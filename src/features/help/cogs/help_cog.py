@@ -84,6 +84,8 @@ class HelpCog(commands.Cog):
             "🤖 General": [
                 ("/help", "Show this help menu"),
                 ("/about", "Show information about the bot"),
+                ("/features", "Display detailed bot features and capabilities"),
+                ("/commands", "Show compact command reference card"),
             ]
         }
     
@@ -118,7 +120,7 @@ class HelpCog(commands.Cog):
         )
         
         main_embed.set_thumbnail(url="https://i.imgur.com/4M34hi2.png")
-        main_embed.set_footer(text="Page 1 of 6 | Main Help Menu")
+        main_embed.set_footer(text=f"Page 1 of {len(self.command_categories) + 1} | Main Help Menu")
         pages.append(main_embed)
         
         # Category pages
@@ -133,7 +135,7 @@ class HelpCog(commands.Cog):
             commands_text = "\n".join([f"**{cmd}**: {desc}" for cmd, desc in commands])
             embed.add_field(name="Commands", value=commands_text, inline=False)
             
-            embed.set_footer(text=f"Page {page_num} of 6 | {category}")
+            embed.set_footer(text=f"Page {page_num} of {len(self.command_categories) + 1} | {category}")
             pages.append(embed)
             page_num += 1
         

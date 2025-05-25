@@ -41,13 +41,22 @@ class NeruBot(commands.Bot):
         # Add music cog
         await self.add_cog(MusicCog(self))
         
-        # Add help cog
+        # Add help and info cogs
         try:
-            from src.interfaces.discord.help_cog import HelpCog
+            # Load help system cogs from features directory
+            from src.features.help.cogs.help_cog import HelpCog
+            from src.features.help.cogs.about_cog import AboutCog
+            from src.features.help.cogs.features_cog import FeaturesCog
+            from src.features.help.cogs.commands_cog import CommandsCog
+            
+            # Register all help-related cogs
             await self.add_cog(HelpCog(self))
-            logger.info("Loaded HelpCog")
+            await self.add_cog(AboutCog(self))
+            await self.add_cog(FeaturesCog(self))
+            await self.add_cog(CommandsCog(self))
+            logger.info("Loaded Help, About, Features, and Commands Cogs")
         except Exception as e:
-            logger.error(f"Failed to load HelpCog: {e}")
+            logger.error(f"Failed to load Help Cogs: {e}")
         
         # Additional cogs can be added here as the bot grows
         

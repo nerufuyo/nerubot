@@ -5,13 +5,19 @@ A clean, efficient Discord music bot with high-quality audio streaming and advan
 ## ✨ Features
 
 ### 🎵 Music Streaming
-- Play music from YouTube with full queue support
+- Play music from YouTube, Spotify, and SoundCloud
 - Advanced playback controls (pause, resume, skip, stop)
 - Loop modes: off, single song, or entire queue
 - 24/7 mode for continuous playback
 - Auto-disconnect after 5 minutes of inactivity
 - High-quality audio streaming with FFmpeg
 - Server-specific configuration
+
+### 🤖 Interactive Help System
+- Paginated help menu with category navigation
+- Compact command reference card
+- Detailed feature showcase
+- Interactive UI with buttons for navigation
 
 ## 🚀 Quick Start
 
@@ -51,7 +57,7 @@ src/
 ## 🎵 Music Commands
 
 ### Basic Commands
-- `/play <song>` - Play a song from YouTube
+- `/play <song>` - Play a song from YouTube, Spotify, or SoundCloud
 - `/queue` - Show current queue
 - `/skip` - Skip current song
 - `/stop` - Stop music and clear queue
@@ -62,6 +68,15 @@ src/
 - `/loop [mode]` - Set loop mode (off/single/queue)
 - `/247` - Toggle 24/7 mode (no auto-disconnect)
 - `/nowplaying` - Show currently playing song with details
+- `/sources` - Display available music sources
+
+## 🤖 Help Commands
+
+### General Help
+- `/help` - Interactive paginated help system with categories
+- `/commands` - Compact command reference card
+- `/about` - Bot information and statistics
+- `/features` - Show current and upcoming features
 
 ## 📁 Project Structure
 
@@ -99,6 +114,10 @@ Environment variables in `.env`:
 ```bash
 # Required
 DISCORD_TOKEN=your_bot_token
+
+# Optional - For Spotify Support
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 
 # Optional
 COMMAND_PREFIX=!

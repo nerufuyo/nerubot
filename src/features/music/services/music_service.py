@@ -4,12 +4,13 @@ Music service for handling audio playback in Discord voice channels.
 import asyncio
 import os
 import discord
-import yt_dlp as youtube_dl
 from collections import deque, defaultdict
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from enum import Enum
 from src.core.utils.logging_utils import get_logger
 from src.core.utils.file_utils import find_ffmpeg
+from src.features.music.services.sources import MusicSource, MusicSourceResult
+from src.features.music.services.sources.manager import SourceManager
 
 # Configure logger
 logger = get_logger(__name__)
@@ -40,29 +41,13 @@ if not discord.opus.is_loaded():
 FFMPEG_PATH = find_ffmpeg()
 logger.info(f"Using FFmpeg path: {FFMPEG_PATH or 'system default (in PATH)'}")
 
-# Configure yt-dlp
-ytdl_format_options = {
-    'format': 'bestaudio/best',
-    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
-    'restrictfilenames': True,
-    'noplaylist': False,
-    'nocheckcertificate': True,
-    'ignoreerrors': True,
-    'logtostderr': False,
-    'quiet': True,
-    'no_warnings': True,
-    'default_search': 'auto',
-    'source_address': '0.0.0.0',
-}
-
+# FFmpeg options
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
 }
 
 ffmpeg_executable = FFMPEG_PATH if FFMPEG_PATH else 'ffmpeg'
-
-ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 class LoopMode(Enum):
     """Loop modes for music playback."""
@@ -81,43 +66,44 @@ class MusicService:
         self.is_24_7 = defaultdict(bool)
         self.idle_timers = {}
         self.disconnect_messages = {}
+        self.source_manager = SourceManager()
     
     async def add_to_queue(self, guild_id: int, query: str, requester):
         """Add a song to the queue."""
         try:
-            # Search for the song
-            loop = asyncio.get_event_loop()
-            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(query, download=False))
+            # Search for the song using the source manager
+            results = await self.source_manager.search(query)
             
-            if data is None:
+            if not results:
                 return {
                     'success': False,
-                    'error': "Could not find any information for that song"
+                    'error': "Could not find any songs matching your query"
                 }
             
-            if 'entries' in data and data['entries']:
-                # Playlist - take first result
-                data = data['entries'][0]
-                if data is None:
-                    return {
-                        'success': False,
-                        'error': "No valid entries found in the playlist"
-                    }
+            # Get the first result
+            result = results[0]
             
-            song_info = {
-                'title': data.get('title', 'Unknown'),
-                'url': data.get('url'),
-                'webpage_url': data.get('webpage_url'),
-                'duration': self._format_duration(data.get('duration')),
-                'requester': requester
-            }
+            # Get a playable version of the result
+            playable_result = await self.source_manager.get_playable(result)
             
-            # Validate that we have a URL to play
-            if not song_info['url']:
+            if not playable_result or not playable_result.url:
                 return {
                     'success': False,
                     'error': "No playable URL found for that song"
                 }
+            
+            # Convert to song info format
+            song_info = {
+                'title': playable_result.title,
+                'url': playable_result.url,
+                'webpage_url': playable_result.webpage_url,
+                'duration': playable_result.duration,
+                'requester': requester,
+                'source': playable_result.source.value,
+                'thumbnail': playable_result.thumbnail,
+                'artist': playable_result.artist,
+                'album': playable_result.album
+            }
             
             # Add to queue
             self.queues[guild_id].append(song_info)
@@ -130,7 +116,8 @@ class MusicService:
                     'success': True,
                     'queued': False,
                     'title': song_info['title'],
-                    'duration': song_info['duration']
+                    'duration': song_info['duration'],
+                    'source': song_info['source']
                 }
             
             return {
@@ -138,7 +125,8 @@ class MusicService:
                 'queued': True,
                 'title': song_info['title'],
                 'duration': song_info['duration'],
-                'position': len(self.queues[guild_id])
+                'position': len(self.queues[guild_id]),
+                'source': song_info['source']
             }
             
         except Exception as e:
@@ -178,7 +166,7 @@ class MusicService:
                 after=lambda e: self._after_play(guild_id, e)
             )
             
-            logger.info(f"Now playing: {song['title']} in guild {guild_id}")
+            logger.info(f"Now playing: {song['title']} in guild {guild_id} from {song.get('source', 'unknown')}")
             
         except Exception as e:
             logger.error(f"Error playing song: {e}")

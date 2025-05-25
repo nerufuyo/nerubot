@@ -4,6 +4,8 @@ python-dotenv>=1.0.0
 
 # Music functionality
 yt-dlp>=2023.7.6
+spotipy>=2.23.0
+beautifulsoup4>=4.12.0
 
 # Additional utilities
 aiohttp>=3.8.0
