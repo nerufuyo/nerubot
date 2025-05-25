@@ -47,13 +47,13 @@ src/
 ├── interfaces/               # Discord interface layer
 │   └── discord/
 │       ├── bot.py           # Main bot class
-│       └── music_cog.py     # Music commands
-├── features/                # Feature modules (NEW!)
-│   ├── news/               # News feature
+│       └── help_cog.py      # Help system
+├── features/                # Feature modules
+│   ├── music/               # Music feature
 │   │   ├── cogs/           # Discord commands
 │   │   ├── services/       # Business logic
 │   │   └── models/         # Data models
-│   ├── quotes/             # AI quotes feature
+│   └── help/                # Help feature
 ## 🎵 Music Commands
 
 ### Basic Commands
@@ -126,9 +126,9 @@ LOG_LEVEL=INFO
 
 ## 📊 Testing
 
-Test the news feature:
+Run unit tests for the music feature:
 ```bash
-python3 test_news.py
+python3 -m unittest discover -s src/features/music/tests
 ```
 
 ## 🤝 Contributing

@@ -41,6 +41,14 @@ class NeruBot(commands.Bot):
         # Add music cog
         await self.add_cog(MusicCog(self))
         
+        # Add news cog
+        try:
+            from src.features.news.cogs.news_cog import NewsCog
+            await self.add_cog(NewsCog(self))
+            logger.info("Loaded News Cog")
+        except Exception as e:
+            logger.error(f"Failed to load News Cog: {e}")
+        
         # Add help and info cogs
         try:
             # Load help system cogs from features directory
@@ -49,14 +57,21 @@ class NeruBot(commands.Bot):
             from src.features.help.cogs.features_cog import FeaturesCog
             from src.features.help.cogs.commands_cog import CommandsCog
             
+            # Load news cog
+            from src.features.news.cogs.news_cog import NewsCog
+            
             # Register all help-related cogs
             await self.add_cog(HelpCog(self))
             await self.add_cog(AboutCog(self))
             await self.add_cog(FeaturesCog(self))
             await self.add_cog(CommandsCog(self))
             logger.info("Loaded Help, About, Features, and Commands Cogs")
+            
+            # Register news cog
+            await self.add_cog(NewsCog(self))
+            logger.info("Loaded News Cog")
         except Exception as e:
-            logger.error(f"Failed to load Help Cogs: {e}")
+            logger.error(f"Failed to load Cogs: {e}")
         
         # Additional cogs can be added here as the bot grows
         
@@ -79,7 +94,7 @@ class NeruBot(commands.Bot):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
-                name=f"{self.command_prefix}help | Music"
+                name=f"{self.command_prefix}help | Music & News"
             )
         )
     

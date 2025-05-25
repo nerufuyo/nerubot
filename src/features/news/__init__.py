@@ -1,0 +1,1 @@
+"""News feature for NeruBot."""
