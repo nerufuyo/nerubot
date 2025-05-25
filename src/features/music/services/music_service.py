@@ -7,6 +7,7 @@ import discord
 import yt_dlp as youtube_dl
 from collections import deque, defaultdict
 from typing import Dict, Optional
+from enum import Enum
 from src.core.utils.logging_utils import get_logger
 from src.core.utils.file_utils import find_ffmpeg
 
@@ -63,6 +64,12 @@ ffmpeg_executable = FFMPEG_PATH if FFMPEG_PATH else 'ffmpeg'
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
+class LoopMode(Enum):
+    """Loop modes for music playback."""
+    OFF = 0
+    SINGLE = 1
+    QUEUE = 2
+
 class MusicService:
     """Service for handling music playback in Discord voice channels."""
     
@@ -70,6 +77,10 @@ class MusicService:
         self.bot = bot
         self.queues = defaultdict(deque)
         self.current_songs = {}
+        self.loop_modes = defaultdict(lambda: LoopMode.OFF)
+        self.is_24_7 = defaultdict(bool)
+        self.idle_timers = {}
+        self.disconnect_messages = {}
     
     async def add_to_queue(self, guild_id: int, query: str, requester):
         """Add a song to the queue."""
@@ -146,6 +157,9 @@ class MusicService:
         if not guild or not guild.voice_client:
             return
         
+        # Cancel idle timer since we're about to play
+        await self.cancel_idle_timer(guild_id)
+        
         song = self.queues[guild_id][0]  # Keep the current song at front for queue display
         self.current_songs[guild_id] = song
         
@@ -178,16 +192,32 @@ class MusicService:
         if error:
             logger.error(f"Player error: {error}")
         
-        # Remove the finished song from queue
-        if self.queues[guild_id]:
-            self.queues[guild_id].popleft()
+        loop_mode = self.loop_modes[guild_id]
         
-        # Remove from current songs
-        if guild_id in self.current_songs:
+        # Handle looping
+        if loop_mode == LoopMode.SINGLE and self.queues[guild_id]:
+            # Single song loop - don't remove the song
+            pass
+        elif loop_mode == LoopMode.QUEUE and self.queues[guild_id]:
+            # Queue loop - move current song to end
+            current_song = self.queues[guild_id].popleft()
+            self.queues[guild_id].append(current_song)
+        else:
+            # No loop - remove the finished song
+            if self.queues[guild_id]:
+                self.queues[guild_id].popleft()
+        
+        # Remove from current songs if not looping single
+        if loop_mode != LoopMode.SINGLE and guild_id in self.current_songs:
             del self.current_songs[guild_id]
         
-        # Play next song
-        coro = self._play_next(guild_id)
+        # Play next song or start idle timer
+        if self.queues[guild_id]:
+            coro = self._play_next(guild_id)
+        else:
+            # No more songs - start idle timer
+            coro = self.start_idle_timer(guild_id)
+        
         future = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
         try:
             future.result()
@@ -216,3 +246,81 @@ class MusicService:
             return f"{hours}:{minutes:02d}:{seconds:02d}"
         else:
             return f"{minutes}:{seconds:02d}"
+    
+    async def set_loop_mode(self, guild_id: int, mode: LoopMode):
+        """Set the loop mode for a guild."""
+        self.loop_modes[guild_id] = mode
+    
+    def get_loop_mode(self, guild_id: int) -> LoopMode:
+        """Get the current loop mode for a guild."""
+        return self.loop_modes[guild_id]
+    
+    async def toggle_24_7(self, guild_id: int) -> bool:
+        """Toggle 24/7 mode for a guild."""
+        self.is_24_7[guild_id] = not self.is_24_7[guild_id]
+        
+        # Cancel idle timer if 24/7 is enabled
+        if self.is_24_7[guild_id] and guild_id in self.idle_timers:
+            self.idle_timers[guild_id].cancel()
+            del self.idle_timers[guild_id]
+        
+        return self.is_24_7[guild_id]
+    
+    def is_24_7_enabled(self, guild_id: int) -> bool:
+        """Check if 24/7 mode is enabled for a guild."""
+        return self.is_24_7[guild_id]
+    
+    async def start_idle_timer(self, guild_id: int):
+        """Start the idle timer for auto-disconnect."""
+        if self.is_24_7[guild_id]:
+            return  # Don't start timer if 24/7 is enabled
+        
+        # Cancel existing timer
+        if guild_id in self.idle_timers:
+            self.idle_timers[guild_id].cancel()
+        
+        # Start new timer
+        self.idle_timers[guild_id] = asyncio.create_task(
+            self._idle_disconnect_timer(guild_id)
+        )
+    
+    async def cancel_idle_timer(self, guild_id: int):
+        """Cancel the idle timer."""
+        if guild_id in self.idle_timers:
+            self.idle_timers[guild_id].cancel()
+            del self.idle_timers[guild_id]
+    
+    async def _idle_disconnect_timer(self, guild_id: int):
+        """Timer that disconnects the bot after 5 minutes of inactivity."""
+        try:
+            await asyncio.sleep(300)  # 5 minutes
+            
+            guild = self.bot.get_guild(guild_id)
+            if guild and guild.voice_client:
+                # Check if still not playing
+                if not guild.voice_client.is_playing() and not self.is_24_7[guild_id]:
+                    await self._send_goodbye_message(guild_id)
+                    await guild.voice_client.disconnect()
+                    await self.clear_queue(guild_id)
+                    
+        except asyncio.CancelledError:
+            pass  # Timer was cancelled
+    
+    async def _send_goodbye_message(self, guild_id: int):
+        """Send goodbye message when disconnecting."""
+        if guild_id in self.disconnect_messages:
+            channel = self.disconnect_messages[guild_id]
+            if channel:
+                try:
+                    embed = discord.Embed(
+                        title="👋 Goodbye!",
+                        description="I've been inactive for 5 minutes, so I'm leaving the voice channel. Thanks for listening!",
+                        color=discord.Color.orange()
+                    )
+                    await channel.send(embed=embed)
+                except:
+                    pass  # Ignore if we can't send the message
+    
+    def set_disconnect_channel(self, guild_id: int, channel):
+        """Set the channel to send disconnect messages to."""
+        self.disconnect_messages[guild_id] = channel

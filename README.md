@@ -1,34 +1,16 @@
-# NeruBot - Enhanced Discord Bot
+# NeruBot - Discord Music Bot
 
-A sophisticated, modular Discord bot with music capabilities and advanced features including news, AI quotes, user profiles, and anonymous confessions.
+A clean, efficient Discord music bot with high-quality audio streaming and advanced queue management.
 
 ## ✨ Features
 
-### 🎵 Music (Ready)
-- Play music from YouTube with queue support
-- Advanced queue management and controls
-- High-quality audio streaming
-
-### 📰 News (Ready) ⭐ NEW!
-- Real-time RSS news feeds from multiple sources
-- Category-based news filtering (Technology, World, General)
-- Support for major news sources (BBC, CNN, TechCrunch, Reuters, etc.)
-- Clean, formatted news display with links
-
-### 💭 AI Quotes (Coming Soon)
-- AI-powered inspirational quotes using DeepSeek
-- Category-based quote generation
-- Mood-based suggestions
-- Multi-language support
-
-### 👤 User Profiles (Coming Soon)
-- Custom user profiles with stats tracking
-- Activity monitoring and achievements
-- Preference management and social features
-
-### 🤐 Anonymous Confessions (Coming Soon)
-- Secure anonymous messaging system
-- Optional moderation and content filtering
+### 🎵 Music Streaming
+- Play music from YouTube with full queue support
+- Advanced playback controls (pause, resume, skip, stop)
+- Loop modes: off, single song, or entire queue
+- 24/7 mode for continuous playback
+- Auto-disconnect after 5 minutes of inactivity
+- High-quality audio streaming with FFmpeg
 - Server-specific configuration
 
 ## 🚀 Quick Start
@@ -66,47 +48,9 @@ src/
 │   │   ├── services/       # Business logic
 │   │   └── models/         # Data models
 │   ├── quotes/             # AI quotes feature
-│   ├── profile/            # User profiles
-│   └── confession/         # Anonymous confessions
-├── shared/                 # Shared utilities
-│   ├── services/           # Common services
-│   ├── models/             # Shared models
-│   └── utils/              # Utility functions
-└── application/            # Core application logic
-    └── services/
-        └── music_service.py
-```
-
-## 🆕 News Commands
-
-### `/news` - Get Latest News
-Get the latest news articles from multiple sources.
-
-**Usage:**
-- `/news` - General news
-- `/news category:technology` - Tech news
-- `/news category:world count:3` - World news (3 articles)
-
-### `/news-categories` - Available Categories
-View all available news categories and sources.
-
-### `/news-source` - Source-Specific News
-Get news from a specific source.
-
-**Usage:**
-- `/news-source source:BBC World`
-- `/news-source source:TechCrunch count:5`
-
-**Available Sources:**
-- BBC World
-- CNN Top Stories
-- TechCrunch
-- Hacker News
-- Reuters World
-- AP News
-
 ## 🎵 Music Commands
 
+### Basic Commands
 - `/play <song>` - Play a song from YouTube
 - `/queue` - Show current queue
 - `/skip` - Skip current song
@@ -114,52 +58,30 @@ Get news from a specific source.
 - `/pause` / `/resume` - Control playback
 - `/join` / `/leave` - Voice channel management
 
-## 🔮 Upcoming Features
+### Advanced Features
+- `/loop [mode]` - Set loop mode (off/single/queue)
+- `/247` - Toggle 24/7 mode (no auto-disconnect)
+- `/nowplaying` - Show currently playing song with details
 
-### `/quote` - AI Quotes (Coming Soon)
-Get AI-generated inspirational quotes using DeepSeek AI.
-- Category-based quotes (wisdom, motivation, etc.)
-- Mood-aware suggestions
-- Personalized content
+## 📁 Project Structure
 
-### `/profile` - User Profiles (Coming Soon)
-Comprehensive user profile system.
-- Custom bios and preferences
-- Activity statistics and achievements
-- Social features and reputation
-
-### `/confess` - Anonymous Confessions (Coming Soon)
-Secure anonymous messaging system.
-- Complete anonymity and privacy
-- Optional moderation system
-- Server-specific configuration
+```
+src/
+├── main.py                 # Entry point
+├── interfaces/            # Discord interface layer
+│   └── discord/
+│       ├── bot.py         # Main bot class
+│       └── help_cog.py    # Help system
+├── features/              # Feature modules
+│   └── music/             # Music feature
+│       ├── cogs/          # Discord commands
+│       ├── services/      # Business logic
+│       └── models/        # Data structures
+└── core/                  # Core utilities
+    └── utils/             # Shared utilities
+```
 
 ## 🛠️ Development
-
-### Adding New Features
-
-The modular architecture makes adding features simple:
-
-1. **Create feature directory:**
-   ```
-   src/features/my_feature/
-   ├── cogs/          # Discord commands
-   ├── services/      # Business logic
-   └── models/        # Data structures
-   ```
-
-2. **Implement the cog:**
-   ```python
-   # src/features/my_feature/cogs/my_cog.py
-   from discord.ext import commands
-   
-   class MyCog(commands.Cog):
-       @app_commands.command()
-       async def my_command(self, interaction):
-           # Your command logic
-   ```
-
-3. **Add to bot:** The bot automatically loads feature cogs!
 
 ### Architecture Benefits
 
@@ -181,9 +103,6 @@ DISCORD_TOKEN=your_bot_token
 # Optional
 COMMAND_PREFIX=!
 LOG_LEVEL=INFO
-
-# Future: API keys for additional features
-DEEPSEEK_API_KEY=your_deepseek_key  # For AI quotes
 ```
 
 ## 📊 Testing

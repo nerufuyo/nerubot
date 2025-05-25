@@ -37,58 +37,36 @@ class HelpCog(commands.Cog):
         
         # Music commands
         music_commands = [
-            (f"{self.bot.command_prefix}join", HELP_JOIN_DESC),
-            (f"{self.bot.command_prefix}leave", HELP_LEAVE_DESC),
-            (f"{self.bot.command_prefix}play <song>", HELP_PLAY_DESC),
-            (f"{self.bot.command_prefix}stop", HELP_STOP_DESC),
-            (f"{self.bot.command_prefix}pause", HELP_PAUSE_DESC),
-            (f"{self.bot.command_prefix}resume", HELP_RESUME_DESC),
-            (f"{self.bot.command_prefix}skip", HELP_SKIP_DESC),
-            (f"{self.bot.command_prefix}volume <0-100>", HELP_VOLUME_DESC),
-            (f"{self.bot.command_prefix}now", HELP_NOW_DESC),
-            (f"{self.bot.command_prefix}queue [page]", HELP_QUEUE_DESC),
-            (f"{self.bot.command_prefix}remove <index>", HELP_REMOVE_DESC),
-            (f"{self.bot.command_prefix}shuffle", HELP_SHUFFLE_DESC),
-            (f"{self.bot.command_prefix}loop <off/song/queue>", HELP_LOOP_DESC)
+            ("/join", "Join your voice channel"),
+            ("/leave", "Leave the voice channel"),
+            ("/play <song>", "Play a song from YouTube"),
+            ("/stop", "Stop music and clear queue"),
+            ("/pause", "Pause the current song"),
+            ("/resume", "Resume the current song"),
+            ("/skip", "Skip the current song"),
+            ("/queue", "Show the music queue"),
+            ("/nowplaying", "Show current song with status"),
+            ("/loop [mode]", "Toggle loop mode (off/single/queue)"),
+            ("/247", "Toggle 24/7 mode"),
+            ("/clear", "Clear the music queue")
         ]
         
         commands_text = "\\n".join([f"**{cmd}**: {desc}" for cmd, desc in music_commands])
         embed.add_field(name="🎵 Music Commands", value=commands_text, inline=False)
         
-        # News commands
-        news_commands = [
-            ("/news", "Get latest news from RSS feeds"),
-            ("/news category:tech", "Get technology news"),
-            ("/news-categories", "Show available categories"),
-            ("/news-source source:BBC", "Get news from specific source")
-        ]
-        
-        news_text = "\\n".join([f"**{cmd}**: {desc}" for cmd, desc in news_commands])
-        embed.add_field(name="📰 News Commands", value=news_text, inline=False)
-        
-        # Future features
-        future_commands = [
-            ("/quote", "AI-generated inspirational quotes (Coming Soon)"),
-            ("/profile", "User profile management (Coming Soon)"),
-            ("/confess", "Anonymous confessions (Coming Soon)")
-        ]
-        
-        future_text = "\\n".join([f"**{cmd}**: {desc}" for cmd, desc in future_commands])
-        embed.add_field(name="🔮 Coming Soon", value=future_text, inline=False)
-        
         embed.add_field(
             name="🏗️ Architecture", 
-            value="Modular design following DRY & KISS principles\\nEasy to maintain and extend", 
+            value="Clean, modular design following best practices\\nEasy to maintain and extend", 
             inline=True
         )
         
         embed.add_field(
-            name="📊 Features", 
-            value="✅ Music Streaming\\n✅ RSS News Feeds\\n🚧 AI Quotes (Coming Soon)\\n🚧 User Profiles\\n🚧 Confessions", 
+            name="📊 Status", 
+            value="✅ Music Streaming\\n🚧 Additional features coming soon!", 
             inline=True
         )
         
-        embed.set_footer(text="NeruBot v2.0 - Enhanced with modular architecture!")
+        embed.set_footer(text="NeruBot - Clean Discord Music Bot!")
         
         await ctx.send(embed=embed)
 

@@ -7,11 +7,6 @@ import logging
 from dotenv import load_dotenv
 from src.interfaces.discord.bot import NeruBot
 from src.core.utils.logging_utils import setup_logger
-from src.core.utils.messages import (
-    BOT_STARTED,
-    CONFIG_TOKEN_MISSING,
-    BOT_SHUTDOWN
-)
 
 # Load environment variables
 load_dotenv()
@@ -32,7 +27,7 @@ async def main():
     # Get the bot token
     token = os.getenv("DISCORD_TOKEN")
     if not token:
-        logger.error(CONFIG_TOKEN_MISSING)
+        logger.error("Error: Discord token not found in environment variables!")
         return
     
     logger.info("Discord token found, creating bot...")
@@ -48,9 +43,9 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        logger.info(BOT_STARTED)
+        logger.info("=== NeruBot Discord Music Bot ===")
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info(BOT_SHUTDOWN)
+        logger.info("Shutting down the bot...")
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)

@@ -8,30 +8,6 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from src.features.music.cogs.music_cog import MusicCog
 from src.core.utils.logging_utils import get_logger
-from src.core.utils.messages import (
-    BOT_SETUP_COMPLETE,
-    BOT_LOGGED_IN,
-    BOT_GUILD_COUNT,
-    ERROR_COMMAND,
-    ERROR_MISSING_ARG,
-    ERROR_BAD_ARG,
-    HELP_TITLE,
-    HELP_DESCRIPTION,
-    HELP_MUSIC_COMMANDS_TITLE,
-    HELP_JOIN_DESC,
-    HELP_LEAVE_DESC,
-    HELP_PLAY_DESC,
-    HELP_STOP_DESC,
-    HELP_PAUSE_DESC,
-    HELP_RESUME_DESC,
-    HELP_SKIP_DESC,
-    HELP_VOLUME_DESC,
-    HELP_NOW_DESC,
-    HELP_QUEUE_DESC,
-    HELP_REMOVE_DESC,
-    HELP_SHUFFLE_DESC,
-    HELP_LOOP_DESC
-)
 
 # Get logger
 logger = get_logger(__name__)
@@ -73,35 +49,7 @@ class NeruBot(commands.Bot):
         except Exception as e:
             logger.error(f"Failed to load HelpCog: {e}")
         
-        # Add feature cogs - temporarily disabled for testing
-        # try:
-        #     from src.features.news.cogs.news_cog import NewsCog
-        #     await self.add_cog(NewsCog(self))
-        #     logger.info("Loaded NewsCog")
-        # except Exception as e:
-        #     logger.error(f"Failed to load NewsCog: {e}")
-        
-        # Disabled - Coming Soon
-        # try:
-        #     from src.features.quotes.cogs.quotes_cog import QuotesCog
-        #     await self.add_cog(QuotesCog(self))
-        #     logger.info("Loaded QuotesCog")
-        # except Exception as e:
-        #     logger.error(f"Failed to load QuotesCog: {e}")
-            
-        # try:
-        #     from src.features.profile.cogs.profile_cog import ProfileCog
-        #     await self.add_cog(ProfileCog(self))
-        #     logger.info("Loaded ProfileCog")
-        # except Exception as e:
-        #     logger.error(f"Failed to load ProfileCog: {e}")
-            
-        # try:
-        #     from src.features.confession.cogs.confession_cog import ConfessionCog
-        #     await self.add_cog(ConfessionCog(self))
-        #     logger.info("Loaded ConfessionCog")
-        # except Exception as e:
-        #     logger.error(f"Failed to load ConfessionCog: {e}")
+        # Additional cogs can be added here as the bot grows
         
         # Force sync all commands with Discord (globally)
         try:
@@ -110,13 +58,13 @@ class NeruBot(commands.Bot):
         except Exception as e:
             logger.error(f"Failed to sync commands: {e}")
         
-        logger.info(BOT_SETUP_COMPLETE)
+        logger.info("Bot setup complete")
     
     async def on_ready(self) -> None:
         """Called when the bot is ready."""
         if self.user:
-            logger.info(BOT_LOGGED_IN.format(name=self.user.name, id=self.user.id))
-        logger.info(BOT_GUILD_COUNT.format(count=len(self.guilds)))
+            logger.info(f"Logged in as {self.user.name} (ID: {self.user.id})")
+        logger.info(f"Connected to {len(self.guilds)} guilds")
         
         # Set bot activity
         await self.change_presence(
@@ -133,13 +81,13 @@ class NeruBot(commands.Bot):
             return
             
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(ERROR_MISSING_ARG.format(param=error.param.name))
+            await ctx.send(f"Missing required argument: {error.param.name}")
             return
             
         if isinstance(error, commands.BadArgument):
-            await ctx.send(ERROR_BAD_ARG.format(error=error))
+            await ctx.send(f"Bad argument: {error}")
             return
             
         # Log other errors
         logger.error(f"Error in command {ctx.command}: {error}")
-        await ctx.send(ERROR_COMMAND.format(error=error))
+        await ctx.send(f"An error occurred: {error}")
