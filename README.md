@@ -1,137 +1,121 @@
-![Node build](https://github.com/eritislami/evobot/actions/workflows/node.yml/badge.svg)
-![Docker build](https://github.com/eritislami/evobot/actions/workflows/docker.yml/badge.svg)
-[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
+# NeruBot - Discord Music Bot
 
-![logo](https://repository-images.githubusercontent.com/186841818/8aa95700-7730-11e9-84be-e80f28520325)
+A feature-rich Discord music bot built with Python using clean architecture principles.
 
-# 🤖 EvoBot (Discord Music Bot)
+## Features
 
-> EvoBot is a Discord Music Bot built with TypeScript, discord.js & uses Command Handler from [discordjs.guide](https://discordjs.guide)
+- Play music from YouTube via URL or search query
+- Queue management (add, remove, view queue)
+- Playback controls (pause, resume, skip, stop)
+- Volume control
+- Loop modes (off, song, queue)
+- Shuffle functionality
+- Clean architecture design (DRY and KISS principles)
+- Easy setup for both local and VPS deployment
+
+## Architecture
+
+This project follows clean architecture principles with distinct layers:
+
+- **Core**: Contains business logic, entities, and use cases
+- **Infrastructure**: Implements repositories and external services
+- **Interfaces**: Handles user interaction via Discord commands
+- **Application**: Contains services that coordinate between layers
 
 ## Requirements
 
-1. Discord Bot Token **[Guide](https://discordjs.guide/preparations/setting-up-a-bot-application.html#creating-your-bot)**  
-   1.1. Enable 'Message Content Intent' in Discord Developer Portal
-2. Node.js 16.11.0 or newer
+- Python 3.8 or higher
+- ffmpeg
+- Discord Bot Token
 
-## 🚀 Getting Started
+## Quick Start
 
-```sh
-git clone https://github.com/eritislami/evobot.git
-cd evobot
-npm install
+### One-Line Command
+
+Simply run this command in your terminal:
+
+```bash
+./start_bot.sh
 ```
 
-After installation finishes follow configuration instructions then run `npm run start` to start the bot.
+Or alternatively:
 
-## ⚙️ Configuration
-
-Copy or Rename `config.json.example` to `config.json` and fill out the values:
-
-⚠️ **Note: Never commit or share your token or api keys publicly** ⚠️
-
-```json
-{
-  "TOKEN": "",
-  "MAX_PLAYLIST_SIZE": 10,
-  "PRUNING": false,
-  "LOCALE": "en",
-  "DEFAULT_VOLUME": 100,
-  "STAY_TIME": 30
-}
+```bash
+python3 run_bot.py
 ```
 
-## 🐬 Docker Configuration
+### What it does automatically:
 
-For those who would prefer to use our [Docker container](https://hub.docker.com/repository/docker/eritislami/evobot), you may provide values from `config.json` as environment variables.
+The script will:
+- Check for required dependencies and offer to install them
+- Prompt for your Discord bot token if not found
+- Check for ffmpeg installation and provide installation instructions
+- Start the bot automatically
 
-```shell
-docker run -e "TOKEN=<discord-token>" eritislami/evobot
+### VPS Deployment
+
+To set up for VPS deployment:
+
+```bash
+python run_bot.py --setup-vps
 ```
 
-## 📝 Features & Commands
+The script will create a systemd service file and provide instructions for deploying to a VPS.
 
-- 🎶 Play music from YouTube via url
+## Manual Setup
 
-`/play https://www.youtube.com/watch?v=GLvohMXgcBo`
+If you prefer manual setup:
 
-- 🔎 Play music from YouTube via search query
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-`/play under the bridge red hot chili peppers`
+2. Set up your Discord token in `.env`:
+```
+DISCORD_TOKEN=your_token_here
+```
 
-- 🔎 Search and select music to play
+3. Run the bot:
+```bash
+python -m src.main
+```
 
-`/search Pearl Jam`
+## Commands
 
-- 📃 Play youtube playlists via url
+- `!join` - Join your voice channel
+- `!leave` - Leave the voice channel
+- `!play <song>` - Play a song by URL or search term
+- `!stop` - Stop playback and clear the queue
+- `!pause` - Pause the current song
+- `!resume` - Resume the paused song
+- `!skip` - Skip to the next song
+- `!volume <0-100>` - Set playback volume
+- `!now` - Show the currently playing song
+- `!queue [page]` - Show songs in the queue
+- `!remove <index>` - Remove a song from the queue
+- `!shuffle` - Shuffle the queue
+- `!loop <off/song/queue>` - Set loop mode
+- `!help` - Show all available commands
 
-`/playlist https://www.youtube.com/watch?v=YlUKcNNmywk&list=PL5RNCwK3GIO13SR_o57bGJCEmqFAwq82c`
+## Creating Your Own Discord Bot
 
-- 🔎 Play youtube playlists via search query
+To create your own Discord bot:
 
-`/playlist linkin park meteora`
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click "New Application" and give it a name
+3. Go to the "Bot" tab and click "Add Bot"
+4. Under the "Token" section, click "Copy" to copy your bot token
+5. Under "Privileged Gateway Intents", enable "Message Content Intent"
+6. Go to OAuth2 > URL Generator:
+   - Select "bot" and "applications.commands" scopes
+   - Select permissions: "Send Messages", "Connect", "Speak", "Use Voice Activity"
+7. Use the generated URL to invite the bot to your server
 
-- Now Playing (/nowplaying)
-- Queue system (/queue)
-- Loop / Repeat (/loop)
-- Shuffle (/shuffle)
-- Volume control (/volume)
-- Lyrics (/lyrics)
-- Pause (/pause)
-- Resume (/resume)
-- Skip (/skip)
-- Skip to song # in queue (/skipto)
-- Move a song in the queue (/move)
-- Remove song # from queue (/remove)
-- Show ping to Discord API (/ping)
-- Show bot uptime (/uptime)
-- Toggle pruning of bot messages (/pruning)
-- Help (/help)
-- Command Handler from [discordjs.guide](https://discordjs.guide/)
-- Media Controls via Buttons
+## License
 
-![buttons](https://i.imgur.com/67TGY0c.png)
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🌎 Locales
+## Contributing
 
-Currently available locales are:
-
-- English (en)
-- Arabic (ar)
-- Brazilian Portuguese (pt_br)
-- Bulgarian (bg)
-- Romanian (ro)
-- Czech (cs)
-- Dutch (nl)
-- French (fr)
-- German (de)
-- Greek (el)
-- Indonesian (id)
-- Italian (it)
-- Japanese (ja)
-- Korean (ko)
-- Minionese (mi)
-- Persian (fa)
-- Polish (pl)
-- Russian (ru)
-- Simplified Chinese (zh_cn)
-- Singaporean Mandarin (zh_sg)
-- Spanish (es)
-- Swedish (sv)
-- Traditional Chinese (zh_tw)
-- Thai (th)
-- Turkish (tr)
-- Ukrainian (uk)
-- Vietnamese (vi)
-- Check [Contributing](#-contributing) if you wish to help add more languages!
-- For languages please use [ISO 639-1](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) two letter format
-
-## 🤝 Contributing
-
-1. [Fork the repository](https://github.com/eritislami/evobot/fork)
-2. Clone your fork: `git clone https://github.com/your-username/evobot.git`
-3. Create your feature branch: `git checkout -b my-new-feature`
-4. Stage changes `git add .`
-5. Commit your changes: `cz` OR `npm run commit` do not use `git commit`
-6. Push to the branch: `git push origin my-new-feature`
-7. Submit a pull request
+Contributions are welcome! Please feel free to submit a Pull Request.
