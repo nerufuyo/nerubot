@@ -1,119 +1,174 @@
-# NeruBot - Simple Discord Bot
+# NeruBot - Enhanced Discord Bot
 
-A clean, modular Discord bot built with Python and discord.py.
+A sophisticated, modular Discord bot with music capabilities and advanced features including news, AI quotes, user profiles, and anonymous confessions.
 
 ## ✨ Features
 
-- 🎵 **Music**: Play music from YouTube with queue support
-- 🎲 **Fun**: Dice rolling, coin flipping, jokes, and magic 8-ball
-- 🔧 **Utility**: Calculator, user info, server info, avatars
-- 📋 **General**: Ping, bot info, help commands
+### 🎵 Music (Ready)
+- Play music from YouTube with queue support
+- Advanced queue management and controls
+- High-quality audio streaming
+
+### 📰 News (Ready) ⭐ NEW!
+- Real-time RSS news feeds from multiple sources
+- Category-based news filtering (Technology, World, General)
+- Support for major news sources (BBC, CNN, TechCrunch, Reuters, etc.)
+- Clean, formatted news display with links
+
+### 💭 AI Quotes (Coming Soon)
+- AI-powered inspirational quotes using DeepSeek
+- Category-based quote generation
+- Mood-based suggestions
+- Multi-language support
+
+### 👤 User Profiles (Coming Soon)
+- Custom user profiles with stats tracking
+- Activity monitoring and achievements
+- Preference management and social features
+
+### 🤐 Anonymous Confessions (Coming Soon)
+- Secure anonymous messaging system
+- Optional moderation and content filtering
+- Server-specific configuration
 
 ## 🚀 Quick Start
 
-1. **Clone and Setup**
+1. **Install Dependencies**
    ```bash
-   git clone <your-repo>
-   cd nerubot
-   pip install -r requirements_new.txt
+   pip install -r requirements.txt
    ```
 
-2. **Configure Bot**
-   Create a `.env` file:
-   ```
+2. **Configure Environment**
+   ```bash
+   # Create .env file
    DISCORD_TOKEN=your_discord_bot_token_here
    ```
 
-3. **Run Bot**
+3. **Run the Bot**
    ```bash
-   python3 bot.py
+   python3 -m src.main
    ```
 
-## 🏗️ Architecture
+## 📁 New Improved Architecture
 
-The bot uses a clean, modular architecture:
+The bot now uses a feature-based modular architecture following DRY and KISS principles:
 
 ```
-nerubot/
-├── bot.py              # Main entry point
-├── cogs/               # Feature modules
-│   ├── general.py      # Basic commands
-│   ├── music.py        # Music functionality  
-│   ├── fun.py          # Entertainment
-│   └── utility.py      # Tools & utilities
-├── services/           # Business logic
-│   └── music_service.py
-├── models/             # Data models
-│   └── song.py
-└── config/             # Configuration
-    └── settings.py
+src/
+├── main.py                    # Entry point
+├── interfaces/               # Discord interface layer
+│   └── discord/
+│       ├── bot.py           # Main bot class
+│       └── music_cog.py     # Music commands
+├── features/                # Feature modules (NEW!)
+│   ├── news/               # News feature
+│   │   ├── cogs/           # Discord commands
+│   │   ├── services/       # Business logic
+│   │   └── models/         # Data models
+│   ├── quotes/             # AI quotes feature
+│   ├── profile/            # User profiles
+│   └── confession/         # Anonymous confessions
+├── shared/                 # Shared utilities
+│   ├── services/           # Common services
+│   ├── models/             # Shared models
+│   └── utils/              # Utility functions
+└── application/            # Core application logic
+    └── services/
+        └── music_service.py
 ```
+
+## 🆕 News Commands
+
+### `/news` - Get Latest News
+Get the latest news articles from multiple sources.
+
+**Usage:**
+- `/news` - General news
+- `/news category:technology` - Tech news
+- `/news category:world count:3` - World news (3 articles)
+
+### `/news-categories` - Available Categories
+View all available news categories and sources.
+
+### `/news-source` - Source-Specific News
+Get news from a specific source.
+
+**Usage:**
+- `/news-source source:BBC World`
+- `/news-source source:TechCrunch count:5`
+
+**Available Sources:**
+- BBC World
+- CNN Top Stories
+- TechCrunch
+- Hacker News
+- Reuters World
+- AP News
 
 ## 🎵 Music Commands
 
 - `/play <song>` - Play a song from YouTube
-- `/stop` - Stop music and clear queue
-- `/skip` - Skip current song
 - `/queue` - Show current queue
-- `/pause` - Pause playback
-- `/resume` - Resume playback
-- `/join` - Join voice channel
-- `/leave` - Leave voice channel
+- `/skip` - Skip current song
+- `/stop` - Stop music and clear queue
+- `/pause` / `/resume` - Control playback
+- `/join` / `/leave` - Voice channel management
 
-## 🎲 Fun Commands
+## 🔮 Upcoming Features
 
-- `/roll <sides>` - Roll a dice
-- `/coinflip` - Flip a coin
-- `/joke` - Get a random joke
-- `/8ball <question>` - Ask the magic 8-ball
+### `/quote` - AI Quotes (Coming Soon)
+Get AI-generated inspirational quotes using DeepSeek AI.
+- Category-based quotes (wisdom, motivation, etc.)
+- Mood-aware suggestions
+- Personalized content
 
-## 🔧 Utility Commands
+### `/profile` - User Profiles (Coming Soon)
+Comprehensive user profile system.
+- Custom bios and preferences
+- Activity statistics and achievements
+- Social features and reputation
 
-- `/calculate <expression>` - Basic calculator
-- `/userinfo [user]` - Get user information
-- `/serverinfo` - Get server information
-- `/avatar [user]` - Get user's avatar
+### `/confess` - Anonymous Confessions (Coming Soon)
+Secure anonymous messaging system.
+- Complete anonymity and privacy
+- Optional moderation system
+- Server-specific configuration
 
-## 📋 General Commands
+## 🛠️ Development
 
-- `/ping` - Check bot latency
-- `/info` - Bot information
-- `/help` - Show all commands
+### Adding New Features
 
-## 🛠️ Adding New Features
+The modular architecture makes adding features simple:
 
-Adding new features is simple with the modular architecture:
-
-1. **Create a new cog** in `cogs/` directory:
-   ```python
-   # cogs/example.py
-   import discord
-   from discord.ext import commands
-   from discord import app_commands
-
-   class Example(commands.Cog):
-       def __init__(self, bot):
-           self.bot = bot
-       
-       @app_commands.command(name="example", description="Example command")
-       async def example(self, interaction: discord.Interaction):
-           await interaction.response.send_message("Hello!")
-
-   async def setup(bot):
-       await bot.add_cog(Example(bot))
+1. **Create feature directory:**
+   ```
+   src/features/my_feature/
+   ├── cogs/          # Discord commands
+   ├── services/      # Business logic
+   └── models/        # Data structures
    ```
 
-2. **Add business logic** in `services/` if needed
-3. **Add models** in `models/` for data structures
-4. The bot automatically loads all cogs!
+2. **Implement the cog:**
+   ```python
+   # src/features/my_feature/cogs/my_cog.py
+   from discord.ext import commands
+   
+   class MyCog(commands.Cog):
+       @app_commands.command()
+       async def my_command(self, interaction):
+           # Your command logic
+   ```
 
-## 📦 Dependencies
+3. **Add to bot:** The bot automatically loads feature cogs!
 
-- `discord.py` - Discord API wrapper
-- `yt-dlp` - YouTube audio extraction
-- `python-dotenv` - Environment variable management
-- `aiohttp` - Async HTTP requests
-- `psutil` - System information
+### Architecture Benefits
+
+- **🧩 Modular:** Each feature is independent
+- **🔧 Maintainable:** Clear separation of concerns
+- **📈 Scalable:** Easy to add/remove features
+- **🧪 Testable:** Services can be tested independently
+- **♻️ DRY:** Shared utilities prevent code duplication
+- **💋 KISS:** Simple, clean interfaces
 
 ## 🔧 Configuration
 
@@ -125,12 +180,30 @@ DISCORD_TOKEN=your_bot_token
 
 # Optional
 COMMAND_PREFIX=!
-MAX_QUEUE_SIZE=50
-DEFAULT_VOLUME=0.5
 LOG_LEVEL=INFO
-WEATHER_API_KEY=your_weather_api_key
+
+# Future: API keys for additional features
+DEEPSEEK_API_KEY=your_deepseek_key  # For AI quotes
 ```
+
+## 📊 Testing
+
+Test the news feature:
+```bash
+python3 test_news.py
+```
+
+## 🤝 Contributing
+
+1. Follow the feature-based architecture
+2. Use the shared utilities for common functionality
+3. Write tests for new services
+4. Follow Python best practices and type hints
 
 ## 📝 License
 
-This project is licensed under the MIT License.
+MIT License - see LICENSE file for details.
+
+---
+
+**NeruBot v2.0** - Now with advanced features and improved architecture! 🚀

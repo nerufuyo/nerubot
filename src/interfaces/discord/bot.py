@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from typing import List, Optional
 from dotenv import load_dotenv
-from src.interfaces.discord.music_cog import MusicCog
+from src.features.music.cogs.music_cog import MusicCog
 from src.core.utils.logging_utils import get_logger
 from src.core.utils.messages import (
     BOT_SETUP_COMPLETE,
@@ -65,6 +65,44 @@ class NeruBot(commands.Bot):
         # Add music cog
         await self.add_cog(MusicCog(self))
         
+        # Add help cog
+        try:
+            from src.interfaces.discord.help_cog import HelpCog
+            await self.add_cog(HelpCog(self))
+            logger.info("Loaded HelpCog")
+        except Exception as e:
+            logger.error(f"Failed to load HelpCog: {e}")
+        
+        # Add feature cogs - temporarily disabled for testing
+        # try:
+        #     from src.features.news.cogs.news_cog import NewsCog
+        #     await self.add_cog(NewsCog(self))
+        #     logger.info("Loaded NewsCog")
+        # except Exception as e:
+        #     logger.error(f"Failed to load NewsCog: {e}")
+        
+        # Disabled - Coming Soon
+        # try:
+        #     from src.features.quotes.cogs.quotes_cog import QuotesCog
+        #     await self.add_cog(QuotesCog(self))
+        #     logger.info("Loaded QuotesCog")
+        # except Exception as e:
+        #     logger.error(f"Failed to load QuotesCog: {e}")
+            
+        # try:
+        #     from src.features.profile.cogs.profile_cog import ProfileCog
+        #     await self.add_cog(ProfileCog(self))
+        #     logger.info("Loaded ProfileCog")
+        # except Exception as e:
+        #     logger.error(f"Failed to load ProfileCog: {e}")
+            
+        # try:
+        #     from src.features.confession.cogs.confession_cog import ConfessionCog
+        #     await self.add_cog(ConfessionCog(self))
+        #     logger.info("Loaded ConfessionCog")
+        # except Exception as e:
+        #     logger.error(f"Failed to load ConfessionCog: {e}")
+        
         # Force sync all commands with Discord (globally)
         try:
             synced = await self.tree.sync()
@@ -76,7 +114,8 @@ class NeruBot(commands.Bot):
     
     async def on_ready(self) -> None:
         """Called when the bot is ready."""
-        logger.info(BOT_LOGGED_IN.format(name=self.user.name, id=self.user.id))
+        if self.user:
+            logger.info(BOT_LOGGED_IN.format(name=self.user.name, id=self.user.id))
         logger.info(BOT_GUILD_COUNT.format(count=len(self.guilds)))
         
         # Set bot activity
@@ -104,33 +143,3 @@ class NeruBot(commands.Bot):
         # Log other errors
         logger.error(f"Error in command {ctx.command}: {error}")
         await ctx.send(ERROR_COMMAND.format(error=error))
-    
-    @commands.hybrid_command(name="help", description="Show help information")
-    async def help_command(self, ctx: commands.Context) -> None:
-        """Show help information."""
-        embed = discord.Embed(
-            title=HELP_TITLE,
-            description=HELP_DESCRIPTION,
-            color=discord.Color.blue()
-        )
-        
-        music_commands = [
-            (f"{self.command_prefix}join", HELP_JOIN_DESC),
-            (f"{self.command_prefix}leave", HELP_LEAVE_DESC),
-            (f"{self.command_prefix}play <song>", HELP_PLAY_DESC),
-            (f"{self.command_prefix}stop", HELP_STOP_DESC),
-            (f"{self.command_prefix}pause", HELP_PAUSE_DESC),
-            (f"{self.command_prefix}resume", HELP_RESUME_DESC),
-            (f"{self.command_prefix}skip", HELP_SKIP_DESC),
-            (f"{self.command_prefix}volume <0-100>", HELP_VOLUME_DESC),
-            (f"{self.command_prefix}now", HELP_NOW_DESC),
-            (f"{self.command_prefix}queue [page]", HELP_QUEUE_DESC),
-            (f"{self.command_prefix}remove <index>", HELP_REMOVE_DESC),
-            (f"{self.command_prefix}shuffle", HELP_SHUFFLE_DESC),
-            (f"{self.command_prefix}loop <off/song/queue>", HELP_LOOP_DESC)
-        ]
-        
-        commands_text = "\n".join([f"**{cmd}**: {desc}" for cmd, desc in music_commands])
-        embed.add_field(name=HELP_MUSIC_COMMANDS_TITLE, value=commands_text, inline=False)
-        
-        await ctx.send(embed=embed)

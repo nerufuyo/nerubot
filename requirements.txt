@@ -11,3 +11,13 @@ psutil>=5.9.0
 
 # Optional: For voice encryption
 PyNaCl>=1.5.0
+
+# News functionality
+feedparser>=6.0.10
+beautifulsoup4>=4.12.0
+
+# Future features
+requests>=2.31.0
+
+# AI functionality - DeepSeek
+openai>=1.80.0
