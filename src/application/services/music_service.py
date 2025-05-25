@@ -59,8 +59,7 @@ ffmpeg_options = {
     'options': '-vn'
 }
 
-if FFMPEG_PATH:
-    ffmpeg_options['executable'] = FFMPEG_PATH
+ffmpeg_executable = FFMPEG_PATH if FFMPEG_PATH else 'ffmpeg'
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
@@ -79,9 +78,20 @@ class MusicService:
             loop = asyncio.get_event_loop()
             data = await loop.run_in_executor(None, lambda: ytdl.extract_info(query, download=False))
             
-            if 'entries' in data:
+            if data is None:
+                return {
+                    'success': False,
+                    'error': "Could not find any information for that song"
+                }
+            
+            if 'entries' in data and data['entries']:
                 # Playlist - take first result
                 data = data['entries'][0]
+                if data is None:
+                    return {
+                        'success': False,
+                        'error': "No valid entries found in the playlist"
+                    }
             
             song_info = {
                 'title': data.get('title', 'Unknown'),
@@ -90,6 +100,13 @@ class MusicService:
                 'duration': self._format_duration(data.get('duration')),
                 'requester': requester
             }
+            
+            # Validate that we have a URL to play
+            if not song_info['url']:
+                return {
+                    'success': False,
+                    'error': "No playable URL found for that song"
+                }
             
             # Add to queue
             self.queues[guild_id].append(song_info)
@@ -134,7 +151,12 @@ class MusicService:
         
         try:
             # Create audio source
-            source = discord.FFmpegPCMAudio(song['url'], **ffmpeg_options)
+            source = discord.FFmpegPCMAudio(
+                song['url'], 
+                executable=ffmpeg_executable,
+                before_options=ffmpeg_options['before_options'],
+                options=ffmpeg_options['options']
+            )
             
             # Play the song
             guild.voice_client.play(

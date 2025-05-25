@@ -4097,3 +4097,6 @@ RuntimeError: no running event loop
 2025-05-25 10:52:43,894 - src.interfaces.discord.bot - INFO - Logged in as Neru Assistant (ID: 1372414651547127809)
 2025-05-25 10:52:43,894 - src.interfaces.discord.bot - INFO - Connected to 2 guilds
 2025-05-25 10:55:24,885 - src.application.services.music_service - INFO - Now playing: Rick Astley - Never Gonna Give You Up (Official Music Video) in guild 1350497269597605898
+2025-05-25 10:56:31,336 - src.application.services.music_service - INFO - Now playing: Coldplay - Viva La Vida (Official Video) in guild 1350497269597605898
+2025-05-25 10:57:02,667 - src.application.services.music_service - INFO - Now playing: Maroon 5 - Animals (Lyrics) in guild 1350497269597605898
+2025-05-25 10:57:06,980 - src.application.services.music_service - INFO - Now playing: sydney rose - we hug now (official audio) in guild 1350497269597605898
