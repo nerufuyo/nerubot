@@ -1,51 +1,83 @@
 """
-Music Service - Handles music playback logic
+Music service for handling audio playback in Discord voice channels.
 """
-import discord
 import asyncio
-import yt_dlp
-from collections import defaultdict, deque
-import logging
+import os
+import discord
+import yt_dlp as youtube_dl
+from collections import deque, defaultdict
+from typing import Dict, Optional
+from src.core.utils.logging_utils import get_logger
+from src.core.utils.file_utils import find_ffmpeg
 
-logger = logging.getLogger(__name__)
+# Configure logger
+logger = get_logger(__name__)
+
+# Load Opus library for Discord voice support
+if not discord.opus.is_loaded():
+    opus_paths = [
+        '/opt/homebrew/lib/libopus.dylib',  # Homebrew on Apple Silicon
+        '/usr/local/lib/libopus.dylib',     # Homebrew on Intel
+        '/opt/homebrew/lib/libopus.0.dylib',
+        '/usr/local/lib/libopus.0.dylib',
+        'libopus.dylib',  # System path
+        'opus'  # Let the system find it
+    ]
+    
+    for opus_path in opus_paths:
+        try:
+            discord.opus.load_opus(opus_path)
+            logger.info(f"Successfully loaded Opus from: {opus_path}")
+            break
+        except:
+            continue
+    
+    if not discord.opus.is_loaded():
+        logger.warning("Failed to load Opus library. Voice functionality may not work.")
+
+# Get FFmpeg path
+FFMPEG_PATH = find_ffmpeg()
+logger.info(f"Using FFmpeg path: {FFMPEG_PATH or 'system default (in PATH)'}")
+
+# Configure yt-dlp
+ytdl_format_options = {
+    'format': 'bestaudio/best',
+    'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
+    'restrictfilenames': True,
+    'noplaylist': False,
+    'nocheckcertificate': True,
+    'ignoreerrors': True,
+    'logtostderr': False,
+    'quiet': True,
+    'no_warnings': True,
+    'default_search': 'auto',
+    'source_address': '0.0.0.0',
+}
+
+ffmpeg_options = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'options': '-vn'
+}
+
+if FFMPEG_PATH:
+    ffmpeg_options['executable'] = FFMPEG_PATH
+
+ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
 class MusicService:
-    """Service for handling music playback."""
+    """Service for handling music playback in Discord voice channels."""
     
     def __init__(self, bot):
         self.bot = bot
         self.queues = defaultdict(deque)
         self.current_songs = {}
-        
-        # YouTube-DL options
-        self.ytdl_options = {
-            'format': 'bestaudio/best',
-            'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
-            'restrictfilenames': True,
-            'noplaylist': True,
-            'nocheckcertificate': True,
-            'ignoreerrors': False,
-            'logtostderr': False,
-            'quiet': True,
-            'no_warnings': True,
-            'default_search': 'auto',
-            'source_address': '0.0.0.0',
-        }
-        
-        # FFmpeg options
-        self.ffmpeg_options = {
-            'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-            'options': '-vn'
-        }
-        
-        self.ytdl = yt_dlp.YoutubeDL(self.ytdl_options)
     
-    async def add_to_queue(self, guild_id: int, query: str, requester: discord.Member):
+    async def add_to_queue(self, guild_id: int, query: str, requester):
         """Add a song to the queue."""
         try:
             # Search for the song
             loop = asyncio.get_event_loop()
-            data = await loop.run_in_executor(None, lambda: self.ytdl.extract_info(query, download=False))
+            data = await loop.run_in_executor(None, lambda: ytdl.extract_info(query, download=False))
             
             if 'entries' in data:
                 # Playlist - take first result
@@ -102,7 +134,7 @@ class MusicService:
         
         try:
             # Create audio source
-            source = discord.FFmpegPCMAudio(song['url'], **self.ffmpeg_options)
+            source = discord.FFmpegPCMAudio(song['url'], **ffmpeg_options)
             
             # Play the song
             guild.voice_client.play(

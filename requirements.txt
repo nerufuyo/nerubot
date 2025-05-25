@@ -1,4 +1,13 @@
-discord.py>=2.5.0
+# Discord Bot Requirements
+discord.py>=2.3.0
 python-dotenv>=1.0.0
-yt-dlp>=2023.0.0
+
+# Music functionality
+yt-dlp>=2023.7.6
+
+# Additional utilities
+aiohttp>=3.8.0
+psutil>=5.9.0
+
+# Optional: For voice encryption
 PyNaCl>=1.5.0

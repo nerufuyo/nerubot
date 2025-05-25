@@ -1,121 +1,136 @@
-# NeruBot - Discord Music Bot
+# NeruBot - Simple Discord Bot
 
-A feature-rich Discord music bot built with Python using clean architecture principles.
+A clean, modular Discord bot built with Python and discord.py.
 
-## Features
+## ✨ Features
 
-- Play music from YouTube via URL or search query
-- Queue management (add, remove, view queue)
-- Playback controls (pause, resume, skip, stop)
-- Volume control
-- Loop modes (off, song, queue)
-- Shuffle functionality
-- Clean architecture design (DRY and KISS principles)
-- Easy setup for both local and VPS deployment
+- 🎵 **Music**: Play music from YouTube with queue support
+- 🎲 **Fun**: Dice rolling, coin flipping, jokes, and magic 8-ball
+- 🔧 **Utility**: Calculator, user info, server info, avatars
+- 📋 **General**: Ping, bot info, help commands
 
-## Architecture
+## 🚀 Quick Start
 
-This project follows clean architecture principles with distinct layers:
+1. **Clone and Setup**
+   ```bash
+   git clone <your-repo>
+   cd nerubot
+   pip install -r requirements_new.txt
+   ```
 
-- **Core**: Contains business logic, entities, and use cases
-- **Infrastructure**: Implements repositories and external services
-- **Interfaces**: Handles user interaction via Discord commands
-- **Application**: Contains services that coordinate between layers
+2. **Configure Bot**
+   Create a `.env` file:
+   ```
+   DISCORD_TOKEN=your_discord_bot_token_here
+   ```
 
-## Requirements
+3. **Run Bot**
+   ```bash
+   python3 bot.py
+   ```
 
-- Python 3.8 or higher
-- ffmpeg
-- Discord Bot Token
+## 🏗️ Architecture
 
-## Quick Start
+The bot uses a clean, modular architecture:
 
-### One-Line Command
+```
+nerubot/
+├── bot.py              # Main entry point
+├── cogs/               # Feature modules
+│   ├── general.py      # Basic commands
+│   ├── music.py        # Music functionality  
+│   ├── fun.py          # Entertainment
+│   └── utility.py      # Tools & utilities
+├── services/           # Business logic
+│   └── music_service.py
+├── models/             # Data models
+│   └── song.py
+└── config/             # Configuration
+    └── settings.py
+```
 
-Simply run this command in your terminal:
+## 🎵 Music Commands
+
+- `/play <song>` - Play a song from YouTube
+- `/stop` - Stop music and clear queue
+- `/skip` - Skip current song
+- `/queue` - Show current queue
+- `/pause` - Pause playback
+- `/resume` - Resume playback
+- `/join` - Join voice channel
+- `/leave` - Leave voice channel
+
+## 🎲 Fun Commands
+
+- `/roll <sides>` - Roll a dice
+- `/coinflip` - Flip a coin
+- `/joke` - Get a random joke
+- `/8ball <question>` - Ask the magic 8-ball
+
+## 🔧 Utility Commands
+
+- `/calculate <expression>` - Basic calculator
+- `/userinfo [user]` - Get user information
+- `/serverinfo` - Get server information
+- `/avatar [user]` - Get user's avatar
+
+## 📋 General Commands
+
+- `/ping` - Check bot latency
+- `/info` - Bot information
+- `/help` - Show all commands
+
+## 🛠️ Adding New Features
+
+Adding new features is simple with the modular architecture:
+
+1. **Create a new cog** in `cogs/` directory:
+   ```python
+   # cogs/example.py
+   import discord
+   from discord.ext import commands
+   from discord import app_commands
+
+   class Example(commands.Cog):
+       def __init__(self, bot):
+           self.bot = bot
+       
+       @app_commands.command(name="example", description="Example command")
+       async def example(self, interaction: discord.Interaction):
+           await interaction.response.send_message("Hello!")
+
+   async def setup(bot):
+       await bot.add_cog(Example(bot))
+   ```
+
+2. **Add business logic** in `services/` if needed
+3. **Add models** in `models/` for data structures
+4. The bot automatically loads all cogs!
+
+## 📦 Dependencies
+
+- `discord.py` - Discord API wrapper
+- `yt-dlp` - YouTube audio extraction
+- `python-dotenv` - Environment variable management
+- `aiohttp` - Async HTTP requests
+- `psutil` - System information
+
+## 🔧 Configuration
+
+Environment variables in `.env`:
 
 ```bash
-./start_bot.sh
+# Required
+DISCORD_TOKEN=your_bot_token
+
+# Optional
+COMMAND_PREFIX=!
+MAX_QUEUE_SIZE=50
+DEFAULT_VOLUME=0.5
+LOG_LEVEL=INFO
+WEATHER_API_KEY=your_weather_api_key
 ```
 
-Or alternatively:
+## 📝 License
 
-```bash
-python3 run_bot.py
-```
-
-### What it does automatically:
-
-The script will:
-- Check for required dependencies and offer to install them
-- Prompt for your Discord bot token if not found
-- Check for ffmpeg installation and provide installation instructions
-- Start the bot automatically
-
-### VPS Deployment
-
-To set up for VPS deployment:
-
-```bash
-python run_bot.py --setup-vps
-```
-
-The script will create a systemd service file and provide instructions for deploying to a VPS.
-
-## Manual Setup
-
-If you prefer manual setup:
-
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-2. Set up your Discord token in `.env`:
-```
-DISCORD_TOKEN=your_token_here
-```
-
-3. Run the bot:
-```bash
-python -m src.main
-```
-
-## Commands
-
-- `!join` - Join your voice channel
-- `!leave` - Leave the voice channel
-- `!play <song>` - Play a song by URL or search term
-- `!stop` - Stop playback and clear the queue
-- `!pause` - Pause the current song
-- `!resume` - Resume the paused song
-- `!skip` - Skip to the next song
-- `!volume <0-100>` - Set playback volume
-- `!now` - Show the currently playing song
-- `!queue [page]` - Show songs in the queue
-- `!remove <index>` - Remove a song from the queue
-- `!shuffle` - Shuffle the queue
-- `!loop <off/song/queue>` - Set loop mode
-- `!help` - Show all available commands
-
-## Creating Your Own Discord Bot
-
-To create your own Discord bot:
-
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
-2. Click "New Application" and give it a name
-3. Go to the "Bot" tab and click "Add Bot"
-4. Under the "Token" section, click "Copy" to copy your bot token
-5. Under "Privileged Gateway Intents", enable "Message Content Intent"
-6. Go to OAuth2 > URL Generator:
-   - Select "bot" and "applications.commands" scopes
-   - Select permissions: "Send Messages", "Connect", "Speak", "Use Voice Activity"
-7. Use the generated URL to invite the bot to your server
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+This project is licensed under the MIT License.

@@ -4053,3 +4053,47 @@ RuntimeError: no running event loop
 2025-05-25 09:29:44,785 - src.interfaces.discord.bot - INFO - Bot setup complete
 2025-05-25 09:29:47,613 - src.interfaces.discord.bot - INFO - Logged in as Neru Assistant (ID: 1372414651547127809)
 2025-05-25 09:29:47,614 - src.interfaces.discord.bot - INFO - Connected to 2 guilds
+2025-05-25 09:32:28,017 - __main__ - INFO - 🏁 Starting NeruBot...
+2025-05-25 09:32:28,017 - discord.client - INFO - logging in using static token
+2025-05-25 09:32:29,220 - __main__ - INFO - 🤖 Loading cogs...
+2025-05-25 09:32:29,230 - __main__ - INFO - ✅ Loaded cog: cogs.fun
+2025-05-25 09:32:29,235 - __main__ - INFO - ✅ Loaded cog: cogs.utility
+2025-05-25 09:32:29,445 - __main__ - INFO - ✅ Loaded cog: cogs.music
+2025-05-25 09:32:29,474 - __main__ - INFO - ✅ Loaded cog: cogs.general
+2025-05-25 09:32:30,142 - __main__ - INFO - 🔄 Synced 20 slash commands
+2025-05-25 09:32:30,909 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: e4ce957eb145cd541bb1a9e50aa00768).
+2025-05-25 09:32:32,918 - __main__ - INFO - 🚀 Neru Assistant#1279 is online!
+2025-05-25 09:32:32,918 - __main__ - INFO - 📡 Connected to 2 servers
+2025-05-25 09:32:45,615 - discord.voice_state - INFO - Connecting to voice...
+2025-05-25 09:32:45,616 - discord.voice_state - INFO - Starting voice handshake... (connection attempt 1)
+2025-05-25 09:32:46,080 - discord.voice_state - INFO - Voice handshake complete. Endpoint found: hongkong11114.discord.media
+2025-05-25 09:32:46,469 - discord.voice_state - INFO - Voice connection complete.
+2025-05-25 09:32:50,145 - services.music_service - ERROR - Error playing song: 
+2025-05-25 09:32:50,145 - discord.player - INFO - ffmpeg process 29791 has not terminated. Waiting to terminate...
+2025-05-25 09:32:50,146 - discord.player - INFO - ffmpeg process 29791 should have terminated with a return code of -9.
+2025-05-25 10:44:53,294 - __main__ - INFO - === NeruBot Discord Music Bot ===
+2025-05-25 10:44:53,896 - __main__ - INFO - Found FFmpeg at: /opt/homebrew/bin/ffmpeg
+2025-05-25 10:44:54,141 - __main__ - INFO - FFmpeg version: ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+2025-05-25 10:44:54,141 - __main__ - INFO - Starting NeruBot...
+2025-05-25 10:44:54,330 - __main__ - ERROR - Error running bot: No module named 'cogs'
+2025-05-25 10:51:31,176 - __main__ - INFO - === NeruBot Discord Music Bot ===
+2025-05-25 10:51:31,377 - __main__ - INFO - Found FFmpeg at: /opt/homebrew/bin/ffmpeg
+2025-05-25 10:51:31,489 - __main__ - INFO - FFmpeg version: ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+2025-05-25 10:51:31,489 - __main__ - INFO - Starting NeruBot...
+2025-05-25 10:51:31,830 - src.application.services.music_service - INFO - Successfully loaded Opus from: /opt/homebrew/lib/libopus.dylib
+2025-05-25 10:51:31,830 - src.application.services.music_service - INFO - Using FFmpeg path: /opt/homebrew/bin/ffmpeg
+2025-05-25 10:51:33,681 - src.interfaces.discord.bot - INFO - Synced 8 command(s) with Discord
+2025-05-25 10:51:33,681 - src.interfaces.discord.bot - INFO - Bot setup complete
+2025-05-25 10:51:36,536 - src.interfaces.discord.bot - INFO - Logged in as Neru Assistant (ID: 1372414651547127809)
+2025-05-25 10:51:36,536 - src.interfaces.discord.bot - INFO - Connected to 2 guilds
+2025-05-25 10:52:38,272 - __main__ - INFO - === NeruBot Discord Music Bot ===
+2025-05-25 10:52:38,498 - __main__ - INFO - Found FFmpeg at: /opt/homebrew/bin/ffmpeg
+2025-05-25 10:52:38,612 - __main__ - INFO - FFmpeg version: ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+2025-05-25 10:52:38,612 - __main__ - INFO - Starting NeruBot...
+2025-05-25 10:52:38,943 - src.application.services.music_service - INFO - Successfully loaded Opus from: /opt/homebrew/lib/libopus.dylib
+2025-05-25 10:52:38,943 - src.application.services.music_service - INFO - Using FFmpeg path: /opt/homebrew/bin/ffmpeg
+2025-05-25 10:52:41,051 - src.interfaces.discord.bot - INFO - Synced 8 command(s) with Discord
+2025-05-25 10:52:41,051 - src.interfaces.discord.bot - INFO - Bot setup complete
+2025-05-25 10:52:43,894 - src.interfaces.discord.bot - INFO - Logged in as Neru Assistant (ID: 1372414651547127809)
+2025-05-25 10:52:43,894 - src.interfaces.discord.bot - INFO - Connected to 2 guilds
+2025-05-25 10:55:24,885 - src.application.services.music_service - INFO - Now playing: Rick Astley - Never Gonna Give You Up (Official Music Video) in guild 1350497269597605898
