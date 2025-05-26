@@ -87,3 +87,8 @@ docs/_build/
 *.mp3
 *.opus
 *.ogg
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
