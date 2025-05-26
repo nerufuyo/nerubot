@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 # NeruBot Complete Setup and Run Script
 # This script handles all setup, dependency installation, and running of the NeruBot Discord bot
 
@@ -290,6 +290,6 @@ main() {
 }
 
 # Check if script is being run directly
-if [[ "${(%):-%N}" == "${0:t}" ]] || [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi

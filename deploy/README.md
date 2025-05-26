@@ -69,6 +69,7 @@ git clone https://github.com/nerufuyo/nerubot.git nerubot
 cd nerubot
 
 # Run setup (dependencies only)
+chmod +x run_nerubot.sh
 ./run_nerubot.sh --setup-only
 
 # Configure environment
@@ -188,7 +189,7 @@ sudo su - nerubot
 cd nerubot
 
 # Pull latest changes
-git pull origin main
+git pull origin master
 
 # Update dependencies
 source nerubot_env/bin/activate
