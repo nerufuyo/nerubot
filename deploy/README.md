@@ -7,22 +7,22 @@ This guide will help you deploy your NeruBot Discord music bot to a Virtual Priv
 ### Option 1: One-Command Deployment (Easiest)
 ```bash
 # Complete deployment with domain and SSL
-curl -fsSL https://raw.githubusercontent.com/your-username/nerubot/main/deploy/quick_deploy.sh | sudo bash -s -- --domain bot.yourdomain.com --ssl
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/quick_deploy.sh | sudo bash -s -- --domain bot.yourdomain.com --ssl
 
 # Basic deployment
-curl -fsSL https://raw.githubusercontent.com/your-username/nerubot/main/deploy/quick_deploy.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/quick_deploy.sh | sudo bash
 ```
 
 ### Option 2: Traditional VPS Deployment (Recommended)
 ```bash
 # On your VPS (as root)
-curl -fsSL https://raw.githubusercontent.com/your-username/nerubot/main/deploy/vps_setup.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/vps_setup.sh | sudo bash
 ```
 
 ### Option 3: Docker Deployment
 ```bash
 # Clone your repository
-git clone https://github.com/your-username/nerubot.git
+git clone https://github.com/nerufuyo/nerubot.git
 cd nerubot
 chmod +x deploy/docker_setup.sh
 ./deploy/docker_setup.sh
@@ -54,7 +54,7 @@ ssh root@your_vps_ip
 ### Step 2: Run the Setup Script
 ```bash
 # Download and run the setup script
-wget https://raw.githubusercontent.com/your-username/nerubot/main/deploy/vps_setup.sh
+wget https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/vps_setup.sh
 chmod +x vps_setup.sh
 sudo ./vps_setup.sh
 ```
@@ -65,7 +65,7 @@ sudo ./vps_setup.sh
 sudo su - nerubot
 
 # Clone your repository
-git clone https://github.com/your-username/nerubot.git nerubot
+git clone https://github.com/nerufuyo/nerubot.git nerubot
 cd nerubot
 
 # Run setup (dependencies only)
@@ -214,7 +214,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 ### Setup and Run
 ```bash
 # Clone repository
-git clone https://github.com/your-username/nerubot.git
+git clone https://github.com/nerufuyo/nerubot.git
 cd nerubot
 
 # Setup Docker files
