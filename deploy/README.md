@@ -82,10 +82,13 @@ nano .env
 # Start the bot service
 sudo systemctl start nerubot
 
-# Check status
+# Check status (if it shows failed, continue to troubleshooting)
 sudo systemctl status nerubot
 
-# Enable auto-start on boot
+# If service is failing, check logs immediately
+sudo journalctl -u nerubot -n 50 --no-pager
+
+# Enable auto-start on boot (only after confirming it works)
 sudo systemctl enable nerubot
 ```
 
@@ -339,14 +342,26 @@ sudo certbot --nginx -d your-domain.com
 
 #### Bot Not Starting
 ```bash
-# Check service status
-sudo systemctl status nerubot
+# Check service status (detailed)
+sudo systemctl status nerubot -l
 
-# Check logs
+# Check recent logs (last 50 lines)
 sudo journalctl -u nerubot -n 50
 
-# Verify configuration
+# Check real-time logs
+sudo journalctl -u nerubot -f
+
+# Check if the bot files exist and have correct permissions
+sudo -u nerubot ls -la /home/nerubot/nerubot/
+
+# Verify configuration file exists
 sudo -u nerubot cat /home/nerubot/nerubot/.env
+
+# Test running the bot manually as nerubot user
+sudo su - nerubot
+cd nerubot
+source nerubot_env/bin/activate
+python src/main.py
 ```
 
 #### Permission Errors
