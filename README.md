@@ -37,6 +37,26 @@ A clean, efficient Discord music bot with high-quality audio streaming and advan
    python3 -m src.main
    ```
 
+## 🌐 Production Deployment
+
+Deploy NeruBot to a VPS for 24/7 operation:
+
+### Quick VPS Deployment
+```bash
+# On your VPS (Ubuntu/Debian)
+curl -fsSL https://raw.githubusercontent.com/your-username/nerubot/main/deploy/vps_setup.sh | sudo bash
+```
+
+### Docker Deployment
+```bash
+git clone https://github.com/your-username/nerubot.git
+cd nerubot
+./deploy/docker_setup.sh
+./docker-start.sh
+```
+
+📖 **[Complete Deployment Guide](deploy/README.md)** - Detailed VPS setup, Docker, monitoring, and security
+
 ## 📁 New Improved Architecture
 
 The bot now uses a feature-based modular architecture following DRY and KISS principles:

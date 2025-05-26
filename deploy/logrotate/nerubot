@@ -1,0 +1,13 @@
+# NeruBot log rotation configuration
+/home/nerubot/logs/*.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 nerubot nerubot
+    postrotate
+        systemctl reload nerubot
+    endscript
+}

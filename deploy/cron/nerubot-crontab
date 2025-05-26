@@ -1,0 +1,20 @@
+# NeruBot Crontab Configuration
+# Add these entries to the nerubot user's crontab: crontab -e
+
+# Health check every 5 minutes
+*/5 * * * * /home/nerubot/nerubot/deploy/scripts/health_check.sh >> /home/nerubot/logs/cron.log 2>&1
+
+# Performance metrics every 15 minutes
+*/15 * * * * /home/nerubot/nerubot/deploy/scripts/performance_monitor.sh save >> /home/nerubot/logs/cron.log 2>&1
+
+# Daily backup at 2 AM
+0 2 * * * /home/nerubot/backup.sh >> /home/nerubot/logs/cron.log 2>&1
+
+# Weekly log cleanup at 3 AM on Sundays
+0 3 * * 0 find /home/nerubot/logs -name "*.log" -type f -mtime +30 -delete >> /home/nerubot/logs/cron.log 2>&1
+
+# Check for updates daily at 4 AM (notification only)
+0 4 * * * /home/nerubot/nerubot/deploy/scripts/update.sh --check-only >> /home/nerubot/logs/cron.log 2>&1
+
+# Clean old backups (keep last 14 days)
+0 1 * * * find /home/nerubot/backups -name "*.tar.gz" -type f -mtime +14 -delete >> /home/nerubot/logs/cron.log 2>&1

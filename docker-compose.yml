@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  nerubot:
+    build: .
+    container_name: nerubot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      - nerubot_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Add a monitoring container
+  watchtower:
+    image: containrrr/watchtower
+    container_name: nerubot_watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # Check daily
+      - WATCHTOWER_INCLUDE_STOPPED=true
+    command: nerubot
+
+networks:
+  nerubot_network:
+    driver: bridge
