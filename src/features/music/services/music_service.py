@@ -11,6 +11,10 @@ from src.core.utils.logging_utils import get_logger
 from src.core.utils.file_utils import find_ffmpeg
 from src.features.music.services.sources import MusicSource, MusicSourceResult
 from src.features.music.services.sources.manager import SourceManager
+from src.core.constants import (
+    TIMEOUT_SEARCH, TIMEOUT_CONVERSION, IDLE_DISCONNECT_TIME, MAX_QUEUE_SIZE,
+    FFMPEG_OPTIONS, OPUS_PATHS, LOG_MSG, MSG_ERROR, MSG_INFO
+)
 
 # Configure logger
 logger = get_logger(__name__)
@@ -71,26 +75,53 @@ class MusicService:
     async def add_to_queue(self, guild_id: int, query: str, requester):
         """Add a song to the queue."""
         try:
-            # Search for the song using the source manager
-            results = await self.source_manager.search(query)
+            logger.info(f"Adding to queue in guild {guild_id}: {query}")
             
-            if not results:
+            # Search for the song using the source manager with timeout
+            try:
+                results = await asyncio.wait_for(
+                    self.source_manager.search(query),
+                    timeout=TIMEOUT_SEARCH
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"Search timeout for query: {query}")
                 return {
                     'success': False,
-                    'error': "Could not find any songs matching your query"
+                    'error': MSG_ERROR['search_timeout']
+                }
+            
+            if not results:
+                logger.warning(f"No search results for: {query}")
+                return {
+                    'success': False,
+                    'error': MSG_ERROR['no_results']
                 }
             
             # Get the first result
             result = results[0]
+            logger.info(f"Found result: {result.title} from {result.source}")
             
-            # Get a playable version of the result
-            playable_result = await self.source_manager.get_playable(result)
-            
-            if not playable_result or not playable_result.url:
+            # Get a playable version of the result with timeout
+            try:
+                playable_result = await asyncio.wait_for(
+                    self.source_manager.get_playable(result),
+                    timeout=TIMEOUT_CONVERSION
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"Conversion timeout for: {result.title}")
                 return {
                     'success': False,
-                    'error': "No playable URL found for that song"
+                    'error': MSG_ERROR['conversion_timeout']
                 }
+            
+            if not playable_result or not playable_result.url:
+                logger.error(f"No playable URL found for: {result.title}")
+                return {
+                    'success': False,
+                    'error': MSG_ERROR['no_playable_url']
+                }
+            
+            logger.info(f"Successfully converted to playable: {playable_result.title}")
             
             # Convert to song info format
             song_info = {
@@ -107,10 +138,12 @@ class MusicService:
             
             # Add to queue
             self.queues[guild_id].append(song_info)
+            logger.info(f"Added to queue: {song_info['title']} in guild {guild_id}")
             
             # If nothing is playing, start playing
             guild = self.bot.get_guild(guild_id)
             if guild and guild.voice_client and not guild.voice_client.is_playing():
+                logger.info(f"Starting playback immediately for guild {guild_id}")
                 await self._play_next(guild_id)
                 return {
                     'success': True,
@@ -130,19 +163,21 @@ class MusicService:
             }
             
         except Exception as e:
-            logger.error(f"Error adding song to queue: {e}")
+            logger.error(f"Error adding song to queue for '{query}': {e}")
             return {
                 'success': False,
-                'error': f"Could not find or play that song: {str(e)}"
+                'error': MSG_ERROR['add_queue_failed']
             }
     
     async def _play_next(self, guild_id: int):
         """Play the next song in the queue."""
         if not self.queues[guild_id]:
+            logger.info(f"No songs in queue for guild {guild_id}")
             return
         
         guild = self.bot.get_guild(guild_id)
         if not guild or not guild.voice_client:
+            logger.warning(f"Guild or voice client not found for guild {guild_id}")
             return
         
         # Cancel idle timer since we're about to play
@@ -151,66 +186,132 @@ class MusicService:
         song = self.queues[guild_id][0]  # Keep the current song at front for queue display
         self.current_songs[guild_id] = song
         
-        try:
-            # Create audio source
-            source = discord.FFmpegPCMAudio(
-                song['url'], 
-                executable=ffmpeg_executable,
-                before_options=ffmpeg_options['before_options'],
-                options=ffmpeg_options['options']
-            )
-            
-            # Play the song
-            guild.voice_client.play(
-                source,
-                after=lambda e: self._after_play(guild_id, e)
-            )
-            
-            logger.info(f"Now playing: {song['title']} in guild {guild_id} from {song.get('source', 'unknown')}")
-            
-        except Exception as e:
-            logger.error(f"Error playing song: {e}")
-            # Remove the failed song and try next
-            if self.queues[guild_id]:
-                self.queues[guild_id].popleft()
-            await self._play_next(guild_id)
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                # Create audio source
+                source = discord.FFmpegPCMAudio(
+                    song['url'], 
+                    executable=ffmpeg_executable,
+                    before_options=ffmpeg_options['before_options'],
+                    options=ffmpeg_options['options']
+                )
+                
+                # Play the song
+                guild.voice_client.play(
+                    source,
+                    after=lambda e: self._after_play(guild_id, e)
+                )
+                
+                logger.info(f"Now playing: {song['title']} in guild {guild_id} from {song.get('source', 'unknown')}")
+                return  # Success, exit the retry loop
+                
+            except Exception as e:
+                retry_count += 1
+                logger.error(f"Error playing song (attempt {retry_count}/{max_retries}): {e}")
+                
+                if retry_count >= max_retries:
+                    # Remove the failed song and try next without recursion
+                    logger.error(f"Failed to play song after {max_retries} attempts, removing from queue")
+                    if self.queues[guild_id]:
+                        failed_song = self.queues[guild_id].popleft()
+                        logger.info(f"Removed failed song: {failed_song.get('title', 'Unknown')}")
+                    
+                    # Clean up current song reference
+                    if guild_id in self.current_songs:
+                        del self.current_songs[guild_id]
+                    
+                    # Try to play the next song (if any) without recursion
+                    if self.queues[guild_id]:
+                        # Schedule the next play attempt
+                        asyncio.create_task(self._play_next(guild_id))
+                    else:
+                        # No more songs, start idle timer
+                        await self.start_idle_timer(guild_id)
+                    return
+                else:
+                    # Wait a bit before retrying
+                    await asyncio.sleep(1)
     
     def _after_play(self, guild_id: int, error):
         """Called after a song finishes playing."""
         if error:
             logger.error(f"Player error: {error}")
         
-        loop_mode = self.loop_modes[guild_id]
-        
-        # Handle looping
-        if loop_mode == LoopMode.SINGLE and self.queues[guild_id]:
-            # Single song loop - don't remove the song
-            pass
-        elif loop_mode == LoopMode.QUEUE and self.queues[guild_id]:
-            # Queue loop - move current song to end
-            current_song = self.queues[guild_id].popleft()
-            self.queues[guild_id].append(current_song)
-        else:
-            # No loop - remove the finished song
-            if self.queues[guild_id]:
-                self.queues[guild_id].popleft()
-        
-        # Remove from current songs if not looping single
-        if loop_mode != LoopMode.SINGLE and guild_id in self.current_songs:
-            del self.current_songs[guild_id]
-        
-        # Play next song or start idle timer
-        if self.queues[guild_id]:
-            coro = self._play_next(guild_id)
-        else:
-            # No more songs - start idle timer
-            coro = self.start_idle_timer(guild_id)
-        
-        future = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
         try:
-            future.result()
+            loop_mode = self.loop_modes[guild_id]
+            
+            # Handle looping
+            if loop_mode == LoopMode.SINGLE and self.queues[guild_id]:
+                # Single song loop - don't remove the song
+                pass
+            elif loop_mode == LoopMode.QUEUE and self.queues[guild_id]:
+                # Queue loop - move current song to end
+                current_song = self.queues[guild_id].popleft()
+                self.queues[guild_id].append(current_song)
+            else:
+                # No loop - remove the finished song
+                if self.queues[guild_id]:
+                    self.queues[guild_id].popleft()
+            
+            # Remove from current songs if not looping single
+            if loop_mode != LoopMode.SINGLE and guild_id in self.current_songs:
+                del self.current_songs[guild_id]
+            
+            # Schedule next action using run_coroutine_threadsafe for thread safety
+            if self.queues[guild_id]:
+                coro = self._play_next(guild_id)
+            else:
+                # No more songs - clean up and start idle timer
+                logger.info(f"Queue empty for guild {guild_id}, starting idle timer")
+                if guild_id in self.current_songs:
+                    del self.current_songs[guild_id]
+                coro = self.start_idle_timer(guild_id)
+            
+            # Always use run_coroutine_threadsafe for thread safety from Discord callbacks
+            try:
+                if self.bot.loop and not self.bot.loop.is_closed():
+                    future = asyncio.run_coroutine_threadsafe(coro, self.bot.loop)
+                    # Add a callback to handle any exceptions
+                    def handle_future_exception(fut):
+                        try:
+                            fut.result()  # This will raise any exception that occurred
+                        except Exception as e:
+                            logger.error(f"Exception in scheduled coroutine for guild {guild_id}: {e}")
+                            # Perform emergency cleanup
+                            self._emergency_cleanup(guild_id)
+                    
+                    future.add_done_callback(handle_future_exception)
+                else:
+                    logger.warning(f"Bot loop is closed or None, performing emergency cleanup for guild {guild_id}")
+                    self._emergency_cleanup(guild_id)
+                    
+            except Exception as e:
+                logger.error(f"Error scheduling coroutine in after_play for guild {guild_id}: {e}")
+                self._emergency_cleanup(guild_id)
+                
         except Exception as e:
-            logger.error(f"Error in after_play: {e}")
+            logger.error(f"Critical error in _after_play for guild {guild_id}: {e}")
+            self._emergency_cleanup(guild_id)
+    
+    def _emergency_cleanup(self, guild_id: int):
+        """Perform emergency cleanup when normal scheduling fails."""
+        try:
+            # Clean up current song reference
+            if guild_id in self.current_songs:
+                del self.current_songs[guild_id]
+                
+            # Cancel any existing idle timers
+            if guild_id in self.idle_timers:
+                self.idle_timers[guild_id].cancel()
+                del self.idle_timers[guild_id]
+                
+            logger.warning(f"Performed emergency cleanup for guild {guild_id}")
+            
+        except Exception as cleanup_e:
+            logger.error(f"Error in emergency cleanup for guild {guild_id}: {cleanup_e}")
     
     async def get_queue(self, guild_id: int):
         """Get the current queue for a guild."""
@@ -260,39 +361,105 @@ class MusicService:
     
     async def start_idle_timer(self, guild_id: int):
         """Start the idle timer for auto-disconnect."""
-        if self.is_24_7[guild_id]:
-            return  # Don't start timer if 24/7 is enabled
-        
-        # Cancel existing timer
-        if guild_id in self.idle_timers:
-            self.idle_timers[guild_id].cancel()
-        
-        # Start new timer
-        self.idle_timers[guild_id] = asyncio.create_task(
-            self._idle_disconnect_timer(guild_id)
-        )
+        try:
+            if self.is_24_7[guild_id]:
+                logger.info(f"24/7 mode enabled for guild {guild_id}, skipping idle timer")
+                return  # Don't start timer if 24/7 is enabled
+            
+            # Cancel existing timer
+            if guild_id in self.idle_timers:
+                self.idle_timers[guild_id].cancel()
+                del self.idle_timers[guild_id]
+            
+            # Verify we have a valid guild and voice client before starting timer
+            guild = self.bot.get_guild(guild_id)
+            if not guild or not guild.voice_client:
+                logger.info(f"No guild or voice client found for {guild_id}, skipping idle timer")
+                return
+            
+            # Check if voice client is actually connected and in a channel
+            if not guild.voice_client.is_connected():
+                logger.warning(f"Voice client not connected for guild {guild_id}, cleaning up")
+                await self.clear_queue(guild_id)
+                return
+                
+            if not guild.voice_client.channel:
+                logger.warning(f"Voice client has no channel for guild {guild_id}, cleaning up")
+                await self.clear_queue(guild_id)
+                return
+            
+            logger.info(f"Starting idle timer for guild {guild_id}")
+            # Start new timer
+            self.idle_timers[guild_id] = asyncio.create_task(
+                self._idle_disconnect_timer(guild_id)
+            )
+        except Exception as e:
+            logger.error(f"Error starting idle timer for guild {guild_id}: {e}")
+            # Ensure we don't leave a broken timer reference
+            if guild_id in self.idle_timers:
+                try:
+                    self.idle_timers[guild_id].cancel()
+                except:
+                    pass
+                del self.idle_timers[guild_id]
     
     async def cancel_idle_timer(self, guild_id: int):
         """Cancel the idle timer."""
-        if guild_id in self.idle_timers:
-            self.idle_timers[guild_id].cancel()
-            del self.idle_timers[guild_id]
+        try:
+            if guild_id in self.idle_timers:
+                self.idle_timers[guild_id].cancel()
+                del self.idle_timers[guild_id]
+                logger.debug(f"Cancelled idle timer for guild {guild_id}")
+        except Exception as e:
+            logger.error(f"Error cancelling idle timer for guild {guild_id}: {e}")
     
     async def _idle_disconnect_timer(self, guild_id: int):
         """Timer that disconnects the bot after 5 minutes of inactivity."""
         try:
             await asyncio.sleep(300)  # 5 minutes
             
+            # Check if we should still disconnect
+            if self.is_24_7[guild_id]:
+                logger.info(f"24/7 mode enabled during idle timer for guild {guild_id}, cancelling disconnect")
+                return
+                
             guild = self.bot.get_guild(guild_id)
             if guild and guild.voice_client:
-                # Check if still not playing
-                if not guild.voice_client.is_playing() and not self.is_24_7[guild_id]:
-                    await self._send_goodbye_message(guild_id)
-                    await guild.voice_client.disconnect()
+                # Validate voice client state before disconnecting
+                if not guild.voice_client.is_connected():
+                    logger.info(f"Voice client already disconnected for guild {guild_id}")
                     await self.clear_queue(guild_id)
+                    return
+                
+                if not guild.voice_client.channel:
+                    logger.info(f"Voice client no longer in channel for guild {guild_id}")
+                    await self.clear_queue(guild_id)
+                    return
+                
+                # Check if still not playing and not in 24/7 mode
+                if not guild.voice_client.is_playing() and not self.is_24_7[guild_id]:
+                    logger.info(LOG_MSG['idle_disconnect'].format(guild_id=guild_id))
+                    await self._send_goodbye_message(guild_id)
                     
+                    try:
+                        await guild.voice_client.disconnect()
+                    except Exception as e:
+                        logger.error(f"Error disconnecting voice client for guild {guild_id}: {e}")
+                    
+                    await self.clear_queue(guild_id)
+                else:
+                    logger.info(f"Bot is playing or 24/7 mode enabled for guild {guild_id}, not disconnecting")
+            else:
+                logger.info(f"No guild or voice client found for guild {guild_id} during idle timer")
+                
         except asyncio.CancelledError:
-            pass  # Timer was cancelled
+            logger.debug(f"Idle timer cancelled for guild {guild_id}")
+        except Exception as e:
+            logger.error(f"Error in idle disconnect timer for guild {guild_id}: {e}")
+        finally:
+            # Clean up timer reference
+            if guild_id in self.idle_timers:
+                del self.idle_timers[guild_id]
     
     async def _send_goodbye_message(self, guild_id: int):
         """Send goodbye message when disconnecting."""
@@ -302,7 +469,7 @@ class MusicService:
                 try:
                     embed = discord.Embed(
                         title="👋 Goodbye!",
-                        description="I've been inactive for 5 minutes, so I'm leaving the voice channel. Thanks for listening!",
+                        description=MSG_INFO['goodbye_idle'],
                         color=discord.Color.orange()
                     )
                     await channel.send(embed=embed)

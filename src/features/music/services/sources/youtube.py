@@ -5,6 +5,7 @@ import asyncio
 import yt_dlp as youtube_dl
 import logging
 from . import MusicSource, MusicSourceResult
+from src.core.constants import LOG_MSG, DEFAULT_UNKNOWN_DURATION, DEFAULT_UNKNOWN_ARTIST, DEFAULT_UNKNOWN_TITLE
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class YouTubeAdapter:
                 return [YouTubeAdapter._process_video_data(data)]
                 
         except Exception as e:
-            logger.error(f"YouTube search error: {e}")
+            logger.error(LOG_MSG["youtube_search_error"].format(error=e))
             return None
     
     @staticmethod
@@ -70,7 +71,7 @@ class YouTubeAdapter:
         
         try:
             # Format duration
-            duration = "Unknown"
+            duration = DEFAULT_UNKNOWN_DURATION
             if 'duration' in data and data['duration']:
                 minutes, seconds = divmod(int(data['duration']), 60)
                 hours, minutes = divmod(minutes, 60)
@@ -81,10 +82,10 @@ class YouTubeAdapter:
                     duration = f"{minutes}:{seconds:02d}"
             
             # Get artist from uploader or channel
-            artist = data.get('uploader', data.get('channel', 'Unknown Artist'))
+            artist = data.get('uploader', data.get('channel', DEFAULT_UNKNOWN_ARTIST))
             
             return MusicSourceResult(
-                title=data.get('title', 'Unknown Title'),
+                title=data.get('title', DEFAULT_UNKNOWN_TITLE),
                 url=data.get('url'),
                 source=MusicSource.YOUTUBE,
                 duration=duration,
@@ -94,5 +95,5 @@ class YouTubeAdapter:
                 album=None
             )
         except Exception as e:
-            logger.error(f"Error processing YouTube data: {e}")
+            logger.error(LOG_MSG["youtube_process_error"].format(error=e))
             return None

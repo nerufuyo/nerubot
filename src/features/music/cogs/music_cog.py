@@ -1,6 +1,7 @@
 """
 Music commands cog for the Discord bot.
 """
+import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -8,18 +9,21 @@ from typing import Optional
 from src.features.music.services.music_service import MusicService, LoopMode
 from src.features.music.services.sources import MusicSource
 from src.core.utils.logging_utils import get_logger
+from src.core.constants import (
+    # Emojis and symbols
+    SOURCE_EMOJI, LOOP_EMOJI,
+    # Colors
+    COLOR_SUCCESS, COLOR_ERROR, COLOR_INFO, COLOR_WARNING,
+    # Messages
+    MSG_ERROR, MSG_SUCCESS, MSG_INFO, MSG_HELP,
+    # Command descriptions
+    CMD_DESCRIPTIONS,
+    # Timeouts
+    TIMEOUT_PLAY_COMMAND
+)
 
 # Configure logger
 logger = get_logger(__name__)
-
-# Source emoji mapping
-SOURCE_EMOJI = {
-    'youtube': '▶️',
-    'spotify': '💚',
-    'soundcloud': '🧡',
-    'direct': '🔗',
-    'unknown': '🎵'
-}
 
 class MusicCog(commands.Cog):
     """Music playback commands."""
@@ -42,8 +46,8 @@ class MusicCog(commands.Cog):
                     try:
                         embed = discord.Embed(
                             title="👋 Goodbye!",
-                            description="I've been disconnected from the voice channel. Thanks for listening!",
-                            color=discord.Color.orange()
+                            description=MSG_INFO['goodbye_disconnect'],
+                            color=COLOR_WARNING
                         )
                         await channel.send(embed=embed)
                     except:
@@ -53,18 +57,18 @@ class MusicCog(commands.Cog):
             await self.music_service.clear_queue(guild_id)
             await self.music_service.cancel_idle_timer(guild_id)
     
-    @app_commands.command(name="join", description="Join your voice channel")
+    @app_commands.command(name="join", description=CMD_DESCRIPTIONS['join'])
     async def join(self, interaction: discord.Interaction):
         """Join the user's voice channel."""
         if not interaction.user.voice:
-            await interaction.response.send_message("❌ You need to be in a voice channel!")
+            await interaction.response.send_message(MSG_ERROR['not_in_voice'])
             return
         
         channel = interaction.user.voice.channel
         
         if interaction.guild.voice_client:
             if interaction.guild.voice_client.channel == channel:
-                await interaction.response.send_message("✅ Already connected to your voice channel!")
+                await interaction.response.send_message(MSG_INFO['already_connected'])
                 return
             else:
                 await interaction.guild.voice_client.move_to(channel)
@@ -74,18 +78,18 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(
             title="🔊 Joined Voice Channel",
             description=f"Connected to **{channel.name}**",
-            color=discord.Color.green()
+            color=COLOR_SUCCESS
         )
         await interaction.response.send_message(embed=embed)
         
         # Set disconnect message channel
         self.music_service.set_disconnect_channel(interaction.guild.id, interaction.channel)
     
-    @app_commands.command(name="leave", description="Leave the voice channel")
+    @app_commands.command(name="leave", description=CMD_DESCRIPTIONS['leave'])
     async def leave(self, interaction: discord.Interaction):
         """Leave the voice channel."""
         if not interaction.guild.voice_client:
-            await interaction.response.send_message("❌ I'm not connected to a voice channel!")
+            await interaction.response.send_message(MSG_ERROR['not_connected'])
             return
         
         channel_name = interaction.guild.voice_client.channel.name
@@ -97,30 +101,42 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(
             title="👋 Left Voice Channel",
             description=f"Disconnected from **{channel_name}**",
-            color=discord.Color.orange()
+            color=COLOR_WARNING
         )
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="play", description="Play a song")
+    @app_commands.command(name="play", description=CMD_DESCRIPTIONS['play'])
     @app_commands.describe(query="Song name or URL (YouTube, Spotify, SoundCloud)")
     async def play(self, interaction: discord.Interaction, query: str):
         """Play a song from various sources."""
-        await interaction.response.defer()
+        # Send initial response to prevent timeout
+        await interaction.response.defer(thinking=True)
         
         # Check if user is in voice channel
         if not interaction.user.voice:
-            await interaction.followup.send("❌ You need to be in a voice channel!")
+            await interaction.followup.send(MSG_ERROR['not_in_voice'])
             return
         
         # Join voice channel if not connected
         if not interaction.guild.voice_client:
-            await interaction.user.voice.channel.connect()
-            # Set disconnect message channel
-            self.music_service.set_disconnect_channel(interaction.guild.id, interaction.channel)
+            try:
+                await interaction.user.voice.channel.connect()
+                # Set disconnect message channel
+                self.music_service.set_disconnect_channel(interaction.guild.id, interaction.channel)
+            except Exception as e:
+                await interaction.followup.send(f"{MSG_ERROR['join_failed']}: {str(e)}")
+                return
         
         try:
-            # Add to queue and play
-            result = await self.music_service.add_to_queue(interaction.guild.id, query, interaction.user)
+            # Add to queue and play with timeout handling
+            try:
+                result = await asyncio.wait_for(
+                    self.music_service.add_to_queue(interaction.guild.id, query, interaction.user),
+                    timeout=TIMEOUT_PLAY_COMMAND
+                )
+            except asyncio.TimeoutError:
+                await interaction.followup.send(MSG_ERROR['play_timeout'])
+                return
             
             if result['success']:
                 # Get source emoji
@@ -130,7 +146,7 @@ class MusicCog(commands.Cog):
                 embed = discord.Embed(
                     title=f"{source_emoji} Added to Queue" if result['queued'] else f"{source_emoji} Now Playing",
                     description=f"**{result['title']}**",
-                    color=discord.Color.blue()
+                    color=COLOR_INFO
                 )
                 embed.add_field(name="Duration", value=result.get('duration', 'Unknown'), inline=True)
                 embed.add_field(name="Requested by", value=interaction.user.mention, inline=True)
@@ -141,20 +157,28 @@ class MusicCog(commands.Cog):
                 
                 await interaction.followup.send(embed=embed)
             else:
-                await interaction.followup.send(f"❌ {result['error']}")
+                # Send more helpful error messages
+                error_msg = result.get('error', 'Unknown error occurred')
+                if "Could not find any information" in error_msg:
+                    error_msg += f"\n\n{MSG_HELP['search_tips']}"
+                elif "timed out" in error_msg.lower():
+                    error_msg += f"\n\n{MSG_HELP['timeout_tips']}"
+                
+                await interaction.followup.send(f"❌ {error_msg}")
                 
         except Exception as e:
-            await interaction.followup.send(f"❌ An error occurred: {str(e)}")
+            logger.error(f"Error in play command: {e}")
+            await interaction.followup.send(MSG_ERROR['unexpected'])
     
-    @app_commands.command(name="stop", description="Stop music and clear queue")
+    @app_commands.command(name="stop", description=CMD_DESCRIPTIONS['stop'])
     async def stop(self, interaction: discord.Interaction):
         """Stop music and clear the queue."""
         if not interaction.guild.voice_client:
-            await interaction.response.send_message("❌ I'm not connected to a voice channel!")
+            await interaction.response.send_message(MSG_ERROR['not_connected'])
             return
         
         if not interaction.guild.voice_client.is_playing():
-            await interaction.response.send_message("❌ Nothing is currently playing!")
+            await interaction.response.send_message(MSG_ERROR['nothing_playing'])
             return
         
         interaction.guild.voice_client.stop()
@@ -163,31 +187,44 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(
             title="⏹️ Stopped",
             description="Music stopped and queue cleared",
-            color=discord.Color.red()
+            color=COLOR_ERROR
         )
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="skip", description="Skip the current song")
+    @app_commands.command(name="skip", description=CMD_DESCRIPTIONS['skip'])
     async def skip(self, interaction: discord.Interaction):
         """Skip the current song."""
         if not interaction.guild.voice_client or not interaction.guild.voice_client.is_playing():
-            await interaction.response.send_message("❌ Nothing is currently playing!")
+            await interaction.response.send_message(MSG_ERROR['nothing_playing'])
             return
         
-        interaction.guild.voice_client.stop()  # This will trigger the next song
+        # Get current queue to check if there are more songs
+        queue = await self.music_service.get_queue(interaction.guild.id)
+        has_next_song = len(queue) > 1
         
-        embed = discord.Embed(
-            title="⏭️ Skipped",
-            description="Skipped to the next song",
-            color=discord.Color.blue()
-        )
+        # Stop the current song (this will trigger _after_play)
+        interaction.guild.voice_client.stop()
+        
+        if has_next_song:
+            embed = discord.Embed(
+                title="⏭️ Skipped",
+                description="Skipped to the next song",
+                color=COLOR_INFO
+            )
+        else:
+            embed = discord.Embed(
+                title="⏭️ Skipped",
+                description="Skipped the last song. Queue is now empty.",
+                color=COLOR_WARNING
+            )
+        
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="pause", description="Pause the current song")
+    @app_commands.command(name="pause", description=CMD_DESCRIPTIONS['pause'])
     async def pause(self, interaction: discord.Interaction):
         """Pause the current song."""
         if not interaction.guild.voice_client or not interaction.guild.voice_client.is_playing():
-            await interaction.response.send_message("❌ Nothing is currently playing!")
+            await interaction.response.send_message(MSG_ERROR['nothing_playing'])
             return
         
         interaction.guild.voice_client.pause()
@@ -195,19 +232,19 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(
             title="⏸️ Paused",
             description="Music paused",
-            color=discord.Color.yellow()
+            color=COLOR_WARNING
         )
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="resume", description="Resume the current song")
+    @app_commands.command(name="resume", description=CMD_DESCRIPTIONS['resume'])
     async def resume(self, interaction: discord.Interaction):
         """Resume the current song."""
         if not interaction.guild.voice_client:
-            await interaction.response.send_message("❌ I'm not connected to a voice channel!")
+            await interaction.response.send_message(MSG_ERROR['not_connected'])
             return
         
         if not interaction.guild.voice_client.is_paused():
-            await interaction.response.send_message("❌ Music is not paused!")
+            await interaction.response.send_message(MSG_ERROR['not_paused'])
             return
         
         interaction.guild.voice_client.resume()
@@ -215,22 +252,22 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(
             title="▶️ Resumed",
             description="Music resumed",
-            color=discord.Color.green()
+            color=COLOR_SUCCESS
         )
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="queue", description="Show the music queue")
+    @app_commands.command(name="queue", description=CMD_DESCRIPTIONS['queue'])
     async def queue(self, interaction: discord.Interaction):
         """Show the current music queue."""
         queue = await self.music_service.get_queue(interaction.guild.id)
         
         if not queue:
-            await interaction.response.send_message("❌ The queue is empty!")
+            await interaction.response.send_message(MSG_INFO['queue_empty'])
             return
         
         embed = discord.Embed(
             title="🎵 Music Queue",
-            color=discord.Color.blue()
+            color=COLOR_INFO
         )
         
         # Show currently playing
@@ -272,12 +309,12 @@ class MusicCog(commands.Cog):
         
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="loop", description="Toggle loop mode (off/single/queue)")
+    @app_commands.command(name="loop", description=CMD_DESCRIPTIONS['loop'])
     @app_commands.describe(mode="Loop mode: off, single, or queue")
     async def loop(self, interaction: discord.Interaction, mode: str = None):
         """Toggle loop mode."""
         if not interaction.guild.voice_client:
-            await interaction.response.send_message("❌ I'm not connected to a voice channel!")
+            await interaction.response.send_message(MSG_ERROR['not_connected'])
             return
         
         current_mode = self.music_service.get_loop_mode(interaction.guild.id)
@@ -287,32 +324,32 @@ class MusicCog(commands.Cog):
             if current_mode == LoopMode.OFF:
                 new_mode = LoopMode.SINGLE
                 mode_text = "Single Song"
-                emoji = "🔂"
+                emoji = LOOP_EMOJI['single']
             elif current_mode == LoopMode.SINGLE:
                 new_mode = LoopMode.QUEUE
                 mode_text = "Queue"
-                emoji = "🔁"
+                emoji = LOOP_EMOJI['queue']
             else:
                 new_mode = LoopMode.OFF
                 mode_text = "Off"
-                emoji = "▶️"
+                emoji = LOOP_EMOJI['off']
         else:
             # Set specific mode
             mode = mode.lower()
             if mode in ["off", "none", "0"]:
                 new_mode = LoopMode.OFF
                 mode_text = "Off"
-                emoji = "▶️"
+                emoji = LOOP_EMOJI['off']
             elif mode in ["single", "song", "1"]:
                 new_mode = LoopMode.SINGLE
                 mode_text = "Single Song"
-                emoji = "🔂"
+                emoji = LOOP_EMOJI['single']
             elif mode in ["queue", "all", "2"]:
                 new_mode = LoopMode.QUEUE
                 mode_text = "Queue"
-                emoji = "🔁"
+                emoji = LOOP_EMOJI['queue']
             else:
-                await interaction.response.send_message("❌ Invalid loop mode! Use: `off`, `single`, or `queue`")
+                await interaction.response.send_message(MSG_ERROR['invalid_loop_mode'])
                 return
         
         await self.music_service.set_loop_mode(interaction.guild.id, new_mode)
@@ -320,15 +357,15 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(
             title=f"{emoji} Loop Mode",
             description=f"Loop mode set to: **{mode_text}**",
-            color=discord.Color.blue()
+            color=COLOR_INFO
         )
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="247", description="Toggle 24/7 mode")
+    @app_commands.command(name="247", description=CMD_DESCRIPTIONS['247'])
     async def twenty_four_seven(self, interaction: discord.Interaction):
         """Toggle 24/7 mode."""
         if not interaction.guild.voice_client:
-            await interaction.response.send_message("❌ I'm not connected to a voice channel!")
+            await interaction.response.send_message(MSG_ERROR['not_connected'])
             return
         
         is_enabled = await self.music_service.toggle_24_7(interaction.guild.id)
@@ -336,14 +373,14 @@ class MusicCog(commands.Cog):
         if is_enabled:
             embed = discord.Embed(
                 title="🌙 24/7 Mode Enabled",
-                description="I will stay in the voice channel even when not playing music.",
-                color=discord.Color.purple()
+                description=MSG_SUCCESS['247_enabled'],
+                color=COLOR_INFO
             )
         else:
             embed = discord.Embed(
                 title="☀️ 24/7 Mode Disabled",
-                description="I will leave the voice channel after 5 minutes of inactivity.",
-                color=discord.Color.orange()
+                description=MSG_SUCCESS['247_disabled'],
+                color=COLOR_WARNING
             )
         
         await interaction.response.send_message(embed=embed)
@@ -351,16 +388,16 @@ class MusicCog(commands.Cog):
         # Set disconnect message channel
         self.music_service.set_disconnect_channel(interaction.guild.id, interaction.channel)
     
-    @app_commands.command(name="nowplaying", description="Show currently playing song")
+    @app_commands.command(name="nowplaying", description=CMD_DESCRIPTIONS['nowplaying'])
     async def nowplaying(self, interaction: discord.Interaction):
         """Show the currently playing song."""
         if not interaction.guild.voice_client or not interaction.guild.voice_client.is_playing():
-            await interaction.response.send_message("❌ Nothing is currently playing!")
+            await interaction.response.send_message(MSG_ERROR['nothing_playing'])
             return
         
         queue = await self.music_service.get_queue(interaction.guild.id)
         if not queue:
-            await interaction.response.send_message("❌ Nothing is currently playing!")
+            await interaction.response.send_message(MSG_ERROR['nothing_playing'])
             return
         
         current_song = queue[0]
@@ -369,13 +406,13 @@ class MusicCog(commands.Cog):
         
         # Determine loop emoji
         if loop_mode == LoopMode.SINGLE:
-            loop_emoji = "🔂"
+            loop_emoji = LOOP_EMOJI['single']
             loop_text = "Single Song"
         elif loop_mode == LoopMode.QUEUE:
-            loop_emoji = "🔁"
+            loop_emoji = LOOP_EMOJI['queue']
             loop_text = "Queue"
         else:
-            loop_emoji = "▶️"
+            loop_emoji = LOOP_EMOJI['off']
             loop_text = "Off"
         
         # Get source emoji
@@ -385,7 +422,7 @@ class MusicCog(commands.Cog):
         embed = discord.Embed(
             title=f"{source_emoji} Now Playing",
             description=f"**{current_song['title']}**",
-            color=discord.Color.blue()
+            color=COLOR_INFO
         )
         embed.add_field(name="Duration", value=current_song['duration'], inline=True)
         embed.add_field(name="Requested by", value=current_song['requester'].mention, inline=True)
@@ -414,55 +451,55 @@ class MusicCog(commands.Cog):
         
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="clear", description="Clear the music queue")
+    @app_commands.command(name="clear", description=CMD_DESCRIPTIONS['clear'])
     async def clear(self, interaction: discord.Interaction):
         """Clear the music queue."""
         if not interaction.guild.voice_client:
-            await interaction.response.send_message("❌ I'm not connected to a voice channel!")
+            await interaction.response.send_message(MSG_ERROR['not_connected'])
             return
         
         await self.music_service.clear_queue(interaction.guild.id)
         
         embed = discord.Embed(
             title="🗑️ Queue Cleared",
-            description="The music queue has been cleared.",
-            color=discord.Color.red()
+            description=MSG_SUCCESS['queue_cleared'],
+            color=COLOR_ERROR
         )
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.command(name="sources", description="Show available music sources")
+    @app_commands.command(name="sources", description=CMD_DESCRIPTIONS['sources'])
     async def sources(self, interaction: discord.Interaction):
         """Show information about available music sources."""
         embed = discord.Embed(
             title="🎵 Available Music Sources",
             description="You can play music from these sources:",
-            color=discord.Color.blue()
+            color=COLOR_INFO
         )
         
         embed.add_field(
             name=f"{SOURCE_EMOJI['youtube']} YouTube",
-            value="Play music from YouTube links or search for songs\nExample: `/play despacito` or `/play https://www.youtube.com/watch?v=kJQP7kiw5Fk`",
+            value=MSG_HELP['sources']['youtube'],
             inline=False
         )
         
         embed.add_field(
             name=f"{SOURCE_EMOJI['spotify']} Spotify",
-            value="Play music from Spotify links (tracks, albums, playlists, artists)\nExample: `/play https://open.spotify.com/track/6habFhsOp2NvshLv26jCFK`",
+            value=MSG_HELP['sources']['spotify'],
             inline=False
         )
         
         embed.add_field(
             name=f"{SOURCE_EMOJI['soundcloud']} SoundCloud",
-            value="Play music from SoundCloud links (tracks, playlists, users)\nExample: `/play https://soundcloud.com/artist/track`",
+            value=MSG_HELP['sources']['soundcloud'],
             inline=False
         )
         
         embed.add_field(
             name=f"{SOURCE_EMOJI['direct']} Direct Links",
-            value="Play music directly from audio file links\nExample: `/play https://example.com/music.mp3`",
+            value=MSG_HELP['sources']['direct'],
             inline=False
         )
         
-        embed.set_footer(text="Use /play followed by a search term or URL to play music from any of these sources!")
+        embed.set_footer(text=MSG_HELP['sources']['footer'])
         
         await interaction.response.send_message(embed=embed)

@@ -10,6 +10,7 @@ import aiohttp
 import bs4
 from . import MusicSource, MusicSourceResult
 from .youtube import YouTubeAdapter
+from src.core.constants import LOG_MSG
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class SoundCloudAdapter:
     def __init__(self):
         # Using yt-dlp for SoundCloud instead of direct API
         self.initialized = False
-        logger.info("Using yt-dlp for SoundCloud playback")
+        logger.info(LOG_MSG["soundcloud_using_ytdlp"])
     
     async def search(self, query: str):
         """Search for a song on SoundCloud."""
@@ -35,7 +36,7 @@ class SoundCloudAdapter:
                 return await self._fallback_search(search_query)
                 
         except Exception as e:
-            logger.error(f"SoundCloud search error: {e}")
+            logger.error(LOG_MSG["soundcloud_search_error"].format(error=e))
             return None
     
     @staticmethod
@@ -73,7 +74,7 @@ class SoundCloudAdapter:
             return soundcloud_results
             
         except Exception as e:
-            logger.error(f"Error in SoundCloud fallback search: {e}")
+            logger.error(LOG_MSG["soundcloud_fallback_error"].format(error=e))
             return None
     
     @staticmethod
@@ -87,5 +88,5 @@ class SoundCloudAdapter:
             return soundcloud_result
             
         except Exception as e:
-            logger.error(f"Error converting SoundCloud to playable: {e}")
+            logger.error(LOG_MSG["soundcloud_convert_error"].format(error=e))
             return None

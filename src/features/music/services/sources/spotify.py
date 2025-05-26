@@ -8,6 +8,10 @@ import logging
 from spotipy.oauth2 import SpotifyClientCredentials
 from . import MusicSource, MusicSourceResult
 from .youtube import YouTubeAdapter
+from src.core.constants import (
+    LOG_MSG, TIMEOUT_SPOTIFY_API, DEFAULT_UNKNOWN_DURATION, 
+    DEFAULT_UNKNOWN_ALBUM, SPOTIFY_SEARCH_STRATEGIES
+)
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -29,12 +33,12 @@ class SpotifyAdapter:
             self.initialized = True
         else:
             self.initialized = False
-            logger.warning("Spotify credentials not found. Spotify support will be limited.")
+            logger.warning(LOG_MSG["spotify_no_credentials"])
     
     async def search(self, query: str):
         """Search for a song on Spotify."""
         if not self.initialized:
-            logger.warning("Spotify adapter not initialized. Falling back to YouTube.")
+            logger.warning(LOG_MSG["spotify_not_initialized"])
             return None
         
         try:
@@ -49,11 +53,19 @@ class SpotifyAdapter:
                 elif '/artist/' in query:
                     return await self._process_artist_url(query)
             
-            # Regular search
+            # Regular search with timeout
             loop = asyncio.get_event_loop()
-            results = await loop.run_in_executor(None, lambda: self.sp.search(q=query, limit=5))
+            try:
+                results = await asyncio.wait_for(
+                    loop.run_in_executor(None, lambda: self.sp.search(q=query, limit=5)),
+                    timeout=TIMEOUT_SPOTIFY_API
+                )
+            except asyncio.TimeoutError:
+                logger.error(LOG_MSG["spotify_search_timeout"].format(query=query))
+                return None
             
             if not results or not results['tracks']['items']:
+                logger.warning(LOG_MSG["spotify_no_results"].format(query=query))
                 return None
             
             spotify_results = []
@@ -62,10 +74,11 @@ class SpotifyAdapter:
                 if result:
                     spotify_results.append(result)
             
+            logger.info(LOG_MSG["spotify_results_found"].format(count=len(spotify_results), query=query))
             return spotify_results
                 
         except Exception as e:
-            logger.error(f"Spotify search error: {e}")
+            logger.error(LOG_MSG["spotify_search_error"].format(query=query, error=e))
             return None
     
     async def _process_track_url(self, url):
@@ -75,13 +88,20 @@ class SpotifyAdapter:
             track_id = url.split('track/')[1].split('?')[0]
             
             loop = asyncio.get_event_loop()
-            track = await loop.run_in_executor(None, lambda: self.sp.track(track_id))
+            try:
+                track = await asyncio.wait_for(
+                    loop.run_in_executor(None, lambda: self.sp.track(track_id)),
+                    timeout=TIMEOUT_SPOTIFY_API
+                )
+            except asyncio.TimeoutError:
+                logger.error(LOG_MSG["spotify_track_timeout"].format(track_id=track_id))
+                return None
             
             result = self._convert_track_to_result(track)
             return [result] if result else None
             
         except Exception as e:
-            logger.error(f"Error processing Spotify track URL: {e}")
+            logger.error(LOG_MSG["spotify_track_error"].format(url=url, error=e))
             return None
     
     async def _process_album_url(self, url):
@@ -111,7 +131,7 @@ class SpotifyAdapter:
             return album_results
             
         except Exception as e:
-            logger.error(f"Error processing Spotify album URL: {e}")
+            logger.error(LOG_MSG["spotify_album_error"].format(error=e))
             return None
     
     async def _process_playlist_url(self, url):
@@ -145,7 +165,7 @@ class SpotifyAdapter:
             return playlist_results
             
         except Exception as e:
-            logger.error(f"Error processing Spotify playlist URL: {e}")
+            logger.error(LOG_MSG["spotify_playlist_error"].format(error=e))
             return None
     
     async def _process_artist_url(self, url):
@@ -171,7 +191,7 @@ class SpotifyAdapter:
             return artist_results
             
         except Exception as e:
-            logger.error(f"Error processing Spotify artist URL: {e}")
+            logger.error(LOG_MSG["spotify_artist_error"].format(error=e))
             return None
     
     def _convert_track_to_result(self, track):
@@ -183,14 +203,14 @@ class SpotifyAdapter:
             # Extract track details
             title = track['name']
             artists = ", ".join([artist['name'] for artist in track['artists']])
-            album_name = track.get('album', {}).get('name', 'Unknown Album')
+            album_name = track.get('album', {}).get('name', DEFAULT_UNKNOWN_ALBUM)
             
             # Format for searching on YouTube
             search_query = f"{title} {artists} audio"
             
             # Get duration
             duration_ms = track.get('duration_ms', 0)
-            duration = "Unknown"
+            duration = DEFAULT_UNKNOWN_DURATION
             if duration_ms:
                 seconds = int(duration_ms / 1000)
                 minutes, seconds = divmod(seconds, 60)
@@ -219,27 +239,58 @@ class SpotifyAdapter:
             )
             
         except Exception as e:
-            logger.error(f"Error converting Spotify track: {e}")
+            logger.error(LOG_MSG["spotify_convert_error"].format(error=e))
             return None
     
     @staticmethod
     async def convert_to_playable(spotify_result):
         """Convert a Spotify result to a playable YouTube result."""
         if not spotify_result:
+            logger.error(LOG_MSG["spotify_convert_none"])
             return None
         
         try:
-            # Search for the song on YouTube
-            youtube_results = await YouTubeAdapter.search(spotify_result.url)
+            logger.info(LOG_MSG["spotify_converting"].format(title=spotify_result.title))
             
-            if not youtube_results or not youtube_results[0]:
+            # Search for the song on YouTube with improved search query
+            search_query = spotify_result.url  # This is the search query we created
+            
+            # Try multiple search strategies for better results
+            search_queries = SPOTIFY_SEARCH_STRATEGIES
+            formatted_queries = []
+            for strategy in search_queries:
+                formatted_query = strategy.format(
+                    title=spotify_result.title.split(' - ')[0],  # Remove artist from title
+                    artist=spotify_result.artist
+                )
+                formatted_queries.append(formatted_query)
+            
+            # Add the original search query as fallback
+            formatted_queries.insert(0, search_query)
+            
+            youtube_result = None
+            for query in formatted_queries:
+                try:
+                    logger.debug(LOG_MSG["spotify_youtube_trying"].format(query=query))
+                    youtube_results = await YouTubeAdapter.search(query)
+                    
+                    if youtube_results and len(youtube_results) > 0 and youtube_results[0]:
+                        youtube_result = youtube_results[0]
+                        logger.info(LOG_MSG["spotify_youtube_found"].format(title=youtube_result.title))
+                        break
+                    else:
+                        logger.debug(LOG_MSG["spotify_youtube_no_results"].format(query=query))
+                        
+                except Exception as search_e:
+                    logger.warning(LOG_MSG["spotify_youtube_failed"].format(query=query, error=search_e))
+                    continue
+            
+            if not youtube_result:
+                logger.error(LOG_MSG["spotify_no_youtube"].format(title=spotify_result.title))
                 return None
             
-            # Get the first YouTube result
-            youtube_result = youtube_results[0]
-            
             # Create a new result with Spotify metadata but YouTube URL
-            return MusicSourceResult(
+            playable_result = MusicSourceResult(
                 title=spotify_result.title,
                 url=youtube_result.url,  # Playable YouTube URL
                 source=MusicSource.SPOTIFY,  # Keep Spotify as source for UI
@@ -250,6 +301,9 @@ class SpotifyAdapter:
                 album=spotify_result.album
             )
             
+            logger.info(LOG_MSG["spotify_conversion_success"].format(title=playable_result.title))
+            return playable_result
+            
         except Exception as e:
-            logger.error(f"Error converting Spotify to playable: {e}")
+            logger.error(LOG_MSG["spotify_convert_error"].format(error=e))
             return None
