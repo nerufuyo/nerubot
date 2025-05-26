@@ -143,7 +143,7 @@ Group=$BOT_USER
 WorkingDirectory=$PROJECT_DIR
 Environment=PYTHONPATH=$PROJECT_DIR
 Environment=PYTHONUNBUFFERED=1
-ExecStart=$PROJECT_DIR/nerubot_env/bin/python src/main.py
+ExecStart=/bin/bash -c 'cd $PROJECT_DIR && source nerubot_env/bin/activate && python src/main.py'
 Restart=always
 RestartSec=10
 StandardOutput=journal

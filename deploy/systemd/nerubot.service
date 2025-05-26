@@ -10,7 +10,7 @@ Group=nerubot
 WorkingDirectory=/home/nerubot/nerubot
 Environment=PYTHONPATH=/home/nerubot/nerubot
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/home/nerubot/nerubot/nerubot_env/bin/python src/main.py
+ExecStart=/bin/bash -c 'cd /home/nerubot/nerubot && source nerubot_env/bin/activate && python src/main.py'
 Restart=always
 RestartSec=10
 StandardOutput=journal

@@ -338,6 +338,17 @@ sudo certbot --nginx -d your-domain.com
 
 ## 🚨 Troubleshooting
 
+### Quick Fix for Service Issues
+
+If you're getting `status=203/EXEC` errors or the service won't start:
+
+```bash
+# Download and run the quick fix script
+wget https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/fix_service.sh
+chmod +x fix_service.sh
+sudo ./fix_service.sh
+```
+
 ### Common Issues
 
 #### Bot Not Starting
