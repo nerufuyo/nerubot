@@ -68,6 +68,14 @@ class NeruBot(commands.Bot):
         except Exception as e:
             logger.error(LOG_MSG["cog_failed"].format(cog_name="Help system", error=e))
         
+        # Add confession cog
+        try:
+            from src.features.confession.cogs.confession_cog import ConfessionCog
+            await self.add_cog(ConfessionCog(self))
+            logger.info(LOG_MSG["cog_loaded"].format(cog_name="ConfessionCog"))
+        except Exception as e:
+            logger.error(LOG_MSG["cog_failed"].format(cog_name="ConfessionCog", error=e))
+        
         # Force sync all commands with Discord (globally)
         try:
             synced = await self.tree.sync()

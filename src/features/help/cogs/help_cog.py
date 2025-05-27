@@ -6,7 +6,7 @@ from discord import ui, ButtonStyle, Interaction
 from discord.ext import commands
 from discord import app_commands
 from typing import List, Dict, Any, Optional
-from src.config.messages import MSG_HELP
+from src.config.messages import MSG_HELP, CMD_DESCRIPTIONS
 from src.config.settings import DISCORD_CONFIG
 
 
@@ -82,6 +82,28 @@ class HelpCog(commands.Cog):
             ],
             "🎵 Music - Info": [
                 ("/sources", MSG_HELP["commands"]["sources"]),
+            ],
+            "📝 Confessions": [
+                ("/confess", MSG_HELP["commands"]["confess"]),
+                ("/reply <confession_id>", MSG_HELP["commands"]["reply"]),
+                ("/confession-stats", MSG_HELP["commands"]["confession-stats"]),
+            ],
+            "📝 Confession Admin": [
+                ("/confession-setup <channel>", MSG_HELP["commands"]["confession-setup"]),
+                ("/confession-settings", MSG_HELP["commands"]["confession-settings"]),
+            ],
+            "📰 News": [
+                ("/news latest [count]", MSG_HELP["commands"]["news-latest"]),
+                ("/news sources", MSG_HELP["commands"]["news-sources"]),
+                ("/news status", MSG_HELP["commands"]["news-status"]),
+                ("/news help", MSG_HELP["commands"]["news-help"]),
+            ],
+            "📰 News Admin": [
+                ("/news set-channel [channel]", MSG_HELP["commands"]["news-set-channel"]),
+                ("/news start", MSG_HELP["commands"]["news-start"]),
+                ("/news stop", MSG_HELP["commands"]["news-stop"]),
+                ("/news add <name> <url>", MSG_HELP["commands"]["news-add"]),
+                ("/news remove <name>", MSG_HELP["commands"]["news-remove"]),
             ],
             "🤖 General": [
                 ("/help", MSG_HELP["commands"]["help"]),

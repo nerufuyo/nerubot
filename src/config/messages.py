@@ -85,6 +85,8 @@ MSG_HELP = {
     "main_description": "Browse through the help pages using the buttons below.\n\n"
                        "**Available Categories:**\n"
                        "• 🎵 Music Commands\n"
+                       "• 📝 Confession Commands\n"
+                       "• 📰 News Commands\n"
                        "• 🤖 General Commands\n\n"
                        "Use the arrows to navigate and ❌ to close.",
     "music_description": "Complete music streaming solution with high-quality audio",
@@ -115,9 +117,27 @@ MSG_HELP = {
         "about": "Show information about the bot",
         "features": "Display detailed bot features and capabilities",
         "commands": "Show compact command reference card",
+        # Confession commands
+        "confess": "Submit an anonymous confession",
+        "reply": "Reply to a confession anonymously",
+        "confession-setup": "Set up confession channel (Admin only)",
+        "confession-settings": "View confession settings (Admin only)",
+        "confession-stats": "View confession statistics",
+        # News commands
+        "news-latest": "Get the latest news items",
+        "news-sources": "List all configured news sources",
+        "news-status": "Show current news configuration and status",
+        "news-help": "Show help for news commands",
+        "news-set-channel": "Set channel for automatic news updates (Admin only)",
+        "news-start": "Start automatic news updates (Admin only)",
+        "news-stop": "Stop automatic news updates (Admin only)",
+        "news-add": "Add a news source (Admin only)",
+        "news-remove": "Remove a news source (Admin only)"
     },
     "about": {
         "features": "• 🎵 Multi-source Music (YouTube, Spotify, SoundCloud)\n"
+                   "• 📝 Anonymous Confession System\n"
+                   "• 📰 News & RSS Feed Integration\n"
                    "• 🔄 Advanced Queue Management\n"
                    "• 🎛️ High-quality Audio\n"
                    "• 🏗️ Clean Architecture",
@@ -136,6 +156,20 @@ MSG_HELP = {
             "• Loop mode (single/queue)\n"
             "• 24/7 mode\n"
             "• High-quality audio with volume control\n\n"
+            
+            "**📝 Anonymous Confessions**\n"
+            "• Submit anonymous confessions\n"
+            "• Reply to confessions anonymously\n"
+            "• Confession management with IDs\n"
+            "• Server-specific confession channels\n"
+            "• Cooldown and moderation features\n\n"
+            
+            "**📰 News System**\n"
+            "• RSS feed integration\n"
+            "• Automatic news updates\n"
+            "• Configurable news sources\n"
+            "• Server-specific news channels\n"
+            "• News posting controls\n\n"
             
             "**🤖 Bot**\n"
             "• Slash commands support\n"
@@ -184,6 +218,20 @@ MSG_HELP = {
             "`/join` - Join voice channel\n"
             "`/leave` - Leave voice channel\n"
             "`/sources` - Show music sources"
+        ),
+        "confession_commands": (
+            "`/confess [image]` - Submit anonymous confession\n"
+            "`/reply <id> [image]` - Reply to a confession\n"
+            "`/confession-setup` - Setup channel (Admin)\n"
+            "`/confession-settings` - View settings (Admin)\n"
+            "`/confession-stats` - View statistics"
+        ),
+        "news_commands": (
+            "`/news latest [count]` - Get latest news\n"
+            "`/news sources` - List news sources\n"
+            "`/news status` - Show configuration\n"
+            "`/news set-channel` - Set channel (Admin)\n"
+            "`/news start/stop` - Control auto-posting (Admin)"
         ),
         "general_commands": (
             "`/help` - Detailed help pages\n"
@@ -234,10 +282,23 @@ CMD_DESCRIPTIONS = {
     "commands": "Show compact command reference",
     "features": "Show bot features and capabilities",
     
+    # Confession commands
+    "confess": "Submit an anonymous confession (with optional image)",
+    "reply": "Reply to a confession anonymously (with optional image)",
+    "confession-setup": "Set up confession channel (Admin only)",
+    "confession-settings": "View confession settings (Admin only)",
+    "confession-stats": "View confession statistics",
+    
     # News commands (if enabled)
-    "news": "Get latest news",
-    "news_sources": "List news sources",
-    "news_status": "Show news configuration"
+    "news-latest": "Get the latest news items",
+    "news-sources": "List all configured news sources",
+    "news-status": "Show current news configuration and status",
+    "news-help": "Show help for news commands",
+    "news-set-channel": "Set channel for automatic news updates (Admin only)",
+    "news-start": "Start automatic news updates (Admin only)",
+    "news-stop": "Stop automatic news updates (Admin only)",
+    "news-add": "Add a news source (Admin only)",
+    "news-remove": "Remove a news source (Admin only)"
 }
 
 # ============================
@@ -377,5 +438,32 @@ MSG_NEWS = {
     "sources": {
         "title": "News Sources",
         "description": "List of configured news sources",
+    }
+}
+
+# ============================
+# CONFESSION MESSAGES
+# ============================
+
+MSG_CONFESSION = {
+    "confession_submitted": "✅ Your confession has been submitted anonymously! (ID: `{confession_id}`)",
+    "reply_submitted": "✅ Your reply has been posted anonymously!",
+    "confession_not_found": "❌ No confession found with ID `{confession_id}` in this server.",
+    "channel_not_set": "❌ Confession channel is not set up for this server. Please ask an admin to set it up.",
+    "content_too_long": "❌ Content too long! Maximum {max_length} characters allowed.",
+    "on_cooldown": "❌ You're on cooldown! Please wait {time} before submitting another confession.",
+    "channel_set": "✅ Anonymous confessions will now be posted to {channel}",
+    "no_content": "❌ Please provide some content for your confession.",
+    "no_confessions": "📊 No confessions found for this server.",
+    "image_too_large": "❌ Image too large! Please use an image smaller than 8MB.",
+    "invalid_image": "❌ Please attach a valid image file (PNG, JPG, GIF, etc.)",
+    "help": {
+        "title": "📝 Anonymous Confession System",
+        "description": "Submit and reply to anonymous confessions safely with optional image attachments",
+        "confess": "Submit an anonymous confession (with optional image)",
+        "reply": "Reply to a confession using its ID (with optional image)",
+        "setup": "Set up confession channel (Admin only)",
+        "settings": "View confession settings (Admin only)",
+        "stats": "View confession statistics"
     }
 }

@@ -30,6 +30,20 @@ class CommandsCog(commands.Cog):
             inline=False
         )
         
+        # Confession commands section
+        embed.add_field(
+            name="📝 Confession Commands", 
+            value=MSG_HELP["command_card"]["confession_commands"], 
+            inline=False
+        )
+        
+        # News commands section
+        embed.add_field(
+            name="📰 News Commands", 
+            value=MSG_HELP["command_card"]["news_commands"], 
+            inline=False
+        )
+        
         # General commands
         embed.add_field(
             name="🤖 General Commands", 
