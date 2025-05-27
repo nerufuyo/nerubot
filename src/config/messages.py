@@ -256,11 +256,14 @@ STATUS_MESSAGES = {
 # ============================
 
 LOG_MSG = {
+    # Bot lifecycle
     "bot_starting": "Starting {bot_name} v{version}...",
     "bot_ready": "Bot is ready! Logged in as {user}",
     "bot_disconnected": "Bot disconnected",
     "cog_loaded": "Loaded cog: {cog_name}",
     "cog_failed": "Failed to load cog {cog_name}: {error}",
+    
+    # Music core
     "music_added_queue": "Added to queue: {title} in guild {guild_id}",
     "music_now_playing": "Now playing: {title} in guild {guild_id} from {source}",
     "music_search_start": "Searching for: {query}",
@@ -268,10 +271,59 @@ LOG_MSG = {
     "music_search_timeout": "Search timeout for query: {query}",
     "music_conversion_success": "Successfully converted to playable: {title}",
     "music_conversion_failed": "Failed to convert to playable: {title}",
+    
+    # Voice channel
     "voice_joined": "Joined voice channel: {channel} in guild {guild_id}",
     "voice_left": "Left voice channel in guild {guild_id}",
     "idle_timer_started": "Started idle timer for guild {guild_id}",
     "idle_disconnect": "Auto-disconnected from guild {guild_id} due to inactivity",
+    
+    # Source management
+    "source_search_start": "Starting search for: {query}",
+    "source_determined": "Determined source: {source}",
+    "source_search_results": "Found {count} results for '{query}' from {source}",
+    "source_no_results": "No results found for '{query}' from {source}",
+    "source_search_error": "Search error for '{query}' from {source}: {error}",
+    "source_convert_none": "Cannot convert None result to playable",
+    "source_convert_start": "Converting {title} from {source} to playable",
+    "source_youtube_playable": "YouTube result {title} is already playable",
+    "source_spotify_converted": "Successfully converted Spotify track: {title}",
+    "source_spotify_failed": "Failed to convert Spotify track: {title}",
+    "source_using_original": "Using original result for: {title}",
+    "source_convert_error": "Error converting {title} to playable: {error}",
+    
+    # Spotify specific
+    "spotify_no_credentials": "Spotify credentials not found - Spotify search disabled",
+    "spotify_not_initialized": "Spotify adapter not initialized",
+    "spotify_search_timeout": "Spotify search timeout for: {query}",
+    "spotify_no_results": "No Spotify results for: {query}",
+    "spotify_results_found": "Found {count} Spotify results for: {query}",
+    "spotify_search_error": "Spotify search error for '{query}': {error}",
+    "spotify_track_timeout": "Spotify track timeout for ID: {track_id}",
+    "spotify_track_error": "Spotify track error for {url}: {error}",
+    "spotify_album_error": "Spotify album error: {error}",
+    "spotify_playlist_error": "Spotify playlist error: {error}",
+    "spotify_artist_error": "Spotify artist error: {error}",
+    "spotify_convert_none": "Cannot convert None Spotify result",
+    "spotify_converting": "Converting Spotify track to YouTube: {title}",
+    "spotify_youtube_trying": "Trying YouTube search with: {query}",
+    "spotify_youtube_found": "Found YouTube match: {title}",
+    "spotify_youtube_no_results": "No YouTube results for: {query}",
+    "spotify_youtube_failed": "YouTube search failed for '{query}': {error}",
+    "spotify_no_youtube": "No YouTube match found for Spotify track: {title}",
+    "spotify_conversion_success": "Successfully converted to playable: {title}",
+    "spotify_convert_error": "Error converting Spotify result: {error}",
+    
+    # SoundCloud specific
+    "soundcloud_using_ytdlp": "Using yt-dlp for SoundCloud search functionality",
+    "soundcloud_search_error": "SoundCloud search error: {error}",
+    "soundcloud_fallback_error": "SoundCloud fallback search error: {error}",
+    "soundcloud_convert_error": "SoundCloud conversion error: {error}",
+    
+    # YouTube specific
+    "youtube_search_error": "YouTube search error for '{query}': {error}",
+    
+    # General
     "command_used": "Command {command} used by {user} in guild {guild_id}",
     "error_occurred": "Error in {location}: {error}",
 }

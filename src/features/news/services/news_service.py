@@ -16,12 +16,18 @@ logger = get_logger(__name__)
 DEFAULT_NEWS_SOURCES = {
     "BBC World": "http://feeds.bbci.co.uk/news/world/rss.xml",
     "BBC Business": "http://feeds.bbci.co.uk/news/business/rss.xml",
-    "Reuters Top News": "https://feeds.reuters.com/reuters/topNews",
-    "Reuters Business": "https://feeds.reuters.com/reuters/businessNews",
-    "AP News": "https://feeds.apnews.com/rss/topstories",
+    "Reuters Top News": "https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml",
+    "Reuters World": "https://www.reuters.com/arc/outboundfeeds/rss/category/world/?outputType=xml",
+    "Reuters Business": "https://www.reuters.com/arc/outboundfeeds/rss/category/business/?outputType=xml",
     "CNN Top Stories": "http://rss.cnn.com/rss/edition.rss",
     "NPR News": "https://feeds.npr.org/1001/rss.xml",
     "Al Jazeera": "https://www.aljazeera.com/xml/rss/all.xml",
+    # Bloomberg
+    "Bloomberg Markets": "https://feeds.bloomberg.com/markets/news.rss",
+    # Indonesian Media
+    "Tempo": "https://rss.tempo.co/",
+    "Antara News": "https://www.antaranews.com/rss/terkini.xml",
+    "Republika": "https://www.republika.co.id/rss",
 }
 
 class NewsService:
@@ -110,7 +116,16 @@ class NewsService:
         """Fetch news from a single source."""
         logger.info(f"Fetching news from {source_name}...")
         
-        async with aiohttp.ClientSession() as session:
+        # Set headers to help with feed access
+        headers = {
+            'User-Agent': 'NeruBot/2.1.0 (Discord Bot; RSS Feed Reader)',
+            'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
+        
+        timeout = aiohttp.ClientTimeout(total=30)  # 30 second timeout
+        
+        async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
             try:
                 async with session.get(feed_url) as response:
                     if response.status != 200:
@@ -118,6 +133,9 @@ class NewsService:
                         return []
                     
                     content = await response.text()
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout connecting to {source_name} feed")
+                return []
             except Exception as e:
                 logger.error(f"Error connecting to {source_name} feed: {e}")
                 return []

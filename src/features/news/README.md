@@ -5,7 +5,7 @@ The News feature provides real-time news updates from trusted sources directly t
 ## Features
 
 - **Real-time Updates**: Automatically fetches news every 10 minutes from trusted sources
-- **Trusted Sources**: Uses RSS feeds from BBC, Reuters, AP News, CNN, NPR, and Al Jazeera
+- **Trusted Sources**: Uses RSS feeds from 12 international and Indonesian sources including BBC, Reuters, Bloomberg, and major Indonesian media
 - **Manual Control**: Users can start/stop automatic updates manually
 - **Latest News**: Get the latest news on demand
 - **Source Management**: Add or remove news sources (admin only)
@@ -36,14 +36,21 @@ The News feature provides real-time news updates from trusted sources directly t
 
 ## Default News Sources
 
+### International Sources
 - **BBC World**: World news from BBC
 - **BBC Business**: Business news from BBC
 - **Reuters Top News**: Top stories from Reuters
+- **Reuters World**: World news from Reuters
 - **Reuters Business**: Business news from Reuters
-- **AP News**: Top stories from Associated Press
 - **CNN Top Stories**: Top stories from CNN
 - **NPR News**: News from National Public Radio
 - **Al Jazeera**: International news from Al Jazeera
+- **Bloomberg Markets**: Financial and market news from Bloomberg
+
+### Indonesian Sources
+- **Tempo**: Leading Indonesian news from Tempo.co
+- **Antara News**: Official Indonesian news agency
+- **Republika**: Indonesian news from Republika
 
 ## Setup Instructions
 
