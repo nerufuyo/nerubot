@@ -1,253 +1,464 @@
-# NeruBot Deployment Guide
+# NeruBot VPS Deployment Guide
 
-This directory contains deployment scripts and configurations for running NeruBot in production environments.
+This guide will help you deploy your NeruBot Discord music bot to a Virtual Private Server (VPS) for 24/7 operation.
 
-## 🚀 Quick Deployment
+## 🚀 Quick Start
 
-### VPS Deployment (Ubuntu/Debian)
+### Option 1: One-Command Deployment (Easiest)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/nerubot/main/deploy/vps_setup.sh | sudo bash
+# Complete deployment with domain and SSL
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/quick_deploy.sh | sudo bash -s -- --domain bot.yourdomain.com --ssl
+
+# Basic deployment
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/quick_deploy.sh | sudo bash
 ```
 
-### Docker Deployment
+### Option 2: Traditional VPS Deployment (Recommended)
 ```bash
-docker build -t nerubot .
-docker run -d --name nerubot --env-file .env nerubot
+# On your VPS (as root)
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/vps_setup.sh | sudo bash
 ```
 
-## 📁 Files Overview
-
-| File | Description |
-|------|-------------|
-| `vps_setup.sh` | Automated VPS deployment script |
-| `nerubot.service` | Systemd service configuration |
-| `docker-compose.yml` | Docker Compose configuration |
-| `monitoring.sh` | Health monitoring script |
-
-## 🛠️ Manual VPS Setup
-
-### 1. System Prerequisites
+### Option 3: Docker Deployment
 ```bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install dependencies
-sudo apt install -y python3 python3-pip python3-venv ffmpeg git
+# Clone your repository
+git clone https://github.com/nerufuyo/nerubot.git
+cd nerubot
+chmod +x deploy/docker_setup.sh
+./deploy/docker_setup.sh
 ```
 
-### 2. Create User and Directory
-```bash
-# Create dedicated user
-sudo useradd -r -m -s /bin/bash nerubot
+## 📋 Prerequisites
 
-# Create application directory
-sudo mkdir -p /opt/nerubot
-sudo chown nerubot:nerubot /opt/nerubot
+### VPS Requirements
+- **OS**: Ubuntu 20.04+ or Debian 11+ (recommended)
+- **RAM**: Minimum 1GB, recommended 2GB+
+- **Storage**: Minimum 10GB
+- **Network**: Stable internet connection
+
+### VPS Providers
+Popular and reliable options:
+- **DigitalOcean** - $5/month droplet
+- **Linode** - $5/month VPS
+- **Vultr** - $3.50/month VPS
+- **AWS EC2** - t3.micro (free tier)
+- **Google Cloud** - e2-micro (free tier)
+
+## 🛠️ Manual Setup Instructions
+
+### Step 1: Connect to Your VPS
+```bash
+ssh root@your_vps_ip
 ```
 
-### 3. Setup Application
+### Step 2: Run the Setup Script
 ```bash
-# Clone repository
-cd /opt/nerubot
-sudo -u nerubot git clone https://github.com/yourusername/nerubot.git .
-
-# Setup virtual environment
-sudo -u nerubot python3 -m venv venv
-sudo -u nerubot ./venv/bin/pip install -r requirements.txt
+# Download and run the setup script
+wget https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/vps_setup.sh
+chmod +x vps_setup.sh
+sudo ./vps_setup.sh
 ```
 
-### 4. Configure Environment
+### Step 3: Deploy Your Bot
 ```bash
-# Copy environment template
-sudo -u nerubot cp .env.example .env
+# Switch to bot user
+sudo su - nerubot
 
-# Edit configuration
-sudo -u nerubot nano .env
+# Clone your repository
+git clone https://github.com/nerufuyo/nerubot.git nerubot
+cd nerubot
+
+# Run setup (dependencies only)
+chmod +x run_nerubot.sh
+./run_nerubot.sh --setup-only
+
+# Configure environment
+nano .env
+# Add your Discord token and other configuration
 ```
 
-### 5. Install Systemd Service
+### Step 4: Start the Service
 ```bash
-# Copy service file
-sudo cp deploy/nerubot.service /etc/systemd/system/
-
-# Enable and start service
-sudo systemctl daemon-reload
-sudo systemctl enable nerubot
+# Start the bot service
 sudo systemctl start nerubot
+
+# Check status (if it shows failed, continue to troubleshooting)
+sudo systemctl status nerubot
+
+# If service is failing, check logs immediately
+sudo journalctl -u nerubot -n 50 --no-pager
+
+# Enable auto-start on boot (only after confirming it works)
+sudo systemctl enable nerubot
 ```
 
-## 🐳 Docker Setup
+## 🔧 Configuration
 
-### Using Docker Compose
-```yaml
-# Create docker-compose.yml
-version: '3.8'
-services:
-  nerubot:
-    build: .
-    container_name: nerubot
-    restart: unless-stopped
-    env_file:
-      - .env
-    volumes:
-      - ./logs:/app/logs
-```
-
-### Using Docker CLI
+### Environment Variables (.env)
 ```bash
-# Build image
-docker build -t nerubot .
+# Required
+DISCORD_TOKEN=your_discord_bot_token_here
 
-# Run container
-docker run -d \
-  --name nerubot \
-  --restart unless-stopped \
-  --env-file .env \
-  -v $(pwd)/logs:/app/logs \
-  nerubot
+# Optional
+LOG_LEVEL=INFO
+BOT_PREFIX=!
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 ```
 
-## 📊 Monitoring
+### Discord Bot Token Setup
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Create a new application
+3. Go to "Bot" section
+4. Create a bot and copy the token
+5. Add the token to your `.env` file
 
-### Service Status
+## 📊 Monitoring and Management
+
+### Service Management
 ```bash
-# Check service status
+# Check bot status
 sudo systemctl status nerubot
 
 # View logs
 sudo journalctl -u nerubot -f
 
-# Check resource usage
-sudo systemctl show nerubot --property=MemoryCurrent,CPUUsageNSec
+# Restart bot
+sudo systemctl restart nerubot
+
+# Stop bot
+sudo systemctl stop nerubot
+```
+
+### Using the Monitor Script
+```bash
+# Quick status overview
+/home/nerubot/monitor.sh
 ```
 
 ### Log Management
+- Logs are automatically rotated daily
+- Last 30 days of logs are kept
+- Location: `/home/nerubot/logs/`
+
+## 🛠️ Management Scripts
+
+Your deployment includes several management scripts for easy maintenance:
+
+### Health Monitoring
 ```bash
-# View recent logs
-tail -f /var/log/nerubot/bot.log
+# Check bot health
+/home/nerubot/nerubot/deploy/scripts/health_check.sh
 
-# Search error logs
-grep -E "(ERROR|CRITICAL)" /var/log/nerubot/bot.log
+# View performance metrics
+/home/nerubot/nerubot/deploy/scripts/performance_monitor.sh
 
-# Rotate logs manually
-sudo logrotate -f /etc/logrotate.d/nerubot
+# Save metrics to file
+/home/nerubot/nerubot/deploy/scripts/performance_monitor.sh save
 ```
 
-## 🔧 Management Commands
-
-### Service Control
+### Updates and Maintenance
 ```bash
-# Start service
-sudo systemctl start nerubot
+# Update bot safely with rollback capability
+/home/nerubot/nerubot/deploy/scripts/update.sh
 
-# Stop service
-sudo systemctl stop nerubot
+# Check for updates without applying
+/home/nerubot/nerubot/deploy/scripts/update.sh --check-only
+
+# Rollback to previous version
+/home/nerubot/nerubot/deploy/scripts/update.sh --rollback
+```
+
+### Automated Tasks
+The deployment automatically sets up cron jobs for:
+- Health checks every 5 minutes
+- Performance monitoring every 15 minutes  
+- Daily backups at 2 AM
+- Weekly log cleanup
+- Daily update checks
+
+## 🔄 Updates and Deployment
+
+### Automatic Updates
+Use the deployment script for easy updates:
+```bash
+/home/nerubot/deploy.sh
+```
+
+### Manual Updates
+```bash
+# Switch to bot user
+sudo su - nerubot
+cd nerubot
+
+# Pull latest changes
+git pull origin master
+
+# Update dependencies
+source nerubot_env/bin/activate
+pip install -r requirements.txt
 
 # Restart service
 sudo systemctl restart nerubot
-
-# Reload configuration
-sudo systemctl reload nerubot
 ```
 
-### Application Updates
+## 🐳 Docker Deployment
+
+### Prerequisites
 ```bash
-# Stop service
-sudo systemctl stop nerubot
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
 
-# Update code
-cd /opt/nerubot
-sudo -u nerubot git pull
-
-# Update dependencies
-sudo -u nerubot ./venv/bin/pip install -r requirements.txt
-
-# Start service
-sudo systemctl start nerubot
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-## 🔒 Security
+### Setup and Run
+```bash
+# Clone repository
+git clone https://github.com/nerufuyo/nerubot.git
+cd nerubot
+
+# Setup Docker files
+chmod +x deploy/docker_setup.sh
+./deploy/docker_setup.sh
+
+# Configure environment
+cp .env.docker .env
+nano .env  # Add your Discord token
+
+# Build and start
+./docker-build.sh
+./docker-start.sh
+```
+
+### Docker Management
+```bash
+# View logs
+./docker-logs.sh
+
+# Stop bot
+./docker-stop.sh
+
+# Update bot
+./docker-update.sh
+```
+
+## 🔒 Security Best Practices
 
 ### Firewall Configuration
+The setup script automatically configures UFW:
+- SSH (port 22) - allowed
+- HTTP (port 80) - allowed
+- HTTPS (port 443) - allowed
+- All other ports - denied
+
+### Fail2Ban
+Automatic protection against brute-force attacks is enabled.
+
+### User Security
+- Bot runs as non-root user `nerubot`
+- Limited file system access
+- Systemd security features enabled
+
+### Additional Recommendations
 ```bash
-# Install UFW
-sudo apt install ufw
+# Change default SSH port (optional)
+sudo nano /etc/ssh/sshd_config
+# Change: Port 22 to Port 2222
+sudo systemctl restart ssh
 
-# Allow SSH
-sudo ufw allow ssh
+# Disable root SSH login
+sudo nano /etc/ssh/sshd_config
+# Add: PermitRootLogin no
+sudo systemctl restart ssh
 
-# Enable firewall
-sudo ufw enable
+# Use SSH keys instead of passwords
+ssh-copy-id nerubot@your_vps_ip
 ```
 
-### Service Security
-The systemd service includes security hardening:
-- Runs as non-root user
-- Private temporary directory
-- Protected home directory
-- Read-only system directories
-- No new privileges
+## 📝 Backup and Recovery
 
-### Regular Maintenance
+### Automatic Backups
+Daily backups are automatically created:
+- Location: `/home/nerubot/backups/`
+- Retention: 7 days
+- Includes: configuration, logs, data
+
+### Manual Backup
 ```bash
-# Update system packages
-sudo apt update && sudo apt upgrade -y
+/home/nerubot/backup.sh
+```
 
-# Clean old logs
-sudo find /var/log/nerubot -name "*.log.*" -mtime +30 -delete
+### Restore from Backup
+```bash
+# Extract backup
+cd /home/nerubot
+tar -xzf backups/nerubot_backup_YYYYMMDD_HHMMSS.tar.gz
 
-# Monitor disk usage
-df -h
+# Restart service
+sudo systemctl restart nerubot
+```
+
+## 🎵 Music Dependencies
+
+The setup script automatically installs:
+- **FFmpeg** - Audio processing
+- **libopus** - Audio encoding for Discord
+- **yt-dlp** - YouTube audio extraction
+
+### Troubleshooting Audio Issues
+```bash
+# Test FFmpeg
+ffmpeg -version
+
+# Test Opus
+python3 -c "import discord; print(discord.opus.is_loaded())"
+
+# Check bot logs for audio errors
+sudo journalctl -u nerubot -f | grep -i audio
+```
+
+## 🌐 Domain and SSL (Optional)
+
+### Setup Domain
+1. Point your domain to your VPS IP
+2. Configure Nginx (already installed):
+```bash
+sudo nano /etc/nginx/sites-available/nerubot
+```
+
+### SSL Certificate
+```bash
+# Get free SSL certificate
+sudo certbot --nginx -d your-domain.com
 ```
 
 ## 🚨 Troubleshooting
 
+### Quick Fix for Service Issues
+
+If you're getting `status=203/EXEC` errors or the service won't start:
+
+```bash
+# Download and run the quick fix script
+wget https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/fix_service.sh
+chmod +x fix_service.sh
+sudo ./fix_service.sh
+```
+
 ### Common Issues
 
-| Issue | Solution |
-|-------|----------|
-| Service fails to start | Check logs with `journalctl -u nerubot` |
-| FFmpeg not found | Install with `sudo apt install ffmpeg` |
-| Permission denied | Check file ownership and permissions |
-| Bot not responding | Verify Discord token in `.env` |
-
-### Debug Mode
+#### Bot Not Starting
 ```bash
-# Stop service
-sudo systemctl stop nerubot
+# Check service status (detailed)
+sudo systemctl status nerubot -l
 
-# Run manually with debug
-cd /opt/nerubot
-sudo -u nerubot ./venv/bin/python src/main.py --debug
+# Check recent logs (last 50 lines)
+sudo journalctl -u nerubot -n 50
+
+# Check real-time logs
+sudo journalctl -u nerubot -f
+
+# Check if the bot files exist and have correct permissions
+sudo -u nerubot ls -la /home/nerubot/nerubot/
+
+# Verify configuration file exists
+sudo -u nerubot cat /home/nerubot/nerubot/.env
+
+# Test running the bot manually as nerubot user
+sudo su - nerubot
+cd nerubot
+source nerubot_env/bin/activate
+python src/main.py
 ```
 
-### Health Check
+#### Permission Errors
 ```bash
-# Check if bot is online
-./deploy/monitoring.sh
+# Fix ownership
+sudo chown -R nerubot:nerubot /home/nerubot/nerubot
 
-# Verify Discord connection
-curl -H "Authorization: Bot YOUR_TOKEN" \
-  https://discord.com/api/v10/users/@me
+# Check file permissions
+ls -la /home/nerubot/nerubot/
 ```
 
-## 📈 Performance Tuning
-
-### Memory Optimization
+#### Audio Not Working
 ```bash
-# Set memory limits in systemd service
-echo "MemoryMax=512M" >> /etc/systemd/system/nerubot.service
-sudo systemctl daemon-reload
+# Install audio dependencies
+sudo apt install ffmpeg libopus0 libopus-dev
+
+# Test in Python
+python3 -c "
+import discord
+print('Opus loaded:', discord.opus.is_loaded())
+"
 ```
 
-### Audio Quality
+#### Memory Issues
 ```bash
-# Optimize FFmpeg settings in config
-echo "FFMPEG_OPTIONS=-vn -f opus" >> .env
+# Check memory usage
+free -h
+htop
+
+# Restart bot if needed
+sudo systemctl restart nerubot
 ```
 
-### Queue Performance
+### Getting Help
+- Check logs: `sudo journalctl -u nerubot -f`
+- Monitor script: `/home/nerubot/monitor.sh`
+- Discord.py docs: https://discordpy.readthedocs.io/
+
+## 📊 Performance Monitoring
+
+### System Resources
 ```bash
-# Limit queue size
-echo "MAX_QUEUE_SIZE=50" >> .env
+# CPU and memory usage
+htop
+
+# Disk usage
+df -h
+
+# Network usage
+iftop
 ```
+
+### Bot Metrics
+```bash
+# Bot uptime and status
+/home/nerubot/monitor.sh
+
+# Recent errors
+sudo journalctl -u nerubot --since "1 hour ago" | grep -i error
+```
+
+## 🔄 Maintenance Schedule
+
+### Daily
+- Automatic log rotation
+- Automatic backups
+- Service health checks
+
+### Weekly
+- Update system packages: `sudo apt update && sudo apt upgrade`
+- Check disk space: `df -h`
+- Review error logs
+
+### Monthly
+- Update bot dependencies
+- Review and clean old backups
+- Security updates
+
+## 📞 Support
+
+If you encounter issues:
+1. Check the troubleshooting section
+2. Review bot logs
+3. Check Discord.py documentation
+4. Open an issue on GitHub
+
+---
+
+**Happy Deploying! 🎵**

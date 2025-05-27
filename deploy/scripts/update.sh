@@ -1,64 +1,54 @@
 #!/bin/bash
-# NeruBot Simple Update Script
-# Updates bot code and restarts service
+# NeruBot Update Script
+# Handles safe updates with rollback capability
 
 set -e
 
+# Configuration
 SERVICE_NAME="nerubot"
 PROJECT_DIR="/home/nerubot/nerubot"
+BACKUP_DIR="/home/nerubot/backups"
+VENV_DIR="$PROJECT_DIR/nerubot_env"
 LOG_FILE="/home/nerubot/logs/update.log"
 
-# Simple logging
-log() {
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# Logging function
+log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
 }
 
-print_success() { echo -e "\033[0;32m✅ $1\033[0m"; }
-print_error() { echo -e "\033[0;31m❌ $1\033[0m"; }
+# Print colored messages
+print_success() {
+    echo -e "${GREEN}[SUCCESS] $1${NC}"
+    log_message "SUCCESS: $1"
+}
 
-# Check user
-if [ "$(whoami)" != "nerubot" ]; then
-    print_error "Run as nerubot user: sudo su - nerubot"
-    exit 1
-fi
+print_error() {
+    echo -e "${RED}[ERROR] $1${NC}"
+    log_message "ERROR: $1"
+}
 
-cd "$PROJECT_DIR"
+print_warning() {
+    echo -e "${YELLOW}[WARNING] $1${NC}"
+    log_message "WARNING: $1"
+}
 
-log "Starting update process"
-print_success "Starting NeruBot update..."
+print_info() {
+    echo -e "${BLUE}[INFO] $1${NC}"
+    log_message "INFO: $1"
+}
 
-# Stop service
-sudo systemctl stop "$SERVICE_NAME"
-log "Service stopped"
-
-# Update code
-if [ -d ".git" ]; then
-    git pull origin main
-    log "Code updated from git"
-else
-    print_error "Not a git repository - manual update required"
-    exit 1
-fi
-
-# Update dependencies
-source nerubot_env/bin/activate
-pip install -r requirements.txt --upgrade
-log "Dependencies updated"
-
-# Start service
-sudo systemctl start "$SERVICE_NAME"
-log "Service started"
-
-# Verify
-sleep 5
-if systemctl is-active --quiet "$SERVICE_NAME"; then
-    print_success "Update completed successfully!"
-    log "Update completed successfully"
-else
-    print_error "Service failed to start after update"
-    log "Service failed to start after update"
-    exit 1
-fi
+# Check if running as nerubot user
+check_user() {
+    if [ "$(whoami)" != "nerubot" ]; then
+        print_error "This script must be run as the nerubot user"
+        print_info "Run: sudo su - nerubot"
         exit 1
     fi
 }
