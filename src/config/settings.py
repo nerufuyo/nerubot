@@ -162,6 +162,17 @@ MUSIC_SOURCES = {
     }
 }
 
+# Spotify search strategies for YouTube fallback
+SPOTIFY_SEARCH_STRATEGIES = [
+    "{title} {artist} audio",
+    "{title} {artist} official",
+    "{title} {artist} music video",
+    "{title} {artist} lyrics",
+    "{title} {artist}",
+    "{artist} {title}",
+    "{title} audio"
+]
+
 # ============================
 # HELP SYSTEM SETTINGS
 # ============================

@@ -7,7 +7,7 @@ This file now imports from the new config system for backward compatibility.
 # Import from new config system
 from src.config.settings import (
     BOT_CONFIG, LIMITS, AUDIO_CONFIG, DISCORD_CONFIG, 
-    MUSIC_SOURCES, DEFAULTS, EMOJIS
+    MUSIC_SOURCES, DEFAULTS, EMOJIS, SPOTIFY_SEARCH_STRATEGIES
 )
 from src.config.messages import (
     MSG_SUCCESS, MSG_ERROR, MSG_INFO, MSG_HELP, 
