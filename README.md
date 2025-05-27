@@ -1,167 +1,104 @@
 # NeruBot - Discord Music Bot
 
-A clean, efficient Discord music bot with high-quality audio streaming and advanced queue management.
+A fast, efficient Discord music bot with high-quality audio streaming and smart queue management.
 
 ## ✨ Features
 
-### 🎵 Music Streaming
-- Play music from YouTube, Spotify, and SoundCloud
-- Advanced playback controls (pause, resume, skip, stop)
-- Loop modes: off, single song, or entire queue
-- 24/7 mode for continuous playback
-- Auto-disconnect after 5 minutes of inactivity
-- High-quality audio streaming with FFmpeg
-- Server-specific configuration
-
-### 🤖 Interactive Help System
-- Paginated help menu with category navigation
-- Compact command reference card
-- Detailed feature showcase
-- Interactive UI with buttons for navigation
+- 🎵 **Multi-Source Music** - YouTube, Spotify, SoundCloud support
+- 🔄 **Smart Queue Management** - Loop modes, shuffle, auto-queue
+- 🎛️ **Intuitive Controls** - Play, pause, skip, volume control
+- 📱 **Interactive Help** - Paginated menus with button navigation
+- 🌐 **24/7 Operation** - Continuous playback mode
+- ⚡ **High Performance** - Optimized for low latency and resource usage
 
 ## 🚀 Quick Start
 
-1. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Configure Environment**
-   ```bash
-   # Create .env file
-   DISCORD_TOKEN=your_discord_bot_token_here
-   ```
-
-3. **Run the Bot**
-   ```bash
-   python3 -m src.main
-   ```
-
-## 🌐 Production Deployment
-
-Deploy NeruBot to a VPS for 24/7 operation:
-
-### Quick VPS Deployment
+### Local Development
 ```bash
-# On your VPS (Ubuntu/Debian)
-curl -fsSL https://raw.githubusercontent.com/your-username/nerubot/main/deploy/vps_setup.sh | sudo bash
-```
-
-### Docker Deployment
-```bash
+# Clone and setup
 git clone https://github.com/your-username/nerubot.git
 cd nerubot
-./deploy/docker_setup.sh
-./docker-start.sh
+./run.sh  # Automated setup and run
 ```
 
-📖 **[Complete Deployment Guide](deploy/README.md)** - Detailed VPS setup, Docker, monitoring, and security
-
-## 📁 New Improved Architecture
-
-The bot now uses a feature-based modular architecture following DRY and KISS principles:
-
-```
-src/
-├── main.py                    # Entry point
-├── interfaces/               # Discord interface layer
-│   └── discord/
-│       ├── bot.py           # Main bot class
-│       └── help_cog.py      # Help system
-├── features/                # Feature modules
-│   ├── music/               # Music feature
-│   │   ├── cogs/           # Discord commands
-│   │   ├── services/       # Business logic
-│   │   └── models/         # Data models
-│   └── help/                # Help feature
-## 🎵 Music Commands
-
-### Basic Commands
-- `/play <song>` - Play a song from YouTube, Spotify, or SoundCloud
-- `/queue` - Show current queue
-- `/skip` - Skip current song
-- `/stop` - Stop music and clear queue
-- `/pause` / `/resume` - Control playback
-- `/join` / `/leave` - Voice channel management
-
-### Advanced Features
-- `/loop [mode]` - Set loop mode (off/single/queue)
-- `/247` - Toggle 24/7 mode (no auto-disconnect)
-- `/nowplaying` - Show currently playing song with details
-- `/sources` - Display available music sources
-
-## 🤖 Help Commands
-
-### General Help
-- `/help` - Interactive paginated help system with categories
-- `/commands` - Compact command reference card
-- `/about` - Bot information and statistics
-- `/features` - Show current and upcoming features
-
-## 📁 Project Structure
-
-```
-src/
-├── main.py                 # Entry point
-├── interfaces/            # Discord interface layer
-│   └── discord/
-│       ├── bot.py         # Main bot class
-│       └── help_cog.py    # Help system
-├── features/              # Feature modules
-│   └── music/             # Music feature
-│       ├── cogs/          # Discord commands
-│       ├── services/      # Business logic
-│       └── models/        # Data structures
-└── core/                  # Core utilities
-    └── utils/             # Shared utilities
-```
-
-## 🛠️ Development
-
-### Architecture Benefits
-
-- **🧩 Modular:** Each feature is independent
-- **🔧 Maintainable:** Clear separation of concerns
-- **📈 Scalable:** Easy to add/remove features
-- **🧪 Testable:** Services can be tested independently
-- **♻️ DRY:** Shared utilities prevent code duplication
-- **💋 KISS:** Simple, clean interfaces
-
-## 🔧 Configuration
-
-Environment variables in `.env`:
-
+### VPS Deployment
 ```bash
-# Required
-DISCORD_TOKEN=your_bot_token
+# One-command VPS setup (Ubuntu/Debian)
+curl -fsSL https://raw.githubusercontent.com/your-username/nerubot/main/deploy/setup.sh | sudo bash
+```
 
-# Optional - For Spotify Support
-SPOTIFY_CLIENT_ID=your_spotify_client_id
-SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+## 🎵 Commands
 
-# Optional
-COMMAND_PREFIX=!
+| Command | Description |
+|---------|-------------|
+| `/play <song>` | Play music from any supported source |
+| `/queue` | Show current music queue |
+| `/skip` | Skip to next song |
+| `/pause` / `/resume` | Control playbook |
+| `/loop [mode]` | Set loop mode (off/single/queue) |
+| `/247` | Toggle 24/7 continuous mode |
+| `/help` | Interactive help system |
+
+## 🛠️ Configuration
+
+Create `.env` file:
+```env
+DISCORD_TOKEN=your_bot_token_here
 LOG_LEVEL=INFO
+COMMAND_PREFIX=!
 ```
 
-## 📊 Testing
+Get your Discord bot token: [Discord Developer Portal](https://discord.com/developers/applications)
 
-Run unit tests for the music feature:
-```bash
-python3 -m unittest discover -s src/features/music/tests
+## 🔧 Management Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `./run.sh` | Setup and start the bot |
+| `./clean.sh` | Clean temporary files |
+| `deploy/setup.sh` | VPS environment setup |
+| `deploy/monitor.sh` | Health monitoring |
+| `deploy/status.sh` | Service status dashboard |
+
+## 📖 Documentation
+
+- **[Deployment Guide](deploy/README.md)** - VPS setup and configuration
+- **[Contributing](CONTRIBUTING.md)** - Development guidelines
+- **[Architecture](ARCHITECTURE.md)** - Technical overview
+- **[Changelog](CHANGELOG.md)** - Version history
+
+## 🏗️ Architecture
+
 ```
+src/
+├── main.py              # Bot entry point
+├── config/              # Settings and configuration
+├── features/            # Feature modules (music, help, news)
+│   ├── music/          # Music streaming functionality
+│   ├── help/           # Interactive help system
+│   └── news/           # News broadcasting
+└── interfaces/         # Discord interface layer
+```
+
+## 📊 Requirements
+
+- **Python 3.8+**
+- **FFmpeg** (for audio processing)
+- **Discord Bot Token**
+- **2GB+ RAM** (recommended for VPS)
 
 ## 🤝 Contributing
 
-1. Follow the feature-based architecture
-2. Use the shared utilities for common functionality
-3. Write tests for new services
-4. Follow Python best practices and type hints
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/new-feature`
+3. Commit changes: `git commit -am 'Add new feature'`
+4. Push to branch: `git push origin feature/new-feature`
+5. Submit pull request
 
-## 📝 License
+## 📄 License
 
-MIT License - see LICENSE file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**NeruBot v2.0** - Now with advanced features and improved architecture! 🚀
+**Need help?** Join our Discord server or open an issue on GitHub!
