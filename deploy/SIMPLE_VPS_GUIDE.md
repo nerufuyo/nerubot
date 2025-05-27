@@ -4,18 +4,38 @@ This is a simplified guide to deploy your NeruBot on a VPS without monitoring fe
 
 ## 🚀 Quick Deployment
 
-### One-Command Setup
+### Option 1: Upload Setup Script (Easy Method)
+Use the provided upload helper script:
+
 ```bash
-# On your VPS (as root)
-curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/simple_vps_setup.sh | sudo bash
+# On your local machine (from the nerubot directory)
+./deploy/upload_to_vps.sh your_vps_ip
+
+# Then follow the instructions displayed by the script
 ```
 
-### Manual Setup
+### Option 2: Manual Upload
+Upload the setup script manually:
+
 ```bash
-# Download the script
-wget https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/simple_vps_setup.sh
-chmod +x simple_vps_setup.sh
-sudo ./simple_vps_setup.sh
+# On your local machine, upload the setup script to your VPS
+scp deploy/simple_vps_setup.sh root@your_vps_ip:/tmp/
+
+# On your VPS (as root)
+chmod +x /tmp/simple_vps_setup.sh
+sudo /tmp/simple_vps_setup.sh
+```
+
+### Option 2: Manual Setup (if script not available)
+```bash
+# Follow the step-by-step guide below
+# This will manually set up everything the script would do
+```
+
+### Option 3: One-Command Setup (when repository is public)
+```bash
+# On your VPS (as root) - only works if repository is public
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/main/deploy/simple_vps_setup.sh | sudo bash
 ```
 
 ## 📋 VPS Requirements
@@ -34,18 +54,33 @@ ssh root@your_vps_ip
 
 ### 2. Run the Setup Script
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/master/deploy/simple_vps_setup.sh | sudo bash
+# If you uploaded the script manually
+chmod +x /tmp/simple_vps_setup.sh
+sudo /tmp/simple_vps_setup.sh
+
+# OR if repository is public
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/main/deploy/simple_vps_setup.sh | sudo bash
 ```
 
-### 3. Switch to Bot User and Clone Repository
+### 3. Upload and Setup Your Bot Code
 ```bash
 # Switch to bot user
 sudo su - nerubot
 
-# Clone your repository
+# If repository is public, clone it:
 git clone https://github.com/nerufuyo/nerubot.git nerubot
-cd nerubot
 
+# OR if repository is private/not available, upload your code manually:
+# On your local machine:
+# tar -czf nerubot.tar.gz --exclude=nerubot_env --exclude=.git --exclude=__pycache__ .
+# scp nerubot.tar.gz nerubot@your_vps_ip:/home/nerubot/
+# 
+# Then on VPS as nerubot user:
+# tar -xzf nerubot.tar.gz
+# mv nerubot-main nerubot  # adjust if needed
+# cd nerubot
+
+cd nerubot
 # Setup dependencies
 ./run_nerubot.sh --setup-only
 ```
@@ -106,6 +141,44 @@ sudo journalctl -u nerubot -n 50
 5. Add the token to your `.env` file
 
 ## ⚠️ Troubleshooting
+
+### Repository Not Found (404 Error)
+If you get a 404 error when trying to download the setup script:
+
+1. **Repository is Private**: The GitHub repository may not be public yet
+   - **Solution**: Upload files manually using `scp` as shown in Option 1 above
+
+2. **Wrong Branch Name**: The URL might reference `master` instead of `main`
+   - **Solution**: Try changing `master` to `main` in the URL
+
+3. **Repository Doesn't Exist**: The repository might not be created yet
+   - **Solution**: Use the manual upload method shown above
+
+### Manual File Upload Process
+```bash
+# On your local machine (from the nerubot directory):
+# 1. Upload the setup script
+scp deploy/simple_vps_setup.sh root@your_vps_ip:/tmp/
+
+# 2. Create a tarball of your project (excluding unnecessary files)
+tar -czf nerubot.tar.gz --exclude=nerubot_env --exclude=.git --exclude=__pycache__ --exclude=*.log .
+
+# 3. Upload the project files
+scp nerubot.tar.gz root@your_vps_ip:/tmp/
+
+# 4. On your VPS, run the setup
+ssh root@your_vps_ip
+chmod +x /tmp/simple_vps_setup.sh
+sudo /tmp/simple_vps_setup.sh
+
+# 5. Setup the bot files
+sudo su - nerubot
+cd /home/nerubot
+tar -xzf /tmp/nerubot.tar.gz
+mv nerubot-* nerubot  # adjust the directory name if needed
+cd nerubot
+./run_nerubot.sh --setup-only
+```
 
 ### Bot Won't Start
 ```bash
