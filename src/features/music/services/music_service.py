@@ -443,6 +443,8 @@ class MusicService:
                     
                     try:
                         await guild.voice_client.disconnect()
+                        # Update bot status when leaving voice
+                        await self._update_bot_presence_for_voice(joined_voice=False)
                     except Exception as e:
                         logger.error(f"Error disconnecting voice client for guild {guild_id}: {e}")
                     
@@ -476,6 +478,41 @@ class MusicService:
                 except:
                     pass  # Ignore if we can't send the message
     
+    async def _update_bot_presence_for_voice(self, joined_voice: bool = False):
+        """Update bot presence to show deafened status when in voice channels."""
+        try:
+            if joined_voice:
+                # Show deafened status for privacy
+                activity = discord.Activity(
+                    type=discord.ActivityType.listening,
+                    name="🔇 Deafened for privacy"
+                )
+                status = discord.Status.online
+            else:
+                # Check if bot is still in any voice channels
+                in_any_voice = any(guild.voice_client for guild in self.bot.guilds if guild.voice_client)
+                
+                if in_any_voice:
+                    # Still in voice channels, keep deafened status
+                    activity = discord.Activity(
+                        type=discord.ActivityType.listening,
+                        name="🔇 Deafened for privacy"
+                    )
+                else:
+                    # Not in any voice channels, return to default status
+                    from src.core.constants import BOT_DEFAULT_STATUS, BOT_DEFAULT_ACTIVITY_TYPE
+                    activity = discord.Activity(
+                        type=getattr(discord.ActivityType, BOT_DEFAULT_ACTIVITY_TYPE, discord.ActivityType.listening),
+                        name=BOT_DEFAULT_STATUS
+                    )
+                status = discord.Status.online
+            
+            await self.bot.change_presence(activity=activity, status=status)
+            logger.info(f"Updated bot presence: {activity.name}")
+            
+        except Exception as e:
+            logger.error(f"Failed to update bot presence: {e}")
+
     def set_disconnect_channel(self, guild_id: int, channel):
         """Set the channel to send disconnect messages to."""
         self.disconnect_messages[guild_id] = channel

@@ -39,6 +39,9 @@ class MusicCog(commands.Cog):
         if member == self.bot.user and before.channel and not after.channel:
             guild_id = before.channel.guild.id
             
+            # Update bot status when disconnected from voice
+            await self.music_service._update_bot_presence_for_voice(joined_voice=False)
+            
             # Send goodbye message
             if guild_id in self.music_service.disconnect_messages:
                 channel = self.music_service.disconnect_messages[guild_id]
@@ -75,9 +78,12 @@ class MusicCog(commands.Cog):
         else:
             await channel.connect()
         
+        # Update bot status to show deafened for privacy
+        await self.music_service._update_bot_presence_for_voice(joined_voice=True)
+        
         embed = discord.Embed(
             title="🔊 Joined Voice Channel",
-            description=f"Connected to **{channel.name}**",
+            description=f"Connected to **{channel.name}**\n🔇 **Bot is deafened for your privacy**",
             color=COLOR_SUCCESS
         )
         await interaction.response.send_message(embed=embed)
@@ -97,6 +103,9 @@ class MusicCog(commands.Cog):
         
         # Clear the queue
         await self.music_service.clear_queue(interaction.guild.id)
+        
+        # Update bot status when leaving voice
+        await self.music_service._update_bot_presence_for_voice(joined_voice=False)
         
         embed = discord.Embed(
             title="👋 Left Voice Channel",
@@ -121,6 +130,8 @@ class MusicCog(commands.Cog):
         if not interaction.guild.voice_client:
             try:
                 await interaction.user.voice.channel.connect()
+                # Update bot status to show deafened for privacy
+                await self.music_service._update_bot_presence_for_voice(joined_voice=True)
                 # Set disconnect message channel
                 self.music_service.set_disconnect_channel(interaction.guild.id, interaction.channel)
             except Exception as e:

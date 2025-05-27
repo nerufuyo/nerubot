@@ -6,6 +6,8 @@ from discord import ui, ButtonStyle, Interaction
 from discord.ext import commands
 from discord import app_commands
 from typing import List, Dict, Any, Optional
+from src.config.messages import MSG_HELP
+from src.config.settings import DISCORD_CONFIG
 
 
 class HelpView(ui.View):
@@ -60,35 +62,35 @@ class HelpCog(commands.Cog):
         # Define all commands by category
         self.command_categories = {
             "🎵 Music - Playback": [
-                ("/play <query>", "Play music from YouTube, Spotify, or SoundCloud"),
-                ("/pause", "Pause the current song"),
-                ("/resume", "Resume the current song"),
-                ("/stop", "Stop music and clear queue"),
-                ("/skip", "Skip the current song"),
+                ("/play <query>", MSG_HELP["commands"]["play"]),
+                ("/pause", MSG_HELP["commands"]["pause"]),
+                ("/resume", MSG_HELP["commands"]["resume"]),
+                ("/stop", MSG_HELP["commands"]["stop"]),
+                ("/skip", MSG_HELP["commands"]["skip"]),
             ],
             "🎵 Music - Voice": [
-                ("/join", "Join your voice channel"),
-                ("/leave", "Leave the voice channel"),
-                ("/volume <0-100>", "Set the volume level"),
+                ("/join", MSG_HELP["commands"]["join"]),
+                ("/leave", MSG_HELP["commands"]["leave"]),
+                ("/volume <0-100>", MSG_HELP["commands"]["volume"]),
             ],
             "🎵 Music - Queue": [
-                ("/queue", "Show the music queue"),
-                ("/nowplaying", "Show currently playing song"),
-                ("/clear", "Clear the music queue"),
-                ("/loop <off/song/queue>", "Toggle loop mode"),
-                ("/247", "Toggle 24/7 mode (stays in voice channel)"),
+                ("/queue", MSG_HELP["commands"]["queue"]),
+                ("/nowplaying", MSG_HELP["commands"]["nowplaying"]),
+                ("/clear", MSG_HELP["commands"]["clear"]),
+                ("/loop <off/song/queue>", MSG_HELP["commands"]["loop"]),
+                ("/247", MSG_HELP["commands"]["247"]),
             ],
             "🎵 Music - Info": [
-                ("/sources", "Show all available music sources"),
+                ("/sources", MSG_HELP["commands"]["sources"]),
             ],
             "🤖 General": [
-                ("/help", "Show this help menu"),
-                ("/about", "Show information about the bot"),
-                ("/features", "Display detailed bot features and capabilities"),
-                ("/commands", "Show compact command reference card"),
+                ("/help", MSG_HELP["commands"]["help"]),
+                ("/about", MSG_HELP["commands"]["about"]),
+                ("/features", MSG_HELP["commands"]["features"]),
+                ("/commands", MSG_HELP["commands"]["commands"]),
             ]
         }
-    
+
     @app_commands.command(name="help", description="Show help information with categories")
     async def help_command(self, interaction: discord.Interaction) -> None:
         """Show paginated help information organized by feature."""
@@ -111,12 +113,8 @@ class HelpCog(commands.Cog):
         # Main help page
         main_embed = discord.Embed(
             title="🤖 NeruBot Help Menu",
-            description="Browse through the help pages using the buttons below.\n\n"
-                       "**Available Categories:**\n"
-                       "• 🎵 Music Commands\n"
-                       "• 🤖 General Commands\n\n"
-                       "Use the arrows to navigate and ❌ to close.",
-            color=discord.Color.blue()
+            description=MSG_HELP["main_description"],
+            color=DISCORD_CONFIG["colors"]["info"]
         )
         
         main_embed.set_thumbnail(url="https://i.imgur.com/4M34hi2.png")
@@ -129,7 +127,7 @@ class HelpCog(commands.Cog):
             embed = discord.Embed(
                 title=f"{category} Commands",
                 description="Here are the commands available in this category:",
-                color=discord.Color.blue()
+                color=DISCORD_CONFIG["colors"]["info"]
             )
             
             commands_text = "\n".join([f"**{cmd}**: {desc}" for cmd, desc in commands])

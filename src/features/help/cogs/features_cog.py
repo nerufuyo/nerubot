@@ -5,6 +5,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from src.features.music.services.sources import MusicSource
+from src.config.messages import MSG_HELP
+from src.config.settings import DISCORD_CONFIG
 
 
 class FeaturesCog(commands.Cog):
@@ -13,59 +15,37 @@ class FeaturesCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
     
-    @app_commands.command(name="features", description="Show bot features and upcoming additions")
+    @app_commands.command(name="features", description=MSG_HELP["commands"]["features"])
     async def features_command(self, interaction: discord.Interaction) -> None:
         """Show features information."""
         embed = discord.Embed(
-            title="🚀 NeruBot Features",
-            description="Here's what NeruBot can do for your server!",
-            color=discord.Color.blue()
+            title=MSG_HELP["features"]["title"],
+            description=MSG_HELP["features"]["description"],
+            color=DISCORD_CONFIG["colors"]["info"]
         )
         
         # Current features
         embed.add_field(
             name="✅ Current Features",
-            value=(
-                "**🎵 Music**\n"
-                "• Multi-source playback (YouTube, Spotify, SoundCloud)\n"
-                "• Advanced queue management\n"
-                "• Loop mode (single/queue)\n"
-                "• 24/7 mode\n"
-                "• High-quality audio with volume control\n\n"
-                
-                "**🤖 Bot**\n"
-                "• Slash commands support\n"
-                "• Interactive help system\n"
-                "• Clean error handling\n"
-            ),
+            value=MSG_HELP["features"]["current"],
             inline=False
         )
         
         # Music sources
         embed.add_field(
             name="🎵 Music Sources",
-            value=(
-                "• ▶️ YouTube\n"
-                "• 💚 Spotify\n"
-                "• 🧡 SoundCloud\n"
-                "• 🔗 Direct audio links\n"
-            ),
-            inline=True
+            value=MSG_HELP["features"]["sources"],
+            inline=False
         )
         
         # Upcoming features
         embed.add_field(
             name="🚧 Coming Soon",
-            value=(
-                "• 📰 News feeds\n"
-                "• 🎮 Game statistics\n"
-                "• 📊 Server analytics\n"
-                "• 📅 Event scheduling\n"
-            ),
-            inline=True
+            value=MSG_HELP["features"]["upcoming"],
+            inline=False
         )
         
-        embed.set_footer(text="Use /help to see all available commands!")
+        embed.set_footer(text=MSG_HELP["features"]["footer"])
         
         await interaction.response.send_message(embed=embed)
 

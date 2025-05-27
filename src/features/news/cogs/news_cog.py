@@ -6,6 +6,8 @@ from typing import Optional, Dict
 
 from src.features.news.services.news_service import NewsService
 from src.core.utils.logging_utils import get_logger
+from src.config.messages import MSG_NEWS
+from src.config.settings import DISCORD_CONFIG
 
 logger = get_logger(__name__)
 
@@ -46,7 +48,7 @@ class NewsCog(commands.Cog):
                 if new_items:
                     latest_item = new_items[0]  # Get the most recent item
                     embed = discord.Embed.from_dict(latest_item.to_embed())
-                    await channel.send("📰 **Breaking News!**", embed=embed)
+                    await channel.send(MSG_NEWS["breaking_news"], embed=embed)
                     
             except Exception as e:
                 logger.error(f"Error posting news to channel {channel_id}: {e}")
@@ -55,7 +57,7 @@ class NewsCog(commands.Cog):
     async def news(self, ctx: commands.Context) -> None:
         """News commands group."""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Please specify a news subcommand. Use `/news help` for more information.")
+            await ctx.send(MSG_NEWS["specify_subcommand"])
     
     @news.command(name="latest", description="Get the latest news")
     @app_commands.describe(count="Number of news items to show")
@@ -65,7 +67,7 @@ class NewsCog(commands.Cog):
         latest_news = self.news_service.get_latest_news(count)
         
         if not latest_news:
-            await ctx.send("No news items available yet. Please try again later.")
+            await ctx.send(MSG_NEWS["no_items_available"])
             return
         
         for news_item in latest_news:
@@ -78,13 +80,13 @@ class NewsCog(commands.Cog):
         sources = self.news_service.get_news_sources()
         
         if not sources:
-            await ctx.send("No news sources configured.")
+            await ctx.send(MSG_NEWS["no_sources_configured"])
             return
         
         embed = discord.Embed(
-            title="News Sources",
-            description="List of configured news sources",
-            color=0x3498db
+            title=MSG_NEWS["sources"]["title"],
+            description=MSG_NEWS["sources"]["description"],
+            color=DISCORD_CONFIG["colors"]["info"]
         )
         
         for source_name, feed_url in sources.items():
@@ -103,9 +105,9 @@ class NewsCog(commands.Cog):
         success = self.news_service.add_news_source(name, feed_url)
         
         if success:
-            await ctx.send(f"Added news source: {name}")
+            await ctx.send(MSG_NEWS["source_added"].format(name=name))
         else:
-            await ctx.send(f"News source already exists: {name}")
+            await ctx.send(MSG_NEWS["source_already_exists"].format(name=name))
     
     @news.command(name="remove", description="Remove a news source")
     @app_commands.describe(name="Name of the news source to remove")
@@ -115,9 +117,9 @@ class NewsCog(commands.Cog):
         success = self.news_service.remove_news_source(name)
         
         if success:
-            await ctx.send(f"Removed news source: {name}")
+            await ctx.send(MSG_NEWS["source_removed"].format(name=name))
         else:
-            await ctx.send(f"News source not found: {name}")
+            await ctx.send(MSG_NEWS["source_not_found"].format(name=name))
     
     @news.command(name="set-channel", description="Set the channel for automatic news updates")
     @app_commands.describe(channel="The channel to send news updates to")
@@ -130,7 +132,7 @@ class NewsCog(commands.Cog):
         self.news_channels[guild_id] = channel.id
         self.auto_post_enabled[guild_id] = True  # Enable auto-posting when setting channel
         
-        await ctx.send(f"News updates will be sent to {channel.mention}. Auto-posting is now enabled.")
+        await ctx.send(MSG_NEWS["channel_set"].format(channel=channel.mention))
     
     @news.command(name="start", description="Start automatic news updates")
     @commands.has_permissions(administrator=True)
@@ -139,11 +141,11 @@ class NewsCog(commands.Cog):
         guild_id = ctx.guild.id
         
         if guild_id not in self.news_channels:
-            await ctx.send("Please set a news channel first using `/news set-channel`.")
+            await ctx.send(MSG_NEWS["set_channel_first"])
             return
         
         self.auto_post_enabled[guild_id] = True
-        await ctx.send("Automatic news updates have been started!")
+        await ctx.send(MSG_NEWS["auto_post_started"])
     
     @news.command(name="status", description="Show current news configuration")
     async def status(self, ctx: commands.Context) -> None:
@@ -151,33 +153,33 @@ class NewsCog(commands.Cog):
         guild_id = ctx.guild.id
         
         embed = discord.Embed(
-            title="News Configuration Status",
-            color=0x3498db
+            title=MSG_NEWS["status"]["title"],
+            color=DISCORD_CONFIG["colors"]["info"]
         )
         
         # Check if news channel is set
         if guild_id in self.news_channels:
             channel = self.bot.get_channel(self.news_channels[guild_id])
-            channel_name = channel.mention if channel else "Channel not found"
-            embed.add_field(name="News Channel", value=channel_name, inline=False)
+            channel_name = channel.mention if channel else MSG_NEWS["status"]["channel_not_found"]
+            embed.add_field(name=MSG_NEWS["status"]["channel"], value=channel_name, inline=False)
         else:
-            embed.add_field(name="News Channel", value="Not set", inline=False)
+            embed.add_field(name=MSG_NEWS["status"]["channel"], value=MSG_NEWS["status"]["not_set"], inline=False)
         
         # Check if auto-posting is enabled
-        auto_post_status = "Enabled" if self.auto_post_enabled.get(guild_id, False) else "Disabled"
-        embed.add_field(name="Auto-posting", value=auto_post_status, inline=False)
+        auto_post_status = MSG_NEWS["status"]["enabled"] if self.auto_post_enabled.get(guild_id, False) else MSG_NEWS["status"]["disabled"]
+        embed.add_field(name=MSG_NEWS["status"]["auto_posting"], value=auto_post_status, inline=False)
         
         # News service status
-        service_status = "Running" if self.news_service.running else "Stopped"
-        embed.add_field(name="News Service", value=service_status, inline=False)
+        service_status = MSG_NEWS["status"]["running"] if self.news_service.running else MSG_NEWS["status"]["stopped"]
+        embed.add_field(name=MSG_NEWS["status"]["service"], value=service_status, inline=False)
         
         # Number of news sources
         source_count = len(self.news_service.get_news_sources())
-        embed.add_field(name="News Sources", value=f"{source_count} configured", inline=False)
+        embed.add_field(name=MSG_NEWS["status"]["sources"], value=MSG_NEWS["status"]["sources_count"].format(count=source_count), inline=False)
         
         # Latest news count
         news_count = len(self.news_service.get_latest_news(100))
-        embed.add_field(name="Available News", value=f"{news_count} items", inline=False)
+        embed.add_field(name=MSG_NEWS["status"]["available"], value=MSG_NEWS["status"]["items_count"].format(count=news_count), inline=False)
         
         await ctx.send(embed=embed)
     
@@ -189,64 +191,64 @@ class NewsCog(commands.Cog):
         
         if guild_id in self.auto_post_enabled:
             self.auto_post_enabled[guild_id] = False
-            await ctx.send("Automatic news updates have been stopped.")
+            await ctx.send(MSG_NEWS["auto_post_stopped"])
         else:
-            await ctx.send("Automatic news updates are not currently enabled.")
+            await ctx.send(MSG_NEWS["auto_post_not_enabled"])
     
     @news.command(name="help", description="Show help for news commands")
     async def help_command(self, ctx: commands.Context) -> None:
         """Show help for news commands."""
         embed = discord.Embed(
-            title="News Commands",
-            description="Commands for the news feature",
-            color=0x3498db
+            title=MSG_NEWS["help"]["title"],
+            description=MSG_NEWS["help"]["description"],
+            color=DISCORD_CONFIG["colors"]["info"]
         )
         
         embed.add_field(
             name="/news latest [count]",
-            value="Get the latest news items. Optionally specify how many items to show (default: 5).",
+            value=MSG_NEWS["help"]["latest"],
             inline=False
         )
         
         embed.add_field(
             name="/news sources",
-            value="List all configured news sources.",
+            value=MSG_NEWS["help"]["sources"],
             inline=False
         )
         
         embed.add_field(
             name="/news status",
-            value="Show current news configuration and status.",
+            value=MSG_NEWS["help"]["status"],
             inline=False
         )
         
         embed.add_field(
             name="/news set-channel [channel]",
-            value="Set the channel for automatic news updates and enable auto-posting. If no channel is specified, the current channel is used.",
+            value=MSG_NEWS["help"]["set_channel"],
             inline=False
         )
         
         embed.add_field(
             name="/news start",
-            value="Start automatic news updates (admin only).",
+            value=MSG_NEWS["help"]["start"],
             inline=False
         )
         
         embed.add_field(
             name="/news stop",
-            value="Stop automatic news updates (admin only).",
+            value=MSG_NEWS["help"]["stop"],
             inline=False
         )
         
         embed.add_field(
             name="/news add <name> <feed_url>",
-            value="Add a news source (admin only).",
+            value=MSG_NEWS["help"]["add"],
             inline=False
         )
         
         embed.add_field(
             name="/news remove <name>",
-            value="Remove a news source (admin only).",
+            value=MSG_NEWS["help"]["remove"],
             inline=False
         )
         

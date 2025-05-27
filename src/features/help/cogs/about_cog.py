@@ -7,6 +7,8 @@ from discord import app_commands
 import platform
 import psutil
 import time
+from src.config.messages import MSG_HELP, BOT_INFO
+from src.config.settings import BOT_CONFIG, DISCORD_CONFIG
 
 
 class AboutCog(commands.Cog):
@@ -16,7 +18,7 @@ class AboutCog(commands.Cog):
         self.bot = bot
         self.start_time = time.time()
     
-    @app_commands.command(name="about", description="Show information about the bot")
+    @app_commands.command(name="about", description=MSG_HELP["commands"]["about"])
     async def about_command(self, interaction: discord.Interaction) -> None:
         """Show information about the bot."""
         # Calculate uptime
@@ -31,18 +33,15 @@ class AboutCog(commands.Cog):
         memory_usage = process.memory_info().rss / 1024 / 1024  # Convert to MB
         
         embed = discord.Embed(
-            title="🤖 About NeruBot",
-            description="A clean, efficient Discord music bot with high-quality audio streaming and advanced queue management.",
-            color=discord.Color.blue()
+            title=f"🤖 About {BOT_CONFIG['name']}",
+            description=BOT_CONFIG['description'],
+            color=DISCORD_CONFIG["colors"]["info"]
         )
         
         # Bot information
         embed.add_field(
             name="💡 Features",
-            value="• 🎵 Multi-source Music (YouTube, Spotify, SoundCloud)\n"
-                  "• 🔄 Advanced Queue Management\n"
-                  "• 🎛️ High-quality Audio\n"
-                  "• 🏗️ Clean Architecture",
+            value=MSG_HELP["about"]["features"],
             inline=False
         )
         
@@ -71,13 +70,11 @@ class AboutCog(commands.Cog):
         # Links and credits
         embed.add_field(
             name="🔗 Links",
-            value="• [GitHub](https://github.com/yourusername/nerubot)\n"
-                 "• [Invite Bot](https://discord.com/oauth2/authorize?client_id=yourid&permissions=8&scope=bot%20applications.commands)\n"
-                 "• [Support Server](https://discord.gg/yourserver)",
+            value=MSG_HELP["about"]["links"],
             inline=False
         )
         
-        embed.set_footer(text="Made with ❤️ | Use /help to see available commands")
+        embed.set_footer(text=MSG_HELP["about"]["footer"])
         
         await interaction.response.send_message(embed=embed)
 
