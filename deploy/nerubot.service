@@ -1,0 +1,29 @@
+[Unit]
+Description=NeruBot Discord Music Bot
+After=network.target
+
+[Service]
+Type=simple
+User=nerubot
+Group=nerubot
+WorkingDirectory=/opt/nerubot
+Environment=PATH=/opt/nerubot/venv/bin
+ExecStart=/opt/nerubot/venv/bin/python src/main.py
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=nerubot
+
+# Environment file
+EnvironmentFile=/opt/nerubot/.env
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/nerubot /var/log/nerubot
+
+[Install]
+WantedBy=multi-user.target
