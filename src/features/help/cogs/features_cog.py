@@ -24,6 +24,8 @@ class FeaturesCog(commands.Cog):
             color=DISCORD_CONFIG["colors"]["info"]
         )
         
+        embed.set_thumbnail(url="https://imgur.com/7IqhTL0.png")
+        
         # Current features
         embed.add_field(
             name="✅ Current Features",
@@ -45,7 +47,7 @@ class FeaturesCog(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text=MSG_HELP["features"]["footer"])
+        embed.set_footer(text=MSG_HELP["features"]["footer"], icon_url="https://imgur.com/7IqhTL0.png")
         
         await interaction.response.send_message(embed=embed)
 

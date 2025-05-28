@@ -139,8 +139,8 @@ class HelpCog(commands.Cog):
             color=DISCORD_CONFIG["colors"]["info"]
         )
         
-        main_embed.set_thumbnail(url="https://i.imgur.com/4M34hi2.png")
-        main_embed.set_footer(text=f"Page 1 of {len(self.command_categories) + 1} | Main Help Menu")
+        main_embed.set_thumbnail(url="https://imgur.com/7IqhTL0.png")
+        main_embed.set_footer(text=f"Page 1 of {len(self.command_categories) + 1} | Main Help Menu", icon_url="https://imgur.com/7IqhTL0.png")
         pages.append(main_embed)
         
         # Category pages
@@ -155,7 +155,8 @@ class HelpCog(commands.Cog):
             commands_text = "\n".join([f"**{cmd}**: {desc}" for cmd, desc in commands])
             embed.add_field(name="Commands", value=commands_text, inline=False)
             
-            embed.set_footer(text=f"Page {page_num} of {len(self.command_categories) + 1} | {category}")
+            embed.set_thumbnail(url="https://imgur.com/7IqhTL0.png")
+            embed.set_footer(text=f"Page {page_num} of {len(self.command_categories) + 1} | {category}", icon_url="https://imgur.com/7IqhTL0.png")
             pages.append(embed)
             page_num += 1
         

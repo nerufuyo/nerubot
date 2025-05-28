@@ -23,6 +23,8 @@ class CommandsCog(commands.Cog):
             color=DISCORD_CONFIG["colors"]["info"]
         )
         
+        embed.set_thumbnail(url="https://imgur.com/7IqhTL0.png")
+        
         # Music commands section
         embed.add_field(
             name="🎵 Music Commands", 
@@ -58,7 +60,7 @@ class CommandsCog(commands.Cog):
             inline=False
         )
         
-        embed.set_footer(text=MSG_HELP["command_card"]["footer"])
+        embed.set_footer(text=MSG_HELP["command_card"]["footer"], icon_url="https://imgur.com/7IqhTL0.png")
         
         await interaction.response.send_message(embed=embed)
 

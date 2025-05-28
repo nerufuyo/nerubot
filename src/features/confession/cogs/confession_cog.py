@@ -121,26 +121,55 @@ class ConfessionView(ui.View):
         super().__init__(timeout=None)  # Persistent view
         self.confession_id = confession_id
     
-    @ui.button(label="Reply Anonymously", style=discord.ButtonStyle.secondary, emoji="💬")
+    @ui.button(label="Reply Anonymously", style=discord.ButtonStyle.secondary, emoji="💬", custom_id="confession_reply")
     async def reply_button(self, interaction: discord.Interaction, button: ui.Button):
-        modal = ReplyModal(self.confession_id)
-        await interaction.response.send_modal(modal)
+        # Get confession ID from the embed
+        if interaction.message and interaction.message.embeds:
+            embed = interaction.message.embeds[0]
+            title = embed.title or ""
+            # Extract confession ID from title like "📝 Anonymous Confession #123"
+            import re
+            match = re.search(r'#(\d+)', title)
+            if match:
+                confession_id = int(match.group(1))
+                modal = ReplyModal(confession_id)
+                await interaction.response.send_modal(modal)
+            else:
+                await interaction.response.send_message("❌ Could not find confession ID.", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ Could not find confession information.", ephemeral=True)
     
-    @ui.button(label="View Replies", style=discord.ButtonStyle.primary, emoji="👁️")
+    @ui.button(label="View Replies", style=discord.ButtonStyle.primary, emoji="👁️", custom_id="confession_view_replies")
     async def view_replies_button(self, interaction: discord.Interaction, button: ui.Button):
         cog = interaction.client.get_cog("ConfessionCog")
         if not cog:
             await interaction.response.send_message("❌ Confession system is not available.", ephemeral=True)
             return
         
-        replies = cog.confession_service.get_confession_replies(self.confession_id)
+        # Get confession ID from the embed
+        if interaction.message and interaction.message.embeds:
+            embed = interaction.message.embeds[0]
+            title = embed.title or ""
+            # Extract confession ID from title like "📝 Anonymous Confession #123"
+            import re
+            match = re.search(r'#(\d+)', title)
+            if match:
+                confession_id = int(match.group(1))
+            else:
+                await interaction.response.send_message("❌ Could not find confession ID.", ephemeral=True)
+                return
+        else:
+            await interaction.response.send_message("❌ Could not find confession information.", ephemeral=True)
+            return
+        
+        replies = cog.confession_service.get_confession_replies(confession_id)
         
         if not replies:
             await interaction.response.send_message("📭 No replies yet for this confession.", ephemeral=True)
             return
         
         embed = discord.Embed(
-            title=f"💬 Replies to Confession #{self.confession_id}",
+            title=f"💬 Replies to Confession #{confession_id}",
             color=DISCORD_CONFIG["colors"]["info"],
             description=f"**{len(replies)}** anonymous replies:"
         )
@@ -164,9 +193,11 @@ class ConfessionCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.confession_service = ConfessionService()
-        
-        # Add persistent views
-        self.bot.add_view(ConfessionView(0))
+    
+    async def cog_load(self):
+        """Called when the cog is loaded. Add persistent views here."""
+        # Add persistent view for confession interactions
+        self.bot.add_view(ConfessionView(0))  # ID doesn't matter since we extract it dynamically
     
     @app_commands.command(name="confess", description="Submit an anonymous confession")
     @app_commands.describe(image="Optional image attachment to include with your confession")

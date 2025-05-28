@@ -11,9 +11,13 @@ BOT_CONFIG = {
     "name": "NeruBot",
     "version": "2.1.0",
     "prefix": "!",
-    "description": "A Discord music bot with clean architecture and high-quality audio",
-    "status": "🎵 Ready to play music!",
+    "description": "🎵 Your friendly Discord companion! I bring high-quality music streaming, anonymous confessions, news updates, and so much more to make your server awesome! ✨",
+    "status": "🎵 Ready to rock your server!",
     "activity_type": "listening",  # listening, playing, watching, streaming
+    "author": "nerufuyo",
+    "author_description": "A passionate developer who loves creating amazing Discord experiences",
+    "website": "https://github.com/nerufuyo/nerubot",
+    "support_server": "https://discord.gg/yourserver"
 }
 
 # ============================

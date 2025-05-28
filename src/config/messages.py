@@ -8,10 +8,11 @@ All user-facing strings, error messages, help text, and localizable content
 # ============================
 
 BOT_INFO = {
-    "ready": "🤖 {bot_name} is online and ready to serve!",
+    "ready": "🎵 {bot_name} is online and ready to make your server amazing!",
     "disconnected": "Bot disconnected from Discord",
     "shutdown": "Bot is shutting down...",
-    "welcome": "Thanks for adding {bot_name} to your server! Use `/help` to get started.",
+    "welcome": "🎉 Thank you for adding {bot_name} to your server! I'm your new friendly companion ready to bring music, fun, and community features to your Discord! Use `/help` to discover all my amazing capabilities, or try `/about` to learn more about me!",
+    "greeting": "👋 Hey there! I'm NeruBot, your friendly Discord companion created by **nerufuyo**! I'm here to make your server more entertaining with music, confessions, news, and much more!",
 }
 
 # ============================
@@ -82,13 +83,15 @@ MSG_INFO = {
 # ============================
 
 MSG_HELP = {
-    "main_description": "Browse through the help pages using the buttons below.\n\n"
-                       "**Available Categories:**\n"
-                       "• 🎵 Music Commands\n"
-                       "• 📝 Confession Commands\n"
-                       "• 📰 News Commands\n"
-                       "• 🤖 General Commands\n\n"
-                       "Use the arrows to navigate and ❌ to close.",
+    "main_description": "👋 **Welcome to NeruBot!** I'm your friendly Discord companion created by **nerufuyo**!\n\n"
+                       "I'm here to make your server amazing with music, community features, and much more! "
+                       "Browse through the help pages using the buttons below to discover everything I can do.\n\n"
+                       "**🎯 What I Offer:**\n"
+                       "• 🎵 **Premium Music** - High-quality streaming from multiple sources\n"
+                       "• 📝 **Anonymous Confessions** - Safe community sharing space\n"
+                       "• 📰 **News Updates** - Stay informed with RSS feeds\n"
+                       "• 🤖 **User-Friendly** - Easy commands with beautiful interfaces\n\n"
+                       "Use the navigation buttons below to explore! ⬇️",
     "music_description": "Complete music streaming solution with high-quality audio",
     "general_description": "General bot commands and information",
     "usage_tips": [
@@ -114,7 +117,7 @@ MSG_HELP = {
         "247": "Toggle 24/7 mode (stays in voice channel)",
         "sources": "Show all available music sources",
         "help": "Show this help menu",
-        "about": "Show information about the bot",
+        "about": "Learn about NeruBot and meet the creator nerufuyo!",
         "features": "Display detailed bot features and capabilities",
         "commands": "Show compact command reference card",
         # Confession commands
@@ -140,55 +143,69 @@ MSG_HELP = {
                    "• 📰 News & RSS Feed Integration\n"
                    "• 🔄 Advanced Queue Management\n"
                    "• 🎛️ High-quality Audio\n"
-                   "• 🏗️ Clean Architecture",
-        "links": "• [GitHub](https://github.com/yourusername/nerubot)\n"
-                "• [Invite Bot](https://discord.com/oauth2/authorize?client_id=yourid&permissions=8&scope=bot%20applications.commands)\n"
-                "• [Support Server](https://discord.gg/yourserver)",
-        "footer": "Made with ❤️ | Use /help to see available commands"
+                   "• 🏗️ Clean Architecture\n"
+                   "• ⚡ Lightning-fast Performance\n"
+                   "• 🛡️ Reliable & Stable\n"
+                   "• 🎨 Beautiful User Interface",
+        "links": "• [GitHub Repository](https://github.com/nerufuyo/nerubot)\n"
+                "• [Invite NeruBot](https://discord.com/oauth2/authorize?client_id=yourid&permissions=8&scope=bot%20applications.commands)\n"
+                "• [Support & Community](https://discord.gg/yourserver)\n"
+                "• [Documentation](https://github.com/nerufuyo/nerubot/wiki)",
+        "footer": "Crafted with ❤️ by nerufuyo | The friendliest bot in Discord!",
+        "description": "Your all-in-one Discord companion for music, community, and entertainment!",
+        "author_info": "Created by **nerufuyo** - A passionate developer dedicated to creating amazing Discord experiences!"
     },
     "features": {
-        "title": "🚀 NeruBot Features",
-        "description": "Here's what NeruBot can do for your server!",
+        "title": "🚀 NeruBot - Your Amazing Discord Companion!",
+        "description": "Discover all the incredible features that make NeruBot the perfect addition to your Discord server! Created with love by **nerufuyo**.",
         "current": (
-            "**🎵 Music**\n"
-            "• Multi-source playback (YouTube, Spotify, SoundCloud)\n"
-            "• Advanced queue management\n"
-            "• Loop mode (single/queue)\n"
-            "• 24/7 mode\n"
-            "• High-quality audio with volume control\n\n"
+            "**🎵 Premium Music Experience**\n"
+            "• Multi-platform streaming (YouTube, Spotify, SoundCloud)\n"
+            "• Crystal-clear audio quality with advanced processing\n"
+            "• Smart queue management with loop modes\n"
+            "• 24/7 mode - I'll stay in your voice channel!\n"
+            "• Volume control and audio filters\n"
+            "• Playlist support with bulk importing\n\n"
             
-            "**📝 Anonymous Confessions**\n"
-            "• Submit anonymous confessions\n"
-            "• Reply to confessions anonymously\n"
-            "• Confession management with IDs\n"
-            "• Server-specific confession channels\n"
-            "• Cooldown and moderation features\n\n"
+            "**📝 Anonymous Confession System**\n"
+            "• Safe and secure anonymous confessions\n"
+            "• Anonymous replies and interactions\n"
+            "• Smart moderation with ID tracking\n"
+            "• Customizable confession channels\n"
+            "• Cooldown protection and anti-spam\n"
+            "• Image support for confessions\n\n"
             
-            "**📰 News System**\n"
-            "• RSS feed integration\n"
-            "• Automatic news updates\n"
-            "• Configurable news sources\n"
-            "• Server-specific news channels\n"
-            "• News posting controls\n\n"
+            "**📰 Intelligent News System**\n"
+            "• Real-time RSS feed integration\n"
+            "• Automatic news updates to your channels\n"
+            "• Multiple configurable news sources\n"
+            "• Smart filtering and formatting\n"
+            "• Admin controls for news management\n"
+            "• Breaking news notifications\n\n"
             
-            "**🤖 Bot**\n"
-            "• Slash commands support\n"
-            "• Interactive help system\n"
-            "• Clean error handling\n"
+            "**🤖 User-Friendly Interface**\n"
+            "• Modern slash commands throughout\n"
+            "• Interactive help system with navigation\n"
+            "• Beautiful embeds and rich formatting\n"
+            "• Comprehensive error handling\n"
+            "• Intuitive command structure\n"
+            "• Fast and responsive performance\n"
         ),
         "sources": (
-            "• ▶️ YouTube\n"
-            "• 💚 Spotify\n"
-            "• 🧡 SoundCloud\n"
-            "• 🔗 Direct audio links\n"
+            "• ▶️ **YouTube** - Direct streaming with high quality\n"
+            "• 💚 **Spotify** - Your favorite playlists and tracks\n"
+            "• 🧡 **SoundCloud** - Discover independent artists\n"
+            "• 🔗 **Direct Links** - MP3, MP4, and more formats\n"
         ),
         "upcoming": (
-            "• 🎮 Game integration\n"
-            "• 📊 Analytics dashboard\n"
-            "• 🎨 Custom themes\n"
-            "• 🌐 Web interface\n"
+            "• 🎮 **Gaming Integration** - Discord activities and games\n"
+            "• 📊 **Analytics Dashboard** - Server insights and statistics\n"
+            "• 🎨 **Custom Themes** - Personalize your bot experience\n"
+            "• 🌐 **Web Interface** - Manage your bot from anywhere\n"
+            "• 🔔 **Smart Notifications** - Advanced alert system\n"
+            "• 🎪 **Event Management** - Server events and scheduling\n"
         ),
-        "footer": "More features coming soon! | Use /help for commands"
+        "footer": "More exciting features coming soon! | Created with ❤️ by nerufuyo"
     },
     "sources": {
         "youtube": "🎵 **YouTube**\nDirect playback from YouTube videos and playlists",
