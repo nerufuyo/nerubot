@@ -23,6 +23,7 @@ class Confession:
     guild_id: int
     channel_id: Optional[int] = None
     message_id: Optional[int] = None
+    thread_id: Optional[int] = None
     image_url: Optional[str] = None
     status: ConfessionStatus = ConfessionStatus.PENDING
     created_at: datetime = field(default_factory=datetime.now)

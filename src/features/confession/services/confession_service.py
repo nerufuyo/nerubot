@@ -60,6 +60,7 @@ class ConfessionService:
                             guild_id=conf_data['guild_id'],
                             channel_id=conf_data.get('channel_id'),
                             message_id=conf_data.get('message_id'),
+                            thread_id=conf_data.get('thread_id'),
                             image_url=conf_data.get('image_url'),
                             status=ConfessionStatus(conf_data.get('status', 'pending')),
                             created_at=datetime.fromisoformat(conf_data['created_at']),
@@ -154,6 +155,7 @@ class ConfessionService:
                     'guild_id': confession.guild_id,
                     'channel_id': confession.channel_id,
                     'message_id': confession.message_id,
+                    'thread_id': confession.thread_id,
                     'image_url': confession.image_url,
                     'status': confession.status.value,
                     'created_at': confession.created_at.isoformat(),
@@ -346,12 +348,13 @@ class ConfessionService:
         guild_confessions.sort(key=lambda x: x.created_at, reverse=True)
         return guild_confessions[:limit]
     
-    def mark_confession_posted(self, confession_id: int, channel_id: int, message_id: int):
+    def mark_confession_posted(self, confession_id: int, channel_id: int, message_id: int, thread_id: Optional[int] = None):
         """Mark a confession as posted."""
         if confession_id in self.confessions:
             confession = self.confessions[confession_id]
             confession.channel_id = channel_id
             confession.message_id = message_id
+            confession.thread_id = thread_id
             confession.posted_at = datetime.now()
             self._save_data()
     

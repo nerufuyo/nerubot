@@ -1,27 +1,5 @@
 {
-  "12345": {
-    "confession_channel_id": 111111,
-    "moderation_enabled": false,
-    "moderation_channel_id": null,
-    "anonymous_replies": true,
-    "max_confession_length": 2000,
-    "max_reply_length": 1000,
-    "cooldown_minutes": 5,
-    "next_confession_id": 1111573,
-    "next_reply_id": 0
-  },
-  "123456789": {
-    "confession_channel_id": 333333333,
-    "moderation_enabled": false,
-    "moderation_channel_id": null,
-    "anonymous_replies": true,
-    "max_confession_length": 2000,
-    "max_reply_length": 1000,
-    "cooldown_minutes": 1,
-    "next_confession_id": 1024003,
-    "next_reply_id": 1560617
-  },
-  "789": {
+  "456": {
     "confession_channel_id": 999,
     "moderation_enabled": false,
     "moderation_channel_id": null,
@@ -30,6 +8,6 @@
     "max_reply_length": 1000,
     "cooldown_minutes": 5,
     "next_confession_id": 1,
-    "next_reply_id": 2
+    "next_reply_id": 0
   }
 }
