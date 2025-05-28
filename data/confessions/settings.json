@@ -9,5 +9,16 @@
     "cooldown_minutes": 5,
     "next_confession_id": 1,
     "next_reply_id": 0
+  },
+  "123": {
+    "confession_channel_id": 456,
+    "moderation_enabled": false,
+    "moderation_channel_id": null,
+    "anonymous_replies": true,
+    "max_confession_length": 2000,
+    "max_reply_length": 1000,
+    "cooldown_minutes": 5,
+    "next_confession_id": 1,
+    "next_reply_id": 1
   }
 }

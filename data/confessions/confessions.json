@@ -15,16 +15,16 @@
   },
   "0": {
     "confession_id": 0,
-    "content": "Test",
-    "author_id": 123,
-    "guild_id": 456,
-    "channel_id": 999,
-    "message_id": 888,
-    "thread_id": 777,
+    "content": "Test confession",
+    "author_id": 789,
+    "guild_id": 123,
+    "channel_id": 456,
+    "message_id": 999,
+    "thread_id": 888,
     "image_url": null,
     "status": "approved",
-    "created_at": "2025-05-28T08:28:06.397559",
-    "posted_at": "2025-05-28T08:28:06.397749",
-    "reply_count": 0
+    "created_at": "2025-05-28T08:45:07.671346",
+    "posted_at": "2025-05-28T08:45:07.671737",
+    "reply_count": 1
   }
 }

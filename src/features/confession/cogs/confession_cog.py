@@ -109,7 +109,7 @@ class ReplyModal(ui.Modal):
         await cog.post_reply(reply, interaction.guild)
         
         await interaction.response.send_message(
-            f"✅ Your reply has been posted anonymously!",
+            f"✅ Your reply has been posted to the confession thread and a notification was sent!",
             ephemeral=True
         )
 
@@ -139,52 +139,10 @@ class ConfessionView(ui.View):
         else:
             await interaction.response.send_message("❌ Could not find confession information.", ephemeral=True)
 
-    @ui.button(label="View Replies", style=discord.ButtonStyle.primary, emoji="👁️", custom_id="confession_view_replies")
-    async def view_replies_button(self, interaction: discord.Interaction, button: ui.Button):
-        cog = interaction.client.get_cog("ConfessionCog")
-        if not cog:
-            await interaction.response.send_message("❌ Confession system is not available.", ephemeral=True)
-            return
-
-        # Get confession ID from the embed
-        if interaction.message and interaction.message.embeds:
-            embed = interaction.message.embeds[0]
-            title = embed.title or ""
-            # Extract confession ID from title like "📝 Anonymous Confession #123"
-            import re
-            match = re.search(r'#(\d+)', title)
-            if match:
-                confession_id = int(match.group(1))
-            else:
-                await interaction.response.send_message("❌ Could not find confession ID.", ephemeral=True)
-                return
-        else:
-            await interaction.response.send_message("❌ Could not find confession information.", ephemeral=True)
-            return
-
-        replies = cog.confession_service.get_confession_replies(confession_id)
-
-        if not replies:
-            await interaction.response.send_message("📭 No replies yet for this confession.", ephemeral=True)
-            return
-
-        embed = discord.Embed(
-            title=f"💬 Replies to Confession #{confession_id}",
-            color=DISCORD_CONFIG["colors"]["info"],
-            description=f"**{len(replies)}** anonymous replies:"
-        )
-
-        for i, reply in enumerate(replies[-5:], 1):  # Show last 5 replies
-            embed.add_field(
-                name=f"Reply #{i}",
-                value=reply.content[:200] + ("..." if len(reply.content) > 200 else ""),
-                inline=False
-            )
-
-        if len(replies) > 5:
-            embed.set_footer(text=f"Showing latest 5 of {len(replies)} replies")
-
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+    @ui.button(label="Create New Confession", style=discord.ButtonStyle.primary, emoji="📝", custom_id="confession_create_new")
+    async def create_new_confession_button(self, interaction: discord.Interaction, button: ui.Button):
+        modal = ConfessionModal()
+        await interaction.response.send_modal(modal)
 
 
 class SetupSuccessView(ui.View):
@@ -454,32 +412,37 @@ class ConfessionCog(commands.Cog):
             logger.error(f"No thread found for confession {reply.confession_id}")
             return
 
-        # Get the thread
+        # Get the thread and main channel
         thread = self.bot.get_channel(confession.thread_id)
+        main_channel = self.bot.get_channel(settings.confession_channel_id)
+        
         if not thread:
             logger.error(f"Thread {confession.thread_id} not found")
             return
-
-        # Create embed
-        embed = discord.Embed(
-            title=f"💬 Anonymous Reply",
-            description=reply.content,
-            color=DISCORD_CONFIG["colors"]["warning"],
-            timestamp=reply.created_at
-        )
-
-        if reply.image_url:
-            embed.set_image(url=reply.image_url)
-
-        embed.set_footer(text=f"Reply to Confession #{reply.confession_id}")
+            
+        if not main_channel:
+            logger.error(f"Main channel {settings.confession_channel_id} not found")
+            return
 
         try:
-            message = await thread.send(embed=embed)
+            # Post reply as a simple bot message in the thread (no embed)
+            reply_message = f"**Anonymous Reply:**\n{reply.content}"
+            
+            if reply.image_url:
+                # If there's an image, send it separately
+                await thread.send(reply_message)
+                message = await thread.send(reply.image_url)
+            else:
+                message = await thread.send(reply_message)
 
             # Mark as posted
             self.confession_service.mark_reply_posted(reply.reply_id, message.id)
 
-            logger.info(f"Posted reply {reply.reply_id} to confession {reply.confession_id} thread")
+            # Send notification in main channel (simple text)
+            notification_text = f"💬 Someone replied to Confession #{reply.confession_id}"
+            await main_channel.send(notification_text)
+
+            logger.info(f"Posted reply {reply.reply_id} to confession {reply.confession_id} thread and sent notification")
 
         except Exception as e:
             logger.error(f"Error posting reply: {e}")
