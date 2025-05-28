@@ -117,13 +117,28 @@ class ReplyModal(ui.Modal):
 class ConfessionView(ui.View):
     """View with buttons for confession interactions."""
     
-    def __init__(self, confession_id: int):
+    def __init__(self, confession_id: int = None):
         super().__init__(timeout=None)  # Persistent view
         self.confession_id = confession_id
 
     @ui.button(label="Reply Anonymously", style=discord.ButtonStyle.secondary, emoji="💬", custom_id="confession_reply")
     async def reply_button(self, interaction: discord.Interaction, button: ui.Button):
-        # Get confession ID from the embed
+        # Extract confession ID from the embed title
+        confession_id = self._extract_confession_id(interaction)
+        if confession_id is None:
+            await interaction.response.send_message("❌ Could not find confession ID.", ephemeral=True)
+            return
+            
+        modal = ReplyModal(confession_id)
+        await interaction.response.send_modal(modal)
+
+    @ui.button(label="Create New Confession", style=discord.ButtonStyle.primary, emoji="📝", custom_id="confession_create_new")
+    async def create_new_confession_button(self, interaction: discord.Interaction, button: ui.Button):
+        modal = ConfessionModal()
+        await interaction.response.send_modal(modal)
+    
+    def _extract_confession_id(self, interaction: discord.Interaction) -> Optional[int]:
+        """Extract confession ID from the message embed."""
         if interaction.message and interaction.message.embeds:
             embed = interaction.message.embeds[0]
             title = embed.title or ""
@@ -131,18 +146,8 @@ class ConfessionView(ui.View):
             import re
             match = re.search(r'#(\d+)', title)
             if match:
-                confession_id = int(match.group(1))
-                modal = ReplyModal(confession_id)
-                await interaction.response.send_modal(modal)
-            else:
-                await interaction.response.send_message("❌ Could not find confession ID.", ephemeral=True)
-        else:
-            await interaction.response.send_message("❌ Could not find confession information.", ephemeral=True)
-
-    @ui.button(label="Create New Confession", style=discord.ButtonStyle.primary, emoji="📝", custom_id="confession_create_new")
-    async def create_new_confession_button(self, interaction: discord.Interaction, button: ui.Button):
-        modal = ConfessionModal()
-        await interaction.response.send_modal(modal)
+                return int(match.group(1))
+        return None
 
 
 class SetupSuccessView(ui.View):
@@ -166,10 +171,13 @@ class ConfessionCog(commands.Cog):
     
     async def cog_load(self):
         """Called when the cog is loaded. Add persistent views here."""
-        # Add persistent view for confession interactions
-        self.bot.add_view(ConfessionView(0))  # ID doesn't matter since we extract it dynamically
         # Add persistent view for setup success button
         self.bot.add_view(SetupSuccessView())
+        
+        # Add one persistent view that can handle all confessions
+        self.bot.add_view(ConfessionView())
+        
+        logger.info("ConfessionCog loaded with persistent views")
     
     @app_commands.command(name="confess", description="Submit an anonymous confession")
     @app_commands.describe(image="Optional image attachment to include with your confession")
@@ -369,6 +377,9 @@ class ConfessionCog(commands.Cog):
 
         # Create view with buttons
         view = ConfessionView(confession.confession_id)
+        
+        # Register the view with the bot for persistence
+        self.bot.add_view(view)
 
         try:
             message = await channel.send(embed=embed, view=view)
@@ -400,6 +411,8 @@ class ConfessionCog(commands.Cog):
     
     async def post_reply(self, reply: ConfessionReply, guild: discord.Guild):
         """Post a reply to the confession thread."""
+        logger.info(f"Attempting to post reply {reply.reply_id} for confession {reply.confession_id}")
+        
         settings = self.confession_service.get_guild_settings(guild.id)
 
         if not settings.confession_channel_id:
@@ -408,16 +421,22 @@ class ConfessionCog(commands.Cog):
 
         # Get the confession to find the thread ID
         confession = self.confession_service.get_confession(reply.confession_id)
-        if not confession or not confession.thread_id:
-            logger.error(f"No thread found for confession {reply.confession_id}")
+        if not confession:
+            logger.error(f"Confession {reply.confession_id} not found")
             return
+            
+        if not confession.thread_id:
+            logger.error(f"No thread ID found for confession {reply.confession_id}")
+            return
+
+        logger.info(f"Found confession {confession.confession_id} with thread_id {confession.thread_id}")
 
         # Get the thread and main channel
         thread = self.bot.get_channel(confession.thread_id)
         main_channel = self.bot.get_channel(settings.confession_channel_id)
         
         if not thread:
-            logger.error(f"Thread {confession.thread_id} not found")
+            logger.error(f"Thread {confession.thread_id} not found or not accessible")
             return
             
         if not main_channel:
@@ -427,6 +446,8 @@ class ConfessionCog(commands.Cog):
         try:
             # Post reply as a simple bot message in the thread (no embed)
             reply_message = f"**Anonymous Reply:**\n{reply.content}"
+            
+            logger.info(f"Posting reply to thread {thread.name} (ID: {thread.id})")
             
             if reply.image_url:
                 # If there's an image, send it separately
@@ -442,10 +463,12 @@ class ConfessionCog(commands.Cog):
             notification_text = f"💬 Someone replied to Confession #{reply.confession_id}"
             await main_channel.send(notification_text)
 
-            logger.info(f"Posted reply {reply.reply_id} to confession {reply.confession_id} thread and sent notification")
+            logger.info(f"Successfully posted reply {reply.reply_id} to confession {reply.confession_id} thread and sent notification")
 
         except Exception as e:
             logger.error(f"Error posting reply: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
 
 
 async def setup(bot: commands.Bot) -> None:

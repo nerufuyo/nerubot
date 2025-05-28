@@ -11,5 +11,18 @@
       "created_at": "2025-05-28T08:45:07.672172",
       "posted_at": null
     }
+  ],
+  "1": [
+    {
+      "reply_id": 1,
+      "confession_id": 1,
+      "content": "Test reply",
+      "author_id": 111,
+      "guild_id": 123,
+      "message_id": null,
+      "image_url": null,
+      "created_at": "2025-05-28T09:06:55.687824",
+      "posted_at": null
+    }
   ]
 }

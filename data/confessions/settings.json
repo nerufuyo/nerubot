@@ -18,7 +18,7 @@
     "max_confession_length": 2000,
     "max_reply_length": 1000,
     "cooldown_minutes": 5,
-    "next_confession_id": 1,
-    "next_reply_id": 1
+    "next_confession_id": 2,
+    "next_reply_id": 2
   }
 }
