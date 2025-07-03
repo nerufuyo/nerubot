@@ -110,3 +110,141 @@ OPUS_PATHS = AUDIO_CONFIG["opus_paths"]
 # DEPRECATED - Use config.messages and config.settings instead
 # Remove this section when all code is updated
 # ============================
+
+# ============================
+# CONFESSION SYSTEM CONSTANTS
+# ============================
+
+# Confession System Configuration
+CONFESSION_CONSTANTS = {
+    "ids": {
+        "confession_prefix": "CONF",
+        "reply_prefix": "REPLY",
+        "id_format": "{prefix}-{id:03d}",
+        "reply_format": "{prefix}-{confession_id:03d}-{letter}",
+    },
+    "messages": {
+        "titles": {
+            "confession": "{emoji} Confession #{id:03d}",
+            "reply": "{emoji} {reply_id}",
+            "setup_intro": "{emoji} Anonymous Confession System",
+            "setup_success": "{emoji} Confession System Setup Complete",
+            "settings": "{emoji} Confession Settings",
+            "stats": "{emoji} Confession Statistics",
+        },
+        "descriptions": {
+            "intro": (
+                "Welcome to the anonymous confession system! This is a safe space where you can share your thoughts, "
+                "feelings, and experiences completely anonymously.\n\n"
+                "**How it works:**\n"
+                "• Click the **Create New Confession** button to share anonymously\n"
+                "• Each confession gets its own discussion thread\n"
+                "• Anyone can reply anonymously using the **Reply** button\n"
+                "• All messages are posted by the bot - complete anonymity guaranteed\n\n"
+                "**Features:**\n"
+                "• Unique ID system for easy reference (CONF-001, REPLY-001-A, etc.)\n"
+                "• Support for text and attachments\n"
+                "• Organized in threads for better discussions\n"
+                "• No way to trace messages back to authors\n\n"
+                "Click the button below to create your first confession!"
+            ),
+            "setup_success": "The confession system has been set up in {channel}",
+        },
+        "footers": {
+            "confession": "ID: {id} | {reply_emoji} Reply",
+            "reply": "ID: {id} | {reply_emoji} Reply",
+            "intro": "All confessions and replies are completely anonymous",
+        },
+        "buttons": {
+            "create_confession": "Create New Confession",
+            "reply": "Reply",
+        },
+        "modals": {
+            "confession_title": "Create New Confession",
+            "reply_title": "Reply to Confession {id}",
+            "fields": {
+                "message_label": "Message",
+                "message_placeholder": "Type your anonymous {type} here...",
+                "attachments_label": "Attachments",
+                "attachments_placeholder": "Paste image/video URLs here (optional, separate multiple with commas)",
+                "confession_id_label": "Confession ID",
+                "confession_id_placeholder": "Auto-populated",
+            }
+        },
+        "success": {
+            "confession_created": "Your confession has been submitted anonymously! (ID: `{id}`)",
+            "reply_created": "Your reply has been posted anonymously in the confession thread! (ID: `{id}`)",
+            "setup_complete": "Confession system setup complete",
+        },
+        "errors": {
+            "system_unavailable": "Confession system is not available.",
+            "empty_content": "Please provide some content for your {type}.",
+            "confession_not_found": "Confession not found",
+            "confession_not_in_guild": "Confession not found in this server",
+            "content_too_long": "{type} too long (max {max} characters)",
+            "no_confession_channel": "Confession channel is not set up for this server. Please ask an admin to set it up.",
+            "channel_not_found": "Confession channel not found",
+            "thread_not_found": "Thread not found",
+            "no_permission": "No permission to access/post in {location}",
+        }
+    },
+    "settings": {
+        "defaults": {
+            "max_confession_length": 2000,
+            "max_reply_length": 1000,
+            "thread_auto_archive_duration": 10080,  # 7 days
+        },
+        "limits": {
+            "max_attachments": 10,
+            "max_attachment_size": 8 * 1024 * 1024,  # 8MB
+        }
+    },
+    "thread": {
+        "name_format": "{emoji} Confession #{id:03d}",
+        "auto_archive_duration": 10080,  # 7 days in minutes
+    }
+}
+
+# File paths for confession system
+CONFESSION_FILE_PATHS = {
+    "data_dir": "data/confessions",
+    "confessions_file": "data/confessions/confessions.json",
+    "replies_file": "data/confessions/replies.json",
+    "settings_file": "data/confessions/settings.json",
+    "queue_file": "data/confessions/queue.json",
+}
+
+# Queue System Constants
+QUEUE_CONSTANTS = {
+    "max_queue_size": 1000,
+    "queue_cleanup_interval": 3600,  # 1 hour in seconds
+    "max_processing_time": 300,  # 5 minutes in seconds
+    "retry_attempts": 3,
+    "retry_delay": 5,  # seconds
+}
+
+# Logging Messages for Confession System
+CONFESSION_LOG_MESSAGES = {
+    "confession": {
+        "created": "Created confession {id} for user {user_id} in guild {guild_id}",
+        "posted": "Posted confession {id} to {guild_name} with thread {thread_id}",
+        "failed_create": "Failed to create confession: {error}",
+        "failed_post": "Error posting confession: {error}",
+        "queued": "Queued confession {id} for processing",
+    },
+    "reply": {
+        "created": "Created reply {id} for confession {confession_id} by user {user_id}",
+        "posted": "Successfully posted reply {id} to confession {confession_id} thread",
+        "failed_create": "Failed to create reply: {error}",
+        "failed_post": "Error posting reply: {error}",
+        "queued": "Queued reply {id} for processing",
+    },
+    "system": {
+        "cog_loaded": "ConfessionCog loaded with persistent views",
+        "guild_configured": "Guild {guild_id} configured for confessions",
+        "queue_processed": "Processed {count} items from confession queue",
+        "queue_error": "Error processing queue item: {error}",
+        "queue_started": "Confession queue processor started",
+        "queue_stopped": "Confession queue processor stopped",
+    }
+}

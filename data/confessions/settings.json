@@ -6,9 +6,8 @@
     "anonymous_replies": true,
     "max_confession_length": 2000,
     "max_reply_length": 1000,
-    "cooldown_minutes": 5,
     "next_confession_id": 1,
-    "next_reply_id": 0
+    "next_reply_letter": {}
   },
   "123": {
     "confession_channel_id": 456,
@@ -17,9 +16,8 @@
     "anonymous_replies": true,
     "max_confession_length": 2000,
     "max_reply_length": 1000,
-    "cooldown_minutes": 5,
-    "next_confession_id": 2,
-    "next_reply_id": 2
+    "next_confession_id": 1,
+    "next_reply_letter": {}
   },
   "123456789": {
     "confession_channel_id": 333333333,
@@ -28,8 +26,35 @@
     "anonymous_replies": true,
     "max_confession_length": 2000,
     "max_reply_length": 1000,
-    "cooldown_minutes": 1,
-    "next_confession_id": 2,
-    "next_reply_id": 2
+    "next_confession_id": 1,
+    "next_reply_letter": {
+      "1": "B",
+      "0": "D"
+    }
+  },
+  "12345": {
+    "confession_channel_id": 9999,
+    "moderation_enabled": false,
+    "moderation_channel_id": null,
+    "anonymous_replies": true,
+    "max_confession_length": 2000,
+    "max_reply_length": 1000,
+    "next_confession_id": 1,
+    "next_reply_letter": {
+      "1": "A",
+      "2": "A",
+      "3": "C",
+      "4": "B"
+    }
+  },
+  "1350497269597605898": {
+    "confession_channel_id": 1377081685455409255,
+    "moderation_enabled": false,
+    "moderation_channel_id": null,
+    "anonymous_replies": true,
+    "max_confession_length": 2000,
+    "max_reply_length": 1000,
+    "next_confession_id": 1,
+    "next_reply_letter": {}
   }
 }

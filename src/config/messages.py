@@ -172,7 +172,6 @@ MSG_HELP = {
             "• Anonymous replies and interactions\n"
             "• Smart moderation with ID tracking\n"
             "• Customizable confession channels\n"
-            "• Cooldown protection and anti-spam\n"
             "• Image support for confessions\n\n"
             
             "**📰 Intelligent News System**\n"
@@ -459,28 +458,7 @@ MSG_NEWS = {
 }
 
 # ============================
-# CONFESSION MESSAGES
+# CONFESSION MESSAGES - DEPRECATED
 # ============================
-
-MSG_CONFESSION = {
-    "confession_submitted": "✅ Your confession has been submitted anonymously! (ID: `{confession_id}`)",
-    "reply_submitted": "✅ Your reply has been posted anonymously!",
-    "confession_not_found": "❌ No confession found with ID `{confession_id}` in this server.",
-    "channel_not_set": "❌ Confession channel is not set up for this server. Please ask an admin to set it up.",
-    "content_too_long": "❌ Content too long! Maximum {max_length} characters allowed.",
-    "on_cooldown": "❌ You're on cooldown! Please wait {time} before submitting another confession.",
-    "channel_set": "✅ Anonymous confessions will now be posted to {channel}",
-    "no_content": "❌ Please provide some content for your confession.",
-    "no_confessions": "📊 No confessions found for this server.",
-    "image_too_large": "❌ Image too large! Please use an image smaller than 8MB.",
-    "invalid_image": "❌ Please attach a valid image file (PNG, JPG, GIF, etc.)",
-    "help": {
-        "title": "📝 Anonymous Confession System",
-        "description": "Submit and reply to anonymous confessions safely with optional image attachments",
-        "confess": "Submit an anonymous confession (with optional image)",
-        "reply": "Reply to a confession using its ID (with optional image)",
-        "setup": "Set up confession channel (Admin only)",
-        "settings": "View confession settings (Admin only)",
-        "stats": "View confession statistics"
-    }
-}
+# Confession messages have been moved to src/core/constants.py
+# Use CONFESSION_CONSTANTS instead

@@ -119,6 +119,8 @@ DISCORD_CONFIG = {
     
     # Embed colors (hex values)
     "colors": {
+        "primary": 0x0099FF,    # Primary Blue
+        "secondary": 0x6C757D,  # Gray
         "success": 0x00FF00,    # Green
         "error": 0xFF0000,      # Red  
         "warning": 0xFFA500,    # Orange
