@@ -130,13 +130,17 @@ class ChatbotService:
         if is_new_session:
             await self._send_welcome_message(channel, user)
         
-        # Get AI response
+        # Get AI response with timeout to prevent interaction expiry
         try:
             # Use automatic provider fallback (priority: Claude -> Gemini -> OpenAI)
-            ai_response = await ai_service.chat(
-                message=message,
-                max_tokens=300,
-                temperature=0.8  # Higher creativity for fun responses
+            # Add timeout to prevent Discord interaction expiry (Discord timeout is 3 seconds)
+            ai_response = await asyncio.wait_for(
+                ai_service.chat(
+                    message=message,
+                    max_tokens=300,
+                    temperature=0.8  # Higher creativity for fun responses
+                ),
+                timeout=10.0  # 10 second timeout for AI response
             )
             
             # Update user stats
@@ -158,6 +162,9 @@ class ChatbotService:
             
             return ai_response.content
             
+        except asyncio.TimeoutError:
+            logger.warning(f"AI response timeout for user {user_id}")
+            return "Hmm, my thinking process is taking a bit longer than usual. Try asking again? 🤖⏰"
         except Exception as e:
             logger.error(f"Error handling chat message from user {user_id}: {e}")
             return "Oops! My circuits got a bit tangled there. Try again? 🤖⚡"
