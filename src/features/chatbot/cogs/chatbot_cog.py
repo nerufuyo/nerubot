@@ -4,7 +4,7 @@ Chatbot Discord Cog - Main chat interface with AI integration
 import discord
 from discord.ext import commands
 from discord import app_commands
-from typing import Optional, List
+from typing import Optional
 from src.features.chatbot.services.chatbot_service import chatbot_service
 from src.services.ai_service import ai_service, AIProvider
 from src.core.utils.logging_utils import get_logger
@@ -96,6 +96,7 @@ class ChatbotCog(commands.Cog):
         try:
             await chatbot_service.stop_session_monitor()
             await ai_service.cleanup()
+            
             logger.info("Chatbot cog unloaded")
         except Exception as e:
             logger.error(f"Error unloading chatbot cog: {e}")
@@ -151,10 +152,10 @@ class ChatbotCog(commands.Cog):
                         mention_author=False
                     )
     
-    @app_commands.command(name="chat", description="Start a conversation with NeruBot!")
-    @app_commands.describe(message="What would you like to say?")
+    @app_commands.command(name="chat", description="Start a conversation with the AI")
+    @app_commands.describe(message="Your message to the AI")
     async def chat_command(self, interaction: discord.Interaction, message: str):
-        """Slash command to chat with the bot"""
+        """Direct chat command for AI interaction"""
         if not await safe_defer_interaction(interaction):
             return
         
@@ -167,216 +168,43 @@ class ChatbotCog(commands.Cog):
             )
             
             if response:
-                embed = discord.Embed(
-                    title="🤖 NeruBot Chat",
-                    description=response,
-                    color=0x00ff9f
-                )
-                embed.set_author(
-                    name=interaction.user.display_name,
-                    icon_url=interaction.user.avatar.url if interaction.user.avatar else None
-                )
-                await safe_followup_send(interaction, embed=embed)
+                await safe_followup_send(interaction, response)
             else:
-                await safe_followup_send(interaction, "Sorry, I couldn't process that right now. Try again?")
-        
+                await safe_followup_send(
+                    interaction,
+                    "I couldn't generate a response right now. Please try again!"
+                )
+                
         except Exception as e:
             logger.error(f"Error in chat command: {e}")
-            await safe_followup_send(interaction, "Oops! My AI brain had a hiccup. Try again! 🤖")
+            await safe_followup_send(
+                interaction,
+                "Something went wrong while processing your message. Please try again!"
+            )
     
-    @app_commands.command(name="ai-provider", description="Set your preferred AI provider")
-    @app_commands.describe(provider="Choose your preferred AI provider")
-    async def set_ai_provider(
-        self,
-        interaction: discord.Interaction,
-        provider: str
-    ):
-        """Set user's preferred AI provider"""
+    @app_commands.command(name="reset-chat", description="Reset your conversation history with the AI")
+    async def reset_chat(self, interaction: discord.Interaction):
+        """Reset the user's chat session"""
         if not await safe_defer_interaction(interaction, ephemeral=True):
             return
         
         try:
-            # Convert string to enum
-            ai_provider = AIProvider(provider.lower())
-            
-            # Check if provider is available
-            available_providers = ai_service.get_available_providers()
-            if ai_provider not in available_providers:
-                await interaction.followup.send(
-                    f"❌ {ai_provider.value.title()} is not currently available. "
-                    f"Available providers: {', '.join(p.value.title() for p in available_providers)}",
-                    ephemeral=True
-                )
-                return
-            
-            # Set user preference
-            await chatbot_service.set_user_preferred_provider(interaction.user.id, ai_provider)
-            
-            await interaction.followup.send(
-                f"✅ Set your preferred AI provider to **{ai_provider.value.title()}**! "
-                f"I'll use this for our future chats~ 🤖",
-                ephemeral=True
-            )
-        
-        except ValueError:
-            await interaction.followup.send(
-                "❌ Invalid AI provider. Please choose from the available options.",
-                ephemeral=True
-            )
-        except Exception as e:
-            logger.error(f"Error setting AI provider: {e}")
-            await interaction.followup.send(
-                "❌ Something went wrong while setting your AI provider. Try again later!",
-                ephemeral=True
-            )
-    
-    @set_ai_provider.autocomplete('provider')
-    async def ai_provider_autocomplete(
-        self,
-        interaction: discord.Interaction,
-        current: str,
-    ) -> List[app_commands.Choice[str]]:
-        """Autocomplete for AI provider selection"""
-        choices = []
-        available_providers = ai_service.get_available_providers()
-        
-        provider_names = {
-            AIProvider.OPENAI: "OpenAI GPT",
-            AIProvider.CLAUDE: "Anthropic Claude",
-            AIProvider.GEMINI: "Google Gemini"
-        }
-        
-        for provider in available_providers:
-            name = provider_names.get(provider, provider.value.title())
-            if current.lower() in name.lower():
-                choices.append(app_commands.Choice(name=name, value=provider.value))
-        
-        return choices[:25]  # Discord limit
-    
-    @app_commands.command(name="chat-stats", description="View your chat statistics")
-    async def chat_stats(self, interaction: discord.Interaction):
-        """Show user's chat statistics"""
-        if not await safe_defer_interaction(interaction, ephemeral=True):
-            return
-        
-        try:
-            stats = await chatbot_service.get_user_stats(interaction.user.id)
-            
-            if not stats or stats.total_messages == 0:
-                await interaction.followup.send(
-                    "📊 No chat statistics yet! Start chatting with me to see your stats~ 🤖",
-                    ephemeral=True
-                )
-                return
+            # Reset the user's session
+            await chatbot_service.reset_user_session(interaction.user.id)
             
             embed = discord.Embed(
-                title="📊 Your Chat Statistics",
-                color=0x00d4ff
-            )
-            embed.set_author(
-                name=interaction.user.display_name,
-                icon_url=interaction.user.avatar.url if interaction.user.avatar else None
+                title="🔄 Chat Session Reset",
+                description="Your conversation history has been cleared. Starting fresh!",
+                color=0x00ff00
             )
             
-            embed.add_field(
-                name="💬 Total Messages",
-                value=f"{stats.total_messages:,}",
-                inline=True
-            )
-            embed.add_field(
-                name="🤖 AI Responses",
-                value=f"{stats.total_ai_responses:,}",
-                inline=True
-            )
+            await safe_followup_send(interaction, embed=embed, ephemeral=True)
             
-            if stats.favorite_provider:
-                embed.add_field(
-                    name="🎯 Preferred AI",
-                    value=stats.favorite_provider.value.title(),
-                    inline=True
-                )
-            
-            if stats.first_chat:
-                import datetime
-                first_chat_date = datetime.datetime.fromtimestamp(stats.first_chat)
-                embed.add_field(
-                    name="📅 First Chat",
-                    value=first_chat_date.strftime("%Y-%m-%d"),
-                    inline=True
-                )
-            
-            # Current session info
-            session = chatbot_service.active_sessions.get(interaction.user.id)
-            if session and session.is_active:
-                embed.add_field(
-                    name="🟢 Current Session",
-                    value=f"{session.message_count} messages",
-                    inline=True
-                )
-            
-            embed.set_footer(text="Thanks for chatting with me! 💙")
-            
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        
         except Exception as e:
-            logger.error(f"Error showing chat stats: {e}")
-            await interaction.followup.send(
-                "❌ Couldn't retrieve your chat stats right now. Try again later!",
-                ephemeral=True
-            )
-    
-    @app_commands.command(name="ai-status", description="Check AI services status")
-    async def ai_status(self, interaction: discord.Interaction):
-        """Show AI services status"""
-        if not await safe_defer_interaction(interaction, ephemeral=True):
-            return
-        
-        try:
-            available_providers = ai_service.get_available_providers()
-            active_sessions = await chatbot_service.get_active_sessions_count()
-            
-            embed = discord.Embed(
-                title="🤖 AI Services Status",
-                color=0x00ff9f if available_providers else 0xff6b6b
-            )
-            
-            # Provider status
-            all_providers = [AIProvider.OPENAI, AIProvider.CLAUDE, AIProvider.GEMINI]
-            provider_names = {
-                AIProvider.OPENAI: "OpenAI GPT",
-                AIProvider.CLAUDE: "Anthropic Claude",
-                AIProvider.GEMINI: "Google Gemini"
-            }
-            
-            status_text = ""
-            for provider in all_providers:
-                name = provider_names[provider]
-                status = "🟢 Available" if provider in available_providers else "🔴 Unavailable"
-                status_text += f"{name}: {status}\n"
-            
-            embed.add_field(
-                name="🔌 Provider Status",
-                value=status_text,
-                inline=False
-            )
-            
-            embed.add_field(
-                name="📊 Active Sessions",
-                value=f"{active_sessions} users currently chatting",
-                inline=True
-            )
-            
-            if available_providers:
-                embed.set_footer(text="All systems operational! 🚀")
-            else:
-                embed.set_footer(text="No AI providers available - check API keys!")
-            
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        
-        except Exception as e:
-            logger.error(f"Error showing AI status: {e}")
-            await interaction.followup.send(
-                "❌ Couldn't check AI status right now. Try again later!",
+            logger.error(f"Error resetting chat session: {e}")
+            await safe_followup_send(
+                interaction,
+                "❌ Failed to reset your chat session. Please try again!",
                 ephemeral=True
             )
 

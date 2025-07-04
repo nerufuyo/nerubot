@@ -135,7 +135,16 @@ MSG_HELP = {
         "news-start": "Start automatic news updates (Admin only)",
         "news-stop": "Stop automatic news updates (Admin only)",
         "news-add": "Add a news source (Admin only)",
-        "news-remove": "Remove a news source (Admin only)"
+        "news-remove": "Remove a news source (Admin only)",
+        # Roast commands
+        "roast": "Get a personalized roast based on your Discord behavior",
+        "roast-stats": "View roasting statistics and behavior analysis",
+        "behavior-analysis": "Get detailed analysis of Discord behavior patterns",
+        # AI Chatbot commands
+        "chat": "Start a conversation with NeruBot's AI",
+        "ai-provider": "Set your preferred AI provider",
+        "chat-stats": "View your chat statistics",
+        "ai-status": "Check AI services status"
     },
     "about": {
         "features": "• 🎵 Multi-source Music (YouTube, Spotify, SoundCloud)\n"
@@ -249,6 +258,11 @@ MSG_HELP = {
             "`/news set-channel` - Set channel (Admin)\n"
             "`/news start/stop` - Control auto-posting (Admin)"
         ),
+        "roast_commands": (
+            "`/roast` - Get a personalized roast\n"
+            "`/roast-stats` - View roasting statistics\n"
+            "`/behavior-analysis` - Analyze Discord behavior patterns"
+        ),
         "general_commands": (
             "`/help` - Detailed help pages\n"
             "`/commands` - This command card\n"
@@ -314,7 +328,18 @@ CMD_DESCRIPTIONS = {
     "news-start": "Start automatic news updates (Admin only)",
     "news-stop": "Stop automatic news updates (Admin only)",
     "news-add": "Add a news source (Admin only)",
-    "news-remove": "Remove a news source (Admin only)"
+    "news-remove": "Remove a news source (Admin only)",
+    
+    # Roast commands
+    "roast": "Get a personalized roast based on your Discord behavior",
+    "roast-stats": "View roasting statistics and behavior analysis",
+    "behavior-analysis": "Get detailed analysis of Discord behavior patterns",
+    
+    # AI Chatbot commands
+    "chat": "Start a conversation with NeruBot's AI",
+    "ai-provider": "Set your preferred AI provider",
+    "chat-stats": "View your chat statistics",
+    "ai-status": "Check AI services status"
 }
 
 # ============================
