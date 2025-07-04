@@ -84,6 +84,14 @@ class NeruBot(commands.Bot):
         except Exception as e:
             logger.error(LOG_MSG["cog_failed"].format(cog_name="WhaleAlertsCog", error=e))
         
+        # Add chatbot cog
+        try:
+            from src.features.chatbot.cogs.chatbot_cog import ChatbotCog
+            await self.add_cog(ChatbotCog(self))
+            logger.info(LOG_MSG["cog_loaded"].format(cog_name="ChatbotCog"))
+        except Exception as e:
+            logger.error(LOG_MSG["cog_failed"].format(cog_name="ChatbotCog", error=e))
+        
         # Force sync all commands with Discord (globally)
         try:
             synced = await self.tree.sync()

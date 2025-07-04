@@ -42,9 +42,16 @@ NeruBot is a comprehensive Discord companion created by **[@nerufuyo](https://gi
 - **Multi-Platform Support** - YouTube, Spotify, SoundCloud
 - **Smart Queue Management** - Loop modes, shuffle, auto-queue
 - **High-Quality Audio** - Optimized streaming with minimal latency
-- **24/7 Mode** - Continuous playback in voice channels
+- **24/7 Mode** - Continuous playbook in voice channels
 - **Playlist Support** - Import and manage playlists seamlessly
 - **Interactive Controls** - Volume, skip, pause, resume
+
+### 🤖 **AI-Powered Chatbot**
+- **Multi-AI Support** - Claude, Gemini, OpenAI with smart fallback
+- **Unique Personality** - Fun, witty gaming/anime character
+- **Smart Sessions** - Welcome messages & 5-min timeout thanks
+- **Natural Conversations** - Responds to mentions and DMs
+- **Global AI Service** - Available for all bot features
 
 </td>
 <td width="50%">
