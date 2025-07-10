@@ -3,7 +3,7 @@ Data models for the confession feature
 """
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 from enum import Enum
 
 
@@ -24,7 +24,7 @@ class Confession:
     channel_id: Optional[int] = None
     message_id: Optional[int] = None
     thread_id: Optional[int] = None
-    image_url: Optional[str] = None
+    attachments: Optional[List[str]] = None  # List of attachment URLs
     status: ConfessionStatus = ConfessionStatus.PENDING
     created_at: datetime = field(default_factory=datetime.now)
     posted_at: Optional[datetime] = None
@@ -34,13 +34,13 @@ class Confession:
 @dataclass
 class ConfessionReply:
     """A reply to a confession."""
-    reply_id: int
+    reply_id: str  # Format: REPLY-{confession_id}-{letter}
     confession_id: int
     content: str
     author_id: int
     guild_id: int
     message_id: Optional[int] = None
-    image_url: Optional[str] = None
+    attachments: Optional[List[str]] = None  # List of attachment URLs
     created_at: datetime = field(default_factory=datetime.now)
     posted_at: Optional[datetime] = None
 
@@ -55,6 +55,5 @@ class GuildConfessionSettings:
     anonymous_replies: bool = True
     max_confession_length: int = 2000
     max_reply_length: int = 1000
-    cooldown_minutes: int = 5
-    next_confession_id: int = 0
-    next_reply_id: int = 0
+    next_confession_id: int = 1
+    next_reply_letter: Dict[int, str] = field(default_factory=dict)  # confession_id -> next letter (A, B, C, etc.)

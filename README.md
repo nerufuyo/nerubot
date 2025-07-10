@@ -42,9 +42,24 @@ NeruBot is a comprehensive Discord companion created by **[@nerufuyo](https://gi
 - **Multi-Platform Support** - YouTube, Spotify, SoundCloud
 - **Smart Queue Management** - Loop modes, shuffle, auto-queue
 - **High-Quality Audio** - Optimized streaming with minimal latency
-- **24/7 Mode** - Continuous playback in voice channels
+- **24/7 Mode** - Continuous playbook in voice channels
 - **Playlist Support** - Import and manage playlists seamlessly
 - **Interactive Controls** - Volume, skip, pause, resume
+
+### 🤖 **AI-Powered Chatbot**
+- **Multi-AI Support** - Claude, Gemini, OpenAI with smart fallback
+- **Unique Personality** - Fun, witty gaming/anime character
+- **Smart Sessions** - Welcome messages & 5-min timeout thanks
+- **Natural Conversations** - Responds to mentions and DMs
+- **Global AI Service** - Available for all bot features
+
+### 🔥 **User Roasting System**
+- **Behavior Analysis** - AI-powered analysis of user Discord habits
+- **Personalized Roasts** - Hilarious, custom roasts based on activity patterns
+- **Activity Tracking** - Monitors messages, voice time, commands, and more
+- **Smart Categories** - 8 different roast types (night owl, spammer, lurker, etc.)
+- **Safety Systems** - Cooldowns and friendly community-appropriate content
+- **Rich Statistics** - Detailed behavior insights and roasting analytics
 
 </td>
 <td width="50%">
@@ -144,7 +159,20 @@ curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/main/deploy/setup.
 | `/confession-setup <channel>` | Set confession channel (Admin) |
 | `/confession-stats` | View confession statistics |
 
-### 📰 News & Crypto Commands
+### � Roast Commands
+| Command | Description |
+|---------|-------------|
+| `/roast [target] [custom]` | Generate personalized roast based on user behavior |
+| `/roast-stats [user]` | View roasting statistics and insights |
+| `/behavior-analysis [user]` | Detailed Discord behavior analysis |
+
+### 🤖 Chatbot Commands
+| Command | Description |
+|---------|-------------|
+| `/chat <message>` | Start a conversation with the AI |
+| `/reset-chat` | Reset your conversation history |
+
+### �📰 News & Crypto Commands
 | Command | Description |
 |---------|-------------|
 | `/news latest [count]` | Get latest news updates |

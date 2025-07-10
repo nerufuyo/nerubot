@@ -1,253 +1,206 @@
-# 📝 Anonymous Confession System
+# Anonymous Confession System
 
-A complete anonymous confession system for Discord servers that allows users to submit confessions and reply to them anonymously.
+## Overview
 
-## 🌟 Features
+The Anonymous Confession System allows users to share their thoughts, feelings, and experiences completely anonymously in your Discord server. The system is designed to maintain complete anonymity while providing an organized and interactive environment for confessions and replies.
 
-### Core Functionality
-- **Anonymous Submissions** - Users can submit confessions completely anonymously
-- **Image Support** - Attach images to confessions and replies
-- **Anonymous Replies** - Reply to any confession using its ID, also anonymously
-- **Unique IDs** - Each confession gets a unique 8-character ID for easy reference
-- **Interactive UI** - Modern Discord modals and buttons for seamless interaction
+## Features
 
-### Privacy & Security
-- **Complete Anonymity** - Bot never reveals who submitted what
-- **Server Isolation** - Confessions are server-specific
-- **No DM Tracking** - All interactions happen through Discord's UI
-- **Secure Storage** - Data stored locally with no external services
+### 🔒 Complete Anonymity
+- All messages are posted by the bot, not the user
+- No usernames, avatars, or user IDs are visible
+- No way to trace messages back to original authors
+- Consistent anonymous formatting throughout
 
-### Moderation & Management
-- **Cooldown System** - Prevents spam with configurable cooldowns
-- **Channel Setup** - Admins can designate specific channels for confessions
-- **Statistics** - View confession and reply statistics
-- **Content Limits** - Configurable length limits for confessions and replies
+### 🆔 Unique ID System
+- **Confessions**: Sequential numbering (CONF-001, CONF-002, etc.)
+- **Replies**: Parent ID + letter suffix (REPLY-001-A, REPLY-001-B, etc.)
+- Easy reference system for users to reply to specific messages
 
-## 🚀 Quick Start
+### 📝 Modal-Based Interface
+- **New Confession Modal**: 2 fields (message, attachments)
+- **Reply Modal**: 3 fields (message, confession_id, attachments)
+- Clean, intuitive user interface
 
-### For Server Administrators
+### 🧵 Thread Organization
+- Each confession automatically creates a thread
+- All replies are posted in the thread for better organization
+- Threads auto-archive after 7 days
 
-1. **Set up confession channel:**
-   ```
-   /confession-setup #confessions
-   ```
+### 📎 Attachment Support
+- Support for images, GIFs, and videos
+- Multiple attachments per confession/reply
+- URL-based attachment system
 
-2. **View current settings:**
-   ```
-   /confession-settings
-   ```
+## Setup
 
-3. **Check statistics:**
-   ```
-   /confession-stats
-   ```
+### 1. Channel Setup
+Use the `/confession-setup` command to set up the confession system:
 
-### For Users
+```
+/confession-setup channel:#confessions
+```
 
-1. **Submit a confession:**
-   ```
-   /confess [image: optional_image.png]
-   ```
-   This opens a modal where you can type your anonymous confession. Images are optional.
+This will:
+- Set the designated channel for confessions
+- Send an introduction message explaining the system
+- Add a persistent "Create New Confession" button
 
-2. **Reply to a confession:**
-   ```
-   /reply abc12345 [image: optional_image.png]
-   ```
-   Replace `abc12345` with the confession ID you want to reply to. Images are optional.
+### 2. Introduction Message
+The bot will post an introduction message in the channel explaining:
+- How the system works
+- Features available
+- How to create confessions and replies
+- Anonymity guarantees
 
-3. **View replies (via buttons):**
-   Click the "View Replies" button on any confession to see anonymous responses.
+## Usage
 
-## 📋 Commands Reference
+### Creating Confessions
 
-### User Commands
+Users can create confessions by:
+1. Clicking the "Create New Confession" button
+2. Filling out the modal with:
+   - **Message**: Their confession content (required)
+   - **Attachments**: URLs for images/videos (optional)
 
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `/confess [image]` | Submit anonymous confession | `/confess [image: optional_image.png]` |
-| `/reply [image]` | Reply to confession by ID | `/reply <confession_id> [image: optional_image.png]` |
+### Replying to Confessions
 
-### Admin Commands
+Users can reply to confessions by:
+1. Clicking the "Reply" button on any confession
+2. Filling out the modal with:
+   - **Message**: Their reply content (required)
+   - **Confession ID**: Auto-populated (read-only)
+   - **Attachments**: URLs for images/videos (optional)
 
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `/confession-setup` | Set confession channel | `/confession-setup #channel` |
-| `/confession-settings` | View server settings | `/confession-settings` |
-| `/confession-stats` | View statistics | `/confession-stats` |
+### ID System
 
-## 🎯 How It Works
+- **Confessions**: `CONF-001`, `CONF-002`, etc.
+- **Replies**: `REPLY-001-A`, `REPLY-001-B`, etc.
+- IDs are displayed in message footers for easy reference
 
-### Confession Flow
-1. User runs `/confess` command
-2. Discord modal opens for text input
-3. Bot posts confession anonymously to designated channel
-4. Confession gets unique ID (e.g., `abc12345`)
-5. Other users can interact via buttons or commands
+## Message Format
 
-### Reply Flow
-1. User runs `/reply abc12345` (or clicks Reply button)
-2. Discord modal opens for reply text
-3. Bot posts reply anonymously, referencing original confession
-4. Reply count updates on original confession
+### Confession Format
+```
+📝 Confession #001
+[User's confession content]
+[Attachments if any]
+ID: CONF-001 | 🔄 Reply
+```
 
-### Interactive Elements
-- **Reply Button** - Opens reply modal instantly
-- **View Replies Button** - Shows recent replies in ephemeral message
-- **Persistent Views** - Buttons work even after bot restarts
+### Reply Format
+```
+↪️ Reply to #001
+[User's reply content]
+[Attachments if any]
+ID: REPLY-001-A | 🔄 Reply
+```
 
-## ⚙️ Configuration
+## Admin Commands
+
+### `/confession-setup`
+- **Description**: Set up confession channel
+- **Permission**: Administrator
+- **Usage**: `/confession-setup channel:#confessions`
+
+### `/confession-settings`
+- **Description**: View current confession settings
+- **Permission**: Administrator
+- **Shows**: Channel, moderation status, limits, cooldowns, next IDs
+
+### `/confession-stats`
+- **Description**: View confession statistics
+- **Permission**: Public
+- **Shows**: Total confessions, replies, averages, latest confession
+
+## Configuration
 
 ### Guild Settings
+- **Confession Channel**: Where confessions are posted
+- **Moderation**: Enable/disable moderation (currently disabled)
+- **Anonymous Replies**: Always enabled
+- **Max Confession Length**: 2000 characters (default)
+- **Max Reply Length**: 1000 characters (default)
+- **Cooldown**: 5 minutes between confessions/replies (default)
 
-Each server can configure:
+### Persistent Views
+- Buttons remain functional after bot restarts
+- Views are automatically registered on bot startup
+- No need to re-setup after restarts
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `confession_channel_id` | None | Channel where confessions are posted |
-| `moderation_enabled` | False | Whether confessions need approval |
-| `anonymous_replies` | True | Allow anonymous replies |
-| `max_confession_length` | 2000 | Maximum confession character limit |
-| `max_reply_length` | 1000 | Maximum reply character limit |
-| `cooldown_minutes` | 5 | Cooldown between confessions per user |
+## Technical Implementation
 
-### Cooldown System
-- Prevents spam from individual users
-- Server-specific cooldowns
-- Configurable duration (default: 5 minutes)
-- Bypass available for moderators (if implemented)
+### Models
+- `Confession`: Stores confession data with attachments list
+- `ConfessionReply`: Stores reply data with string-based IDs
+- `GuildConfessionSettings`: Per-guild configuration
 
-## 🗄️ Data Structure
+### Services
+- `ConfessionService`: Handles all confession logic
+- Sequential ID generation for confessions
+- Letter-based ID generation for replies
+- Data persistence via JSON files
 
-### Storage
-- **Local JSON files** - All data stored in `data/confessions/`
-- **No external dependencies** - Works completely offline
-- **Automatic persistence** - Data saved after each operation
+### Views
+- `SetupView`: Initial setup button
+- `ConfessionView`: Main interaction buttons
+- Persistent views for reliability
 
-### Files
-- `confessions.json` - All confession data
-- `replies.json` - All reply data  
-- `settings.json` - Server-specific settings
+## Data Structure
 
-## 🛡️ Privacy Features
+### Confession IDs
+- Start from 1 for each guild
+- Format: `CONF-{ID:03d}` (e.g., CONF-001)
+- Sequential numbering per guild
 
-### Anonymous Design
-- **No user tracking** - Bot doesn't store connection between users and confessions
-- **ID-based system** - Only confession IDs are used for references
-- **Ephemeral responses** - Error messages are private to user
-- **No logging** - User actions not logged with personal info
+### Reply IDs
+- Format: `REPLY-{confession_id:03d}-{letter}` (e.g., REPLY-001-A)
+- Letters increment per confession (A, B, C, etc.)
+- Hierarchical organization
 
-### Data Isolation
-- **Server boundaries** - Confessions don't cross servers
-- **Channel restrictions** - Only posted to designated channels
-- **Local storage only** - No cloud services or external APIs
+### File Storage
+- `confessions.json`: All confession data
+- `replies.json`: All reply data
+- `settings.json`: Guild settings and ID counters
 
-## 🔧 Advanced Features
+## Security & Privacy
 
-### Moderation Tools (Future)
-- Confession approval workflow
-- Moderation dashboard
-- Content filtering
-- User reporting system
+### Anonymity Protection
+- User IDs are stored but never displayed
+- All messages posted by bot account
+- No correlation between messages and users
+- Consistent formatting for all messages
 
-### Statistics & Analytics
-- Total confessions per server
-- Reply engagement rates
-- Popular confession topics
-- Usage trends over time
+### Moderation
+- Currently auto-approves all confessions
+- Framework exists for future moderation features
+- Cooldown system prevents spam
 
-## 🚨 Safety Considerations
+## Troubleshooting
 
-### Content Guidelines
-The system includes several safety measures:
-- Character limits prevent extremely long posts
-- Cooldowns prevent spam
-- Server isolation prevents cross-contamination
-- Admin controls for channel management
+### Common Issues
+1. **Buttons not working**: Views are persistent but may need bot restart
+2. **Threads not creating**: Check bot permissions for thread creation
+3. **Attachments not showing**: Ensure URLs are valid and accessible
 
-### Recommended Usage
-- Set clear community guidelines
-- Monitor confession channel regularly
-- Have moderation team if server is large
-- Consider content warnings for sensitive topics
+### Required Permissions
+- Send Messages
+- Create Threads
+- Upload Files
+- Use Slash Commands
+- Add Reactions/Buttons
 
-## 🎨 UI/UX Features
-
-### Modern Discord Integration
-- **Slash Commands** - Native Discord command system
-- **Modals** - Clean, professional input forms
-- **Buttons** - Interactive elements that persist
-- **Embeds** - Beautiful, consistent message formatting
-- **Ephemeral Messages** - Private responses when appropriate
-
-### User Experience
-- **One-click submissions** - Simple `/confess` command
-- **Easy replies** - Both command and button options
-- **Visual feedback** - Clear success/error messages
-- **Intuitive navigation** - Discoverable through help system
-
-## 📊 Example Usage
-
-```
-User: /confess
-[Modal opens]
-User: Types "I'm struggling with college stress..."
-Bot: ✅ Your confession has been submitted anonymously! (ID: abc12345)
-
-[In #confessions channel]
-Bot: 📝 Anonymous Confession #abc12345
-     I'm struggling with college stress...
-     [Reply Anonymously] [View Replies]
-
-Other User: /reply abc12345
-[Modal opens]  
-Other User: Types supportive message
-Bot: ✅ Your reply has been posted anonymously!
-
-[In #confessions channel]
-Bot: 💬 Anonymous Reply to #abc12345
-     You're not alone! College can be overwhelming...
-```
-
-## 🔄 Development & Testing
-
-### Demo Script
-Run the demo to see the system in action:
-```bash
-python src/features/confession/demo.py
-```
-
-### Testing Features
-- Create sample confessions
-- Test reply functionality  
-- Verify cooldown system
-- Check statistics calculation
-- Validate settings management
-
-## 🚀 Future Enhancements
+## Future Enhancements
 
 ### Planned Features
-- **Moderation Queue** - Admin approval workflow for sensitive content
-- **Confession Categories** - Tag confessions by topic/theme
-- **Trending System** - Popular confessions bubble up
-- **Search System** - Find confessions by keywords
-- **Export Tools** - Backup confession data
-- **Scheduled Confessions** - Submit confessions for later posting
+- Moderation queue system
+- Custom cooldown per guild
+- Confession categories
+- Report system
+- Statistics dashboard
 
-### Integration Possibilities
-- **Auto-moderation** - AI content filtering
-- **Analytics Dashboard** - Web-based statistics
-- **Mobile App** - Dedicated confession app
-- **Cross-server** - Network of confession channels
-
----
-
-## 📞 Support
-
-For issues or questions about the confession system:
-1. Check the bot's help system with `/help`
-2. Review this documentation
-3. Contact server administrators
-4. Report bugs through appropriate channels
-
-**Remember: This system is designed to create a safe, supportive environment for anonymous sharing. Please use it responsibly and follow your server's community guidelines.**
+### Extensibility
+- Modular design allows easy feature additions
+- Clean separation of concerns
+- Comprehensive error handling
+- Detailed logging system

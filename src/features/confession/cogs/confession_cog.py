@@ -10,46 +10,74 @@ from src.features.confession.services.confession_service import ConfessionServic
 from src.features.confession.models.confession import Confession, ConfessionReply
 from src.core.utils.logging_utils import get_logger
 from src.config.settings import DISCORD_CONFIG
+from src.core.constants import CONFESSION_CONSTANTS, CONFESSION_LOG_MESSAGES
 
 logger = get_logger(__name__)
 
 
 class ConfessionModal(ui.Modal):
-    """Modal for submitting confessions."""
+    """Modal for submitting confessions with exactly 2 fields as specified."""
     
-    def __init__(self, image_url: Optional[str] = None):
-        super().__init__(title="Submit Anonymous Confession")
-        self.image_url = image_url
+    def __init__(self):
+        super().__init__(title=CONFESSION_CONSTANTS["messages"]["modals"]["confession_title"])
         
-        self.confession_input = ui.TextInput(
-            label="Your Confession",
-            placeholder="Type your anonymous confession here...",
+        # Field 1: Message (required)
+        self.message_input = ui.TextInput(
+            label=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["message_label"],
+            placeholder=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["message_placeholder"].format(type="confession"),
             style=discord.TextStyle.paragraph,
-            max_length=2000,
+            max_length=CONFESSION_CONSTANTS["settings"]["defaults"]["max_confession_length"],
             required=True
         )
-        self.add_item(self.confession_input)
+        self.add_item(self.message_input)
+        
+        # Field 2: Attachments (optional) - text input for URLs
+        self.attachments_input = ui.TextInput(
+            label=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["attachments_label"],
+            placeholder=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["attachments_placeholder"],
+            style=discord.TextStyle.short,
+            max_length=500,
+            required=False
+        )
+        self.add_item(self.attachments_input)
     
     async def on_submit(self, interaction: discord.Interaction):
         # Get the cog to access the service
         cog = interaction.client.get_cog("ConfessionCog")
         if not cog:
-            await interaction.response.send_message("❌ Confession system is not available.", ephemeral=True)
+            await interaction.response.send_message(
+                f"❌ {CONFESSION_CONSTANTS['messages']['errors']['system_unavailable']}", 
+                ephemeral=True
+            )
             return
         
-        content = self.confession_input.value.strip()
+        content = self.message_input.value.strip()
         if not content:
-            await interaction.response.send_message("❌ Please provide some content for your confession.", ephemeral=True)
+            await interaction.response.send_message(
+                f"❌ {CONFESSION_CONSTANTS['messages']['errors']['empty_content'].format(type='confession')}", 
+                ephemeral=True
+            )
             return
         
-        logger.info(f"Creating new confession from user {interaction.user.id} in guild {interaction.guild.id}")
+        # Parse attachments
+        attachments = []
+        if self.attachments_input.value.strip():
+            attachment_urls = [url.strip() for url in self.attachments_input.value.split(',')]
+            # Filter out empty URLs and validate them
+            for url in attachment_urls:
+                if url and (url.startswith('http://') or url.startswith('https://')):
+                    attachments.append(url)
+                elif url:
+                    logger.warning(f"Invalid attachment URL: {url}")
+        
+        logger.info(f"Creating new confession from user {interaction.user.id} with {len(attachments)} attachments")
         
         # Create confession
-        success, message, confession = cog.confession_service.create_confession(
+        success, message, confession_id = cog.confession_service.create_confession(
             content=content,
             author_id=interaction.user.id,
             guild_id=interaction.guild.id,
-            image_url=self.image_url
+            attachments=attachments
         )
         
         if not success:
@@ -57,55 +85,103 @@ class ConfessionModal(ui.Modal):
             await interaction.response.send_message(f"❌ {message}", ephemeral=True)
             return
         
-        logger.info(f"Successfully created confession {confession.confession_id}, now posting to channel")
+        # Get the created confession
+        confession = cog.confession_service.get_confession(int(confession_id.split('-')[1]))
+        if not confession:
+            logger.error(f"Could not retrieve created confession {confession_id}")
+            await interaction.response.send_message(
+                "❌ Error retrieving created confession", 
+                ephemeral=True
+            )
+            return
+        
+        logger.info(f"Successfully created confession {confession_id}, now posting to channel")
         
         # Post confession to channel
         await cog.post_confession(confession, interaction.guild)
         
         await interaction.response.send_message(
-            f"✅ Your confession has been submitted anonymously! (ID: `{confession.confession_id}`)",
+            f"✅ {CONFESSION_CONSTANTS['messages']['success']['confession_created'].format(id=confession_id)}",
             ephemeral=True
         )
 
 
 class ReplyModal(ui.Modal):
-    """Modal for replying to confessions."""
+    """Modal for replying to confessions with exactly 3 fields as specified."""
     
-    def __init__(self, confession_id: int, image_url: Optional[str] = None):
-        super().__init__(title=f"Reply to Confession #{confession_id}")
+    def __init__(self, confession_id: int):
+        super().__init__(title=CONFESSION_CONSTANTS["messages"]["modals"]["reply_title"].format(id=f"CONF-{confession_id:03d}"))
         self.confession_id = confession_id
-        self.image_url = image_url
         
-        self.reply_input = ui.TextInput(
-            label="Your Reply",
-            placeholder="Type your anonymous reply here...",
+        # Field 1: Message (required)
+        self.message_input = ui.TextInput(
+            label=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["message_label"],
+            placeholder=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["message_placeholder"].format(type="reply"),
             style=discord.TextStyle.paragraph,
-            max_length=1000,
+            max_length=CONFESSION_CONSTANTS["settings"]["defaults"]["max_reply_length"],
             required=True
         )
-        self.add_item(self.reply_input)
+        self.add_item(self.message_input)
+        
+        # Field 2: Confession ID (auto-populated, read-only)
+        self.confession_id_input = ui.TextInput(
+            label=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["confession_id_label"],
+            placeholder=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["confession_id_placeholder"],
+            style=discord.TextStyle.short,
+            default=f"CONF-{confession_id:03d}",
+            max_length=20,
+            required=False
+        )
+        self.add_item(self.confession_id_input)
+        
+        # Field 3: Attachments (optional)
+        self.attachments_input = ui.TextInput(
+            label=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["attachments_label"],
+            placeholder=CONFESSION_CONSTANTS["messages"]["modals"]["fields"]["attachments_placeholder"],
+            style=discord.TextStyle.short,
+            max_length=500,
+            required=False
+        )
+        self.add_item(self.attachments_input)
     
     async def on_submit(self, interaction: discord.Interaction):
         # Get the cog to access the service
         cog = interaction.client.get_cog("ConfessionCog")
         if not cog:
-            await interaction.response.send_message("❌ Confession system is not available.", ephemeral=True)
+            await interaction.response.send_message(
+                f"❌ {CONFESSION_CONSTANTS['messages']['errors']['system_unavailable']}", 
+                ephemeral=True
+            )
             return
         
-        content = self.reply_input.value.strip()
+        content = self.message_input.value.strip()
         if not content:
-            await interaction.response.send_message("❌ Please provide some content for your reply.", ephemeral=True)
+            await interaction.response.send_message(
+                f"❌ {CONFESSION_CONSTANTS['messages']['errors']['empty_content'].format(type='reply')}", 
+                ephemeral=True
+            )
             return
         
-        logger.info(f"Creating reply to confession {self.confession_id} from user {interaction.user.id}")
+        # Parse attachments
+        attachments = []
+        if self.attachments_input.value.strip():
+            attachment_urls = [url.strip() for url in self.attachments_input.value.split(',')]
+            # Filter out empty URLs and validate them
+            for url in attachment_urls:
+                if url and (url.startswith('http://') or url.startswith('https://')):
+                    attachments.append(url)
+                elif url:
+                    logger.warning(f"Invalid attachment URL: {url}")
+        
+        logger.info(f"Creating reply to confession {self.confession_id} with {len(attachments)} attachments")
         
         # Create reply
-        success, message, reply = cog.confession_service.create_reply(
+        success, message, reply_id = cog.confession_service.create_reply(
             confession_id=self.confession_id,
             content=content,
             author_id=interaction.user.id,
             guild_id=interaction.guild.id,
-            image_url=self.image_url
+            attachments=attachments
         )
         
         if not success:
@@ -113,13 +189,29 @@ class ReplyModal(ui.Modal):
             await interaction.response.send_message(f"❌ {message}", ephemeral=True)
             return
         
-        logger.info(f"Successfully created reply {reply.reply_id}, now posting to thread")
+        # Get the created reply
+        replies = cog.confession_service.get_confession_replies(self.confession_id)
+        reply = None
+        for r in replies:
+            if r.reply_id == reply_id:
+                reply = r
+                break
+        
+        if not reply:
+            logger.error(f"Could not retrieve created reply {reply_id}")
+            await interaction.response.send_message(
+                "❌ Error retrieving created reply", 
+                ephemeral=True
+            )
+            return
+        
+        logger.info(f"Successfully created reply {reply_id}, now posting to thread")
         
         # Post reply to channel
         await cog.post_reply(reply, interaction.guild)
         
         await interaction.response.send_message(
-            f"✅ Your reply has been posted anonymously in the confession thread!",
+            f"✅ {CONFESSION_CONSTANTS['messages']['success']['reply_created'].format(id=reply_id)}",
             ephemeral=True
         )
 
@@ -131,19 +223,27 @@ class ConfessionView(ui.View):
         super().__init__(timeout=None)  # Persistent view
         self.confession_id = confession_id
 
-    @ui.button(label="Reply Anonymously", style=discord.ButtonStyle.secondary, emoji="💬", custom_id="confession_reply")
+    @ui.button(label=CONFESSION_CONSTANTS["messages"]["buttons"]["reply"], style=discord.ButtonStyle.secondary, emoji="🔄", custom_id="confession_reply")
     async def reply_button(self, interaction: discord.Interaction, button: ui.Button):
-        # Extract confession ID from the embed title
-        confession_id = self._extract_confession_id(interaction)
+        # First try to use the confession_id stored in the view
+        confession_id = self.confession_id
+        
+        # If not available, try to extract from the embed title
         if confession_id is None:
-            await interaction.response.send_message("❌ Could not find confession ID.", ephemeral=True)
+            confession_id = self._extract_confession_id(interaction)
+        
+        if confession_id is None:
+            await interaction.response.send_message(
+                f"❌ {CONFESSION_CONSTANTS['messages']['errors']['confession_not_found']}", 
+                ephemeral=True
+            )
             return
         
         logger.info(f"User {interaction.user.id} clicked reply button for confession {confession_id}")
         modal = ReplyModal(confession_id)
         await interaction.response.send_modal(modal)
 
-    @ui.button(label="Create New Confession", style=discord.ButtonStyle.primary, emoji="📝", custom_id="confession_create_new")
+    @ui.button(label=CONFESSION_CONSTANTS["messages"]["buttons"]["create_confession"], style=discord.ButtonStyle.primary, emoji="📝", custom_id="confession_create_new")
     async def create_new_confession_button(self, interaction: discord.Interaction, button: ui.Button):
         logger.info(f"User {interaction.user.id} clicked create new confession button")
         modal = ConfessionModal()
@@ -154,22 +254,32 @@ class ConfessionView(ui.View):
         if interaction.message and interaction.message.embeds:
             embed = interaction.message.embeds[0]
             title = embed.title or ""
-            # Extract confession ID from title like "📝 Anonymous Confession #123"
+            # Extract confession ID from title like "📝 Confession #001" or "↪️ Reply to #001"
             import re
             match = re.search(r'#(\d+)', title)
             if match:
                 return int(match.group(1))
+        
+        # Try to extract from footer text like "ID: CONF-001 | 🔄 Reply"
+        if interaction.message and interaction.message.embeds:
+            embed = interaction.message.embeds[0]
+            footer = embed.footer.text if embed.footer else ""
+            match = re.search(r'CONF-(\d+)', footer)
+            if match:
+                return int(match.group(1))
+        
         return None
 
 
-class SetupSuccessView(ui.View):
+class SetupView(ui.View):
     """View with button for creating confessions after setup."""
     
     def __init__(self):
         super().__init__(timeout=None)  # Persistent view
 
-    @ui.button(label="Create Confession", style=discord.ButtonStyle.green, emoji="📝", custom_id="create_confession")
-    async def create_confession_button(self, interaction: discord.Interaction, button: ui.Button):
+    @ui.button(label=CONFESSION_CONSTANTS["messages"]["buttons"]["create_confession"], style=discord.ButtonStyle.primary, emoji="📝", custom_id="create_new_confession")
+    async def create_new_confession_button(self, interaction: discord.Interaction, button: ui.Button):
+        logger.info(f"User {interaction.user.id} clicked create new confession button")
         modal = ConfessionModal()
         await interaction.response.send_modal(modal)
 
@@ -183,82 +293,13 @@ class ConfessionCog(commands.Cog):
     
     async def cog_load(self):
         """Called when the cog is loaded. Add persistent views here."""
-        # Add persistent view for setup success button
-        self.bot.add_view(SetupSuccessView())
+        # Add persistent view for setup button
+        self.bot.add_view(SetupView())
         
         # Add one persistent view that can handle all confessions
         self.bot.add_view(ConfessionView())
         
-        logger.info("ConfessionCog loaded with persistent views")
-    
-    @app_commands.command(name="confess", description="Submit an anonymous confession")
-    @app_commands.describe(image="Optional image attachment to include with your confession")
-    async def confess(self, interaction: discord.Interaction, image: Optional[discord.Attachment] = None):
-        """Submit an anonymous confession through a modal."""
-        image_url = None
-        
-        # Validate image if provided
-        if image:
-            if not image.content_type or not image.content_type.startswith('image/'):
-                await interaction.response.send_message(
-                    "❌ Please attach a valid image file (PNG, JPG, GIF, etc.)",
-                    ephemeral=True
-                )
-                return
-            
-            # Check file size (limit to 8MB)
-            if image.size > 8 * 1024 * 1024:
-                await interaction.response.send_message(
-                    "❌ Image too large! Please use an image smaller than 8MB.",
-                    ephemeral=True
-                )
-                return
-            
-            image_url = image.url
-        
-        modal = ConfessionModal(image_url)
-        await interaction.response.send_modal(modal)
-    
-    @app_commands.command(name="reply", description="Reply to a confession anonymously")
-    @app_commands.describe(
-        confession_id="The ID or tag of the confession to reply to",
-        image="Optional image attachment to include with your reply"
-    )
-    async def reply_to_confession(self, interaction: discord.Interaction, confession_id: str, image: Optional[discord.Attachment] = None):
-        """Reply to a confession using its ID."""
-        # Find confession - the service now handles both int parsing and string prefix matching
-        confession = self.confession_service.get_confession_by_tag(confession_id, interaction.guild.id)
-        
-        if not confession:
-            await interaction.response.send_message(
-                f"❌ No confession found with ID `{confession_id}` in this server.",
-                ephemeral=True
-            )
-            return
-        
-        image_url = None
-        
-        # Validate image if provided
-        if image:
-            if not image.content_type or not image.content_type.startswith('image/'):
-                await interaction.response.send_message(
-                    "❌ Please attach a valid image file (PNG, JPG, GIF, etc.)",
-                    ephemeral=True
-                )
-                return
-            
-            # Check file size (limit to 8MB)
-            if image.size > 8 * 1024 * 1024:
-                await interaction.response.send_message(
-                    "❌ Image too large! Please use an image smaller than 8MB.",
-                    ephemeral=True
-                )
-                return
-            
-            image_url = image.url
-        
-        modal = ReplyModal(confession.confession_id, image_url)
-        await interaction.response.send_modal(modal)
+        logger.info(CONFESSION_LOG_MESSAGES["system"]["cog_loaded"])
     
     @app_commands.command(name="confession-setup", description="Set up confession channel (Admin only)")
     @app_commands.describe(channel="The channel where confessions will be posted")
@@ -270,13 +311,29 @@ class ConfessionCog(commands.Cog):
             confession_channel_id=channel.id
         )
 
-        embed = discord.Embed(
-            title="✅ Confession Channel Set",
-            description=f"Anonymous confessions will now be posted to {channel.mention}",
+        # Send introduction message to the confession channel
+        intro_embed = discord.Embed(
+            title=CONFESSION_CONSTANTS["messages"]["titles"]["setup_intro"].format(emoji="📝"),
+            description=CONFESSION_CONSTANTS["messages"]["descriptions"]["intro"],
+            color=DISCORD_CONFIG["colors"]["primary"]
+        )
+        
+        intro_embed.set_footer(text=CONFESSION_CONSTANTS["messages"]["footers"]["intro"])
+        
+        # Create persistent view with the button
+        view = SetupView()
+        
+        # Send introduction message to the confession channel
+        await channel.send(embed=intro_embed, view=view)
+
+        # Send confirmation to admin
+        confirm_embed = discord.Embed(
+            title=CONFESSION_CONSTANTS["messages"]["titles"]["setup_success"].format(emoji="✅"),
+            description=CONFESSION_CONSTANTS["messages"]["descriptions"]["setup_success"].format(channel=channel.mention),
             color=DISCORD_CONFIG["colors"]["success"]
         )
         
-        embed.add_field(
+        confirm_embed.add_field(
             name="📋 Channel Information",
             value=(
                 f"**Channel:** {channel.mention}\n"
@@ -287,23 +344,20 @@ class ConfessionCog(commands.Cog):
             inline=False
         )
         
-        embed.add_field(
-            name="📝 How It Works",
+        confirm_embed.add_field(
+            name="📝 System Features",
             value=(
-                "• Confessions will be posted as messages in this channel\n"
-                "• Each confession will automatically create a thread\n"
-                "• Replies will be posted inside the thread for better organization\n"
-                "• Users can use the button below or `/confess` command to create confessions"
+                "• Anonymous confession creation\n"
+                "• Thread-based organization\n"
+                "• Anonymous replies in threads\n"
+                "• Unique ID system (CONF-001, REPLY-001-A)\n"
+                "• Attachment support\n"
+                "• Complete anonymity protection"
             ),
             inline=False
         )
         
-        embed.set_footer(text="Use the button below to create your first confession!")
-
-        # Create view with "Create Confession" button
-        view = SetupSuccessView()
-        
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(embed=confirm_embed, ephemeral=True)
     
     @app_commands.command(name="confession-settings", description="View/modify confession settings (Admin only)")
     @app_commands.default_permissions(administrator=True)
@@ -312,7 +366,7 @@ class ConfessionCog(commands.Cog):
         settings = self.confession_service.get_guild_settings(interaction.guild.id)
         
         embed = discord.Embed(
-            title="⚙️ Confession Settings",
+            title=CONFESSION_CONSTANTS["messages"]["titles"]["settings"].format(emoji="⚙️"),
             color=DISCORD_CONFIG["colors"]["info"]
         )
         
@@ -328,9 +382,8 @@ class ConfessionCog(commands.Cog):
         embed.add_field(name="Anonymous Replies", value="Enabled" if settings.anonymous_replies else "Disabled", inline=True)
         embed.add_field(name="Max Confession Length", value=f"{settings.max_confession_length} chars", inline=True)
         embed.add_field(name="Max Reply Length", value=f"{settings.max_reply_length} chars", inline=True)
-        embed.add_field(name="Cooldown", value=f"{settings.cooldown_minutes} minutes", inline=True)
-        embed.add_field(name="Next Confession ID", value=f"#{settings.next_confession_id}", inline=True)
-        embed.add_field(name="Next Reply ID", value=f"#{settings.next_reply_id}", inline=True)
+        embed.add_field(name="Next Confession ID", value=f"CONF-{settings.next_confession_id:03d}", inline=True)
+        embed.add_field(name="Reply Letters", value=f"{len(settings.next_reply_letter)} confessions tracked", inline=True)
         
         await interaction.response.send_message(embed=embed)
     
@@ -347,7 +400,7 @@ class ConfessionCog(commands.Cog):
         total_replies = sum(confession.reply_count for confession in confessions)
         
         embed = discord.Embed(
-            title="📊 Confession Statistics",
+            title=CONFESSION_CONSTANTS["messages"]["titles"]["stats"].format(emoji="📊"),
             color=DISCORD_CONFIG["colors"]["info"]
         )
         
@@ -357,7 +410,7 @@ class ConfessionCog(commands.Cog):
         
         if confessions:
             latest = confessions[0]
-            embed.add_field(name="Latest Confession", value=f"#{latest.confession_id}", inline=True)
+            embed.add_field(name="Latest Confession", value=f"CONF-{latest.confession_id:03d}", inline=True)
         
         await interaction.response.send_message(embed=embed)
     
@@ -374,18 +427,45 @@ class ConfessionCog(commands.Cog):
             logger.error(f"Confession channel {settings.confession_channel_id} not found")
             return
 
-        # Create embed
+        # Create embed with the specified format
         embed = discord.Embed(
-            title=f"📝 Anonymous Confession #{confession.confession_id}",
+            title=CONFESSION_CONSTANTS["messages"]["titles"]["confession"].format(emoji="📝", id=confession.confession_id),
             description=confession.content,
             color=DISCORD_CONFIG["colors"]["info"],
             timestamp=confession.created_at
         )
 
-        if confession.image_url:
-            embed.set_image(url=confession.image_url)
-
-        embed.set_footer(text="Use the buttons below to interact anonymously")
+        # Add attachments if any
+        if confession.attachments:
+            # Filter image and non-image attachments
+            image_attachments = []
+            other_attachments = []
+            
+            for attachment in confession.attachments:
+                if attachment.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                    image_attachments.append(attachment)
+                else:
+                    other_attachments.append(attachment)
+            
+            # Set first image as main embed image
+            if image_attachments:
+                embed.set_image(url=image_attachments[0])
+            
+            # Add remaining images and other attachments as fields
+            remaining_images = image_attachments[1:] if len(image_attachments) > 1 else []
+            if remaining_images or other_attachments:
+                attachment_links = []
+                
+                # Add remaining images as preview links
+                for i, img_url in enumerate(remaining_images, 2):
+                    attachment_links.append(f"[🖼️ Image {i}]({img_url})")
+                
+                # Add other attachments
+                for i, att_url in enumerate(other_attachments, 1):
+                    attachment_links.append(f"[📎 Attachment {i}]({att_url})")
+                
+                if attachment_links:
+                    embed.add_field(name="📎 Additional Attachments", value="\n".join(attachment_links), inline=False)
 
         # Create view with buttons
         view = ConfessionView(confession.confession_id)
@@ -397,21 +477,30 @@ class ConfessionCog(commands.Cog):
             # Post the confession message first
             message = await channel.send(embed=embed, view=view)
             
+            # Send additional images as separate messages for better preview
+            if confession.attachments:
+                image_attachments = [att for att in confession.attachments if att.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))]
+                if len(image_attachments) > 1:
+                    # Send remaining images as separate messages for preview
+                    for img_url in image_attachments[1:]:
+                        try:
+                            # Create a simple embed for additional images
+                            img_embed = discord.Embed(color=DISCORD_CONFIG["colors"]["info"])
+                            img_embed.set_image(url=img_url)
+                            await channel.send(embed=img_embed)
+                        except Exception as e:
+                            logger.warning(f"Failed to send additional image {img_url}: {e}")
+            
             # Create a thread for this confession immediately
-            thread_name = f"💬 Confession #{confession.confession_id}"
+            thread_name = CONFESSION_CONSTANTS["thread"]["name_format"].format(
+                emoji="💬", 
+                id=confession.confession_id
+            )
             thread = await message.create_thread(
                 name=thread_name, 
-                auto_archive_duration=10080  # 7 days
+                auto_archive_duration=CONFESSION_CONSTANTS["thread"]["auto_archive_duration"]
             )
             
-            # Post a welcome message in the thread
-            welcome_embed = discord.Embed(
-                title="📝 Confession Discussion",
-                description=f"This is the discussion thread for **Confession #{confession.confession_id}**.\n\nAnyone can reply anonymously using:\n• The **Reply** button on the original message\n• The `/reply {confession.confession_id}` command\n\nAll replies will appear here as anonymous messages.",
-                color=DISCORD_CONFIG["colors"]["secondary"]
-            )
-            await thread.send(embed=welcome_embed)
-
             # Mark as posted with thread ID
             self.confession_service.mark_confession_posted(
                 confession.confession_id,
@@ -420,10 +509,14 @@ class ConfessionCog(commands.Cog):
                 thread.id
             )
 
-            logger.info(f"Posted confession {confession.confession_id} to {guild.name} with thread {thread.id}")
+            logger.info(CONFESSION_LOG_MESSAGES["confession"]["posted"].format(
+                id=f"CONF-{confession.confession_id:03d}",
+                guild_name=guild.name,
+                thread_id=thread.id
+            ))
 
         except Exception as e:
-            logger.error(f"Error posting confession: {e}")
+            logger.error(CONFESSION_LOG_MESSAGES["confession"]["failed_post"].format(error=str(e)))
             import traceback
             logger.error(traceback.format_exc())
     
@@ -449,7 +542,7 @@ class ConfessionCog(commands.Cog):
 
         logger.info(f"Found confession {confession.confession_id} with thread_id {confession.thread_id}")
 
-        # Get the thread and main channel
+        # Get the thread
         try:
             thread = await self.bot.fetch_channel(confession.thread_id)
         except discord.NotFound:
@@ -461,40 +554,83 @@ class ConfessionCog(commands.Cog):
         except Exception as e:
             logger.error(f"Error fetching thread {confession.thread_id}: {e}")
             return
-            
-        main_channel = self.bot.get_channel(settings.confession_channel_id)
-        if not main_channel:
-            logger.error(f"Main channel {settings.confession_channel_id} not found")
-            return
 
         try:
-            # Create an embed for the reply to match confession style
+            # Create reply embed with the specified format
             embed = discord.Embed(
-                title=f"💬 Anonymous Reply #{reply.reply_id}",
+                title=CONFESSION_CONSTANTS["messages"]["titles"]["reply"].format(emoji="↪️", reply_id=reply.reply_id),
                 description=reply.content,
                 color=DISCORD_CONFIG["colors"]["secondary"],
                 timestamp=reply.created_at
             )
             
-            if reply.image_url:
-                embed.set_image(url=reply.image_url)
+            # Add attachments if any
+            if reply.attachments:
+                # Filter image and non-image attachments
+                image_attachments = []
+                other_attachments = []
+                
+                for attachment in reply.attachments:
+                    if attachment.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                        image_attachments.append(attachment)
+                    else:
+                        other_attachments.append(attachment)
+                
+                # Set first image as main embed image
+                if image_attachments:
+                    embed.set_image(url=image_attachments[0])
+                
+                # Add remaining images and other attachments as fields
+                remaining_images = image_attachments[1:] if len(image_attachments) > 1 else []
+                if remaining_images or other_attachments:
+                    attachment_links = []
+                    
+                    # Add remaining images as preview links
+                    for i, img_url in enumerate(remaining_images, 2):
+                        attachment_links.append(f"[🖼️ Image {i}]({img_url})")
+                    
+                    # Add other attachments
+                    for i, att_url in enumerate(other_attachments, 1):
+                        attachment_links.append(f"[📎 Attachment {i}]({att_url})")
+                    
+                    if attachment_links:
+                        embed.add_field(name="📎 Additional Attachments", value="\n".join(attachment_links), inline=False)
             
-            embed.set_footer(text=f"Reply to Confession #{reply.confession_id}")
+            # Add Reply button to the reply message
+            reply_view = ConfessionView(confession.confession_id)
+            self.bot.add_view(reply_view)
             
             logger.info(f"Posting reply to thread {thread.name} (ID: {thread.id})")
             
             # Post reply embed in the thread
-            message = await thread.send(embed=embed)
+            message = await thread.send(embed=embed, view=reply_view)
+            
+            # Send additional images as separate messages for better preview
+            if reply.attachments:
+                image_attachments = [att for att in reply.attachments if att.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))]
+                if len(image_attachments) > 1:
+                    # Send remaining images as separate messages for preview
+                    for img_url in image_attachments[1:]:
+                        try:
+                            # Create a simple embed for additional images
+                            img_embed = discord.Embed(color=DISCORD_CONFIG["colors"]["secondary"])
+                            img_embed.set_image(url=img_url)
+                            await thread.send(embed=img_embed)
+                        except Exception as e:
+                            logger.warning(f"Failed to send additional image {img_url}: {e}")
 
             # Mark as posted
             self.confession_service.mark_reply_posted(reply.reply_id, message.id)
 
-            logger.info(f"Successfully posted reply {reply.reply_id} to confession {reply.confession_id} thread")
+            logger.info(CONFESSION_LOG_MESSAGES["reply"]["posted"].format(
+                id=reply.reply_id,
+                confession_id=reply.confession_id
+            ))
 
         except discord.Forbidden:
             logger.error(f"No permission to post in thread {thread.id}")
         except Exception as e:
-            logger.error(f"Error posting reply: {e}")
+            logger.error(CONFESSION_LOG_MESSAGES["reply"]["failed_post"].format(error=str(e)))
             import traceback
             logger.error(traceback.format_exc())
 

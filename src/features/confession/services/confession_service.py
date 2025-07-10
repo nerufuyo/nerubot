@@ -1,5 +1,5 @@
 """
-Confession service for managing anonymous confessions
+Confession service for managing anonymous confessions with queue system
 """
 import asyncio
 from datetime import datetime, timedelta
@@ -7,7 +7,11 @@ from typing import Optional, List, Dict, Tuple
 from src.features.confession.models.confession import (
     Confession, ConfessionReply, GuildConfessionSettings, ConfessionStatus
 )
+from src.features.confession.services.queue_service import confession_queue, QueueItem
 from src.core.utils.logging_utils import get_logger
+from src.core.constants import (
+    CONFESSION_CONSTANTS, CONFESSION_FILE_PATHS, CONFESSION_LOG_MESSAGES
+)
 import json
 import os
 
@@ -15,22 +19,25 @@ logger = get_logger(__name__)
 
 
 class ConfessionService:
-    """Service for managing anonymous confessions."""
+    """Service for managing anonymous confessions with queue system."""
     
     def __init__(self):
         self.confessions: Dict[int, Confession] = {}
         self.replies: Dict[int, List[ConfessionReply]] = {}
         self.guild_settings: Dict[int, GuildConfessionSettings] = {}
-        self.user_cooldowns: Dict[Tuple[int, int], datetime] = {}  # (user_id, guild_id) -> last_confession_time
+
         
         # File paths for persistence
-        self.data_dir = "data/confessions"
-        self.confessions_file = f"{self.data_dir}/confessions.json"
-        self.replies_file = f"{self.data_dir}/replies.json"
-        self.settings_file = f"{self.data_dir}/settings.json"
+        self.data_dir = CONFESSION_FILE_PATHS["data_dir"]
+        self.confessions_file = CONFESSION_FILE_PATHS["confessions_file"]
+        self.replies_file = CONFESSION_FILE_PATHS["replies_file"]
+        self.settings_file = CONFESSION_FILE_PATHS["settings_file"]
         
         # Create data directory if it doesn't exist
         os.makedirs(self.data_dir, exist_ok=True)
+        
+        # Initialize queue processor for this service BEFORE loading data
+        self.queue = confession_queue
         
         # Load data
         self._load_data()
@@ -43,14 +50,11 @@ class ConfessionService:
                 with open(self.confessions_file, 'r') as f:
                     data = json.load(f)
                     for conf_id, conf_data in data.items():
-                        # Handle both old string IDs and new numeric IDs
                         confession_id = conf_data['confession_id']
                         if isinstance(confession_id, str):
-                            # Try to convert old string ID to numeric, or use a high number for migration
                             try:
                                 confession_id = int(confession_id)
                             except ValueError:
-                                # For old UUID-style IDs, we'll assign them high numbers during migration
                                 confession_id = hash(confession_id) % 1000000 + 1000000
                         
                         confession = Confession(
@@ -61,7 +65,7 @@ class ConfessionService:
                             channel_id=conf_data.get('channel_id'),
                             message_id=conf_data.get('message_id'),
                             thread_id=conf_data.get('thread_id'),
-                            image_url=conf_data.get('image_url'),
+                            attachments=conf_data.get('attachments', []),
                             status=ConfessionStatus(conf_data.get('status', 'pending')),
                             created_at=datetime.fromisoformat(conf_data['created_at']),
                             posted_at=datetime.fromisoformat(conf_data['posted_at']) if conf_data.get('posted_at') else None,
@@ -74,42 +78,18 @@ class ConfessionService:
                 with open(self.replies_file, 'r') as f:
                     data = json.load(f)
                     for conf_id, replies_data in data.items():
-                        # Convert confession ID to numeric
-                        numeric_conf_id = conf_id
-                        if isinstance(conf_id, str):
-                            try:
-                                numeric_conf_id = int(conf_id)
-                            except ValueError:
-                                numeric_conf_id = hash(conf_id) % 1000000 + 1000000
-                        else:
-                            numeric_conf_id = int(conf_id)
+                        numeric_conf_id = int(conf_id)
                         
                         replies = []
                         for reply_data in replies_data:
-                            # Handle reply ID conversion
-                            reply_id = reply_data['reply_id']
-                            confession_id = reply_data['confession_id']
-                            
-                            if isinstance(reply_id, str):
-                                try:
-                                    reply_id = int(reply_id)
-                                except ValueError:
-                                    reply_id = hash(reply_id) % 1000000 + 1000000
-                            
-                            if isinstance(confession_id, str):
-                                try:
-                                    confession_id = int(confession_id)
-                                except ValueError:
-                                    confession_id = hash(confession_id) % 1000000 + 1000000
-                            
                             reply = ConfessionReply(
-                                reply_id=reply_id,
-                                confession_id=confession_id,
+                                reply_id=reply_data['reply_id'],
+                                confession_id=reply_data['confession_id'],
                                 content=reply_data['content'],
                                 author_id=reply_data['author_id'],
                                 guild_id=reply_data['guild_id'],
                                 message_id=reply_data.get('message_id'),
-                                image_url=reply_data.get('image_url'),
+                                attachments=reply_data.get('attachments', []),
                                 created_at=datetime.fromisoformat(reply_data['created_at']),
                                 posted_at=datetime.fromisoformat(reply_data['posted_at']) if reply_data.get('posted_at') else None
                             )
@@ -130,10 +110,12 @@ class ConfessionService:
                             anonymous_replies=settings_data.get('anonymous_replies', True),
                             max_confession_length=settings_data.get('max_confession_length', 2000),
                             max_reply_length=settings_data.get('max_reply_length', 1000),
-                            cooldown_minutes=settings_data.get('cooldown_minutes', 5),
-                            next_confession_id=settings_data.get('next_confession_id', 0),
-                            next_reply_id=settings_data.get('next_reply_id', 0)
+                            next_confession_id=settings_data.get('next_confession_id', 1),
+                            next_reply_letter=settings_data.get('next_reply_letter', {})
                         )
+                        # Convert string keys to int keys for next_reply_letter
+                        if isinstance(settings.next_reply_letter, dict):
+                            settings.next_reply_letter = {int(k): v for k, v in settings.next_reply_letter.items()}
                         self.guild_settings[guild_id] = settings
                         
         except Exception as e:
@@ -141,6 +123,26 @@ class ConfessionService:
         
         # Perform migration to set initial ID counters if needed
         self._migrate_id_counters()
+    
+    def _migrate_id_counters(self):
+        """Migrate ID counters from guild settings to queue system."""
+        try:
+            # Sync ID counters with queue system
+            for guild_id, settings in self.guild_settings.items():
+                # Update queue counters from settings
+                self.queue.guild_confession_counters[guild_id] = settings.next_confession_id
+                if settings.next_reply_letter:
+                    if guild_id not in self.queue.guild_reply_counters:
+                        self.queue.guild_reply_counters[guild_id] = {}
+                    self.queue.guild_reply_counters[guild_id].update(settings.next_reply_letter)
+            
+            # Save queue state after migration
+            self.queue._save_queue_state()
+            logger.info("ID counter migration completed")
+        except Exception as e:
+            logger.error(f"Error during ID counter migration: {e}")
+        
+        # ...existing code...
     
     def _save_data(self):
         """Save data to files."""
@@ -156,7 +158,7 @@ class ConfessionService:
                     'channel_id': confession.channel_id,
                     'message_id': confession.message_id,
                     'thread_id': confession.thread_id,
-                    'image_url': confession.image_url,
+                    'attachments': confession.attachments or [],
                     'status': confession.status.value,
                     'created_at': confession.created_at.isoformat(),
                     'posted_at': confession.posted_at.isoformat() if confession.posted_at else None,
@@ -178,7 +180,7 @@ class ConfessionService:
                         'author_id': reply.author_id,
                         'guild_id': reply.guild_id,
                         'message_id': reply.message_id,
-                        'image_url': reply.image_url,
+                        'attachments': reply.attachments or [],
                         'created_at': reply.created_at.isoformat(),
                         'posted_at': reply.posted_at.isoformat() if reply.posted_at else None
                     })
@@ -196,9 +198,8 @@ class ConfessionService:
                     'anonymous_replies': settings.anonymous_replies,
                     'max_confession_length': settings.max_confession_length,
                     'max_reply_length': settings.max_reply_length,
-                    'cooldown_minutes': settings.cooldown_minutes,
                     'next_confession_id': settings.next_confession_id,
-                    'next_reply_id': settings.next_reply_id
+                    'next_reply_letter': {str(k): v for k, v in settings.next_reply_letter.items()}
                 }
             
             with open(self.settings_file, 'w') as f:
@@ -208,169 +209,156 @@ class ConfessionService:
             logger.error(f"Error saving confession data: {e}")
     
     def get_guild_settings(self, guild_id: int) -> GuildConfessionSettings:
-        """Get guild confession settings."""
+        """Get or create guild settings."""
         if guild_id not in self.guild_settings:
-            self.guild_settings[guild_id] = GuildConfessionSettings(guild_id=guild_id)
-            self._save_data()
+            defaults = CONFESSION_CONSTANTS["settings"]["defaults"]
+            self.guild_settings[guild_id] = GuildConfessionSettings(
+                guild_id=guild_id,
+                max_confession_length=defaults["max_confession_length"],
+                max_reply_length=defaults["max_reply_length"]
+            )
         return self.guild_settings[guild_id]
     
-    def update_guild_settings(self, guild_id: int, **kwargs) -> GuildConfessionSettings:
-        """Update guild confession settings."""
+    def update_guild_settings(self, guild_id: int, **kwargs):
+        """Update guild settings."""
         settings = self.get_guild_settings(guild_id)
-        
         for key, value in kwargs.items():
             if hasattr(settings, key):
                 setattr(settings, key, value)
-        
-        self.guild_settings[guild_id] = settings
         self._save_data()
-        return settings
     
-    def check_user_cooldown(self, user_id: int, guild_id: int) -> Tuple[bool, Optional[int]]:
-        """Check if user is on cooldown. Returns (is_on_cooldown, seconds_remaining)."""
-        settings = self.get_guild_settings(guild_id)
-        key = (user_id, guild_id)
-        
-        if key not in self.user_cooldowns:
-            return False, None
-        
-        last_confession = self.user_cooldowns[key]
-        cooldown_end = last_confession + timedelta(minutes=settings.cooldown_minutes)
-        
-        if datetime.now() < cooldown_end:
-            remaining = (cooldown_end - datetime.now()).total_seconds()
-            return True, int(remaining)
-        
-        return False, None
-    
-    def create_confession(self, content: str, author_id: int, guild_id: int, image_url: Optional[str] = None) -> Tuple[bool, str, Optional[Confession]]:
-        """Create a new confession. Returns (success, message, confession)."""
+    def create_confession(self, content: str, author_id: int, guild_id: int, 
+                         attachments: Optional[List[str]] = None) -> Tuple[bool, str, Optional[str]]:
+        """Create a new confession using the queue system."""
         settings = self.get_guild_settings(guild_id)
         
         # Check content length
-        if len(content) > settings.max_confession_length:
-            return False, f"Confession too long! Maximum {settings.max_confession_length} characters allowed.", None
-        
-        # Check cooldown
-        on_cooldown, remaining = self.check_user_cooldown(author_id, guild_id)
-        if on_cooldown:
-            minutes = remaining // 60
-            seconds = remaining % 60
-            return False, f"You're on cooldown! Please wait {minutes}m {seconds}s before submitting another confession.", None
+        max_length = CONFESSION_CONSTANTS["settings"]["defaults"]["max_confession_length"]
+        if len(content) > max_length:
+            error_msg = CONFESSION_CONSTANTS["messages"]["errors"]["content_too_long"].format(
+                type="Confession", max=max_length
+            )
+            return False, error_msg, None
         
         # Check if confession channel is set
         if not settings.confession_channel_id:
-            return False, "Confession channel is not set up for this server. Please ask an admin to set it up.", None
+            error_msg = CONFESSION_CONSTANTS["messages"]["errors"]["no_confession_channel"]
+            return False, error_msg, None
         
-        # Generate sequential confession ID
-        confession_id = settings.next_confession_id
-        
-        # Increment the counter for next confession
-        settings.next_confession_id += 1
-        
-        # Create confession
-        confession = Confession(
-            confession_id=confession_id,
-            content=content,
-            author_id=author_id,
-            guild_id=guild_id,
-            image_url=image_url,
-            status=ConfessionStatus.APPROVED if not settings.moderation_enabled else ConfessionStatus.PENDING
-        )
-        
-        self.confessions[confession_id] = confession
-        self.user_cooldowns[(author_id, guild_id)] = datetime.now()
-        self._save_data()
-        
-        return True, "Confession created successfully!", confession
+        # Add to queue and get reserved ID
+        try:
+            item_id, confession_id = self.queue.add_confession(
+                guild_id=guild_id,
+                user_id=author_id,
+                content=content,
+                attachments=attachments or []
+            )
+            
+            # Create confession object with reserved ID
+            confession = Confession(
+                confession_id=confession_id,
+                content=content,
+                author_id=author_id,
+                guild_id=guild_id,
+                attachments=attachments or [],
+                status=ConfessionStatus.APPROVED  # Auto-approve for now
+            )
+            
+            # Store confession
+            self.confessions[confession_id] = confession
+            
+            # Initialize replies list
+            self.replies[confession_id] = []
+            
+            self._save_data()
+            
+            assigned_id = CONFESSION_CONSTANTS["ids"]["id_format"].format(
+                prefix=CONFESSION_CONSTANTS["ids"]["confession_prefix"],
+                id=confession_id
+            )
+            
+            logger.info(CONFESSION_LOG_MESSAGES["confession"]["created"].format(
+                id=assigned_id, user_id=author_id, guild_id=guild_id
+            ))
+            logger.info(CONFESSION_LOG_MESSAGES["confession"]["queued"].format(id=assigned_id))
+            
+            return True, CONFESSION_CONSTANTS["messages"]["success"]["confession_created"].format(id=assigned_id), assigned_id
+            
+        except Exception as e:
+            logger.error(CONFESSION_LOG_MESSAGES["confession"]["failed_create"].format(error=str(e)))
+            return False, f"Failed to create confession: {str(e)}", None
     
-    def create_reply(self, confession_id: int, content: str, author_id: int, guild_id: int, image_url: Optional[str] = None) -> Tuple[bool, str, Optional[ConfessionReply]]:
-        """Create a reply to a confession. Returns (success, message, reply)."""
+    def create_reply(self, confession_id: int, content: str, author_id: int, 
+                    guild_id: int, attachments: Optional[List[str]] = None) -> Tuple[bool, str, Optional[str]]:
+        """Create a reply to a confession using the queue system."""
         settings = self.get_guild_settings(guild_id)
         
         # Check if confession exists
         if confession_id not in self.confessions:
-            return False, "Confession not found!", None
+            error_msg = CONFESSION_CONSTANTS["messages"]["errors"]["confession_not_found"]
+            return False, error_msg, None
         
         confession = self.confessions[confession_id]
-        
-        # Check if confession is in the same guild
         if confession.guild_id != guild_id:
-            return False, "Confession not found in this server!", None
+            error_msg = CONFESSION_CONSTANTS["messages"]["errors"]["confession_not_in_guild"]
+            return False, error_msg, None
         
         # Check content length
-        if len(content) > settings.max_reply_length:
-            return False, f"Reply too long! Maximum {settings.max_reply_length} characters allowed.", None
+        max_length = CONFESSION_CONSTANTS["settings"]["defaults"]["max_reply_length"]
+        if len(content) > max_length:
+            error_msg = CONFESSION_CONSTANTS["messages"]["errors"]["content_too_long"].format(
+                type="Reply", max=max_length
+            )
+            return False, error_msg, None
         
-        # Generate sequential reply ID
-        reply_id = settings.next_reply_id
-        
-        # Increment the counter for next reply
-        settings.next_reply_id += 1
-        
-        # Create reply
-        reply = ConfessionReply(
-            reply_id=reply_id,
-            confession_id=confession_id,
-            content=content,
-            author_id=author_id,
-            guild_id=guild_id,
-            image_url=image_url
-        )
-        
-        # Add to replies
-        if confession_id not in self.replies:
-            self.replies[confession_id] = []
-        self.replies[confession_id].append(reply)
-        
-        # Update reply count
-        confession.reply_count += 1
-        
-        self._save_data()
-        
-        return True, "Reply created successfully!", reply
+        # Add to queue and get reserved ID
+        try:
+            item_id, reply_id = self.queue.add_reply(
+                guild_id=guild_id,
+                user_id=author_id,
+                confession_id=confession_id,
+                content=content,
+                attachments=attachments or []
+            )
+            
+            # Create reply object
+            reply = ConfessionReply(
+                reply_id=reply_id,
+                confession_id=confession_id,
+                content=content,
+                author_id=author_id,
+                guild_id=guild_id,
+                attachments=attachments or []
+            )
+            
+            # Add to replies
+            if confession_id not in self.replies:
+                self.replies[confession_id] = []
+            self.replies[confession_id].append(reply)
+            
+            # Update confession reply count
+            confession.reply_count += 1
+            
+            self._save_data()
+            
+            logger.info(CONFESSION_LOG_MESSAGES["reply"]["created"].format(
+                id=reply_id, confession_id=confession_id, user_id=author_id
+            ))
+            logger.info(CONFESSION_LOG_MESSAGES["reply"]["queued"].format(id=reply_id))
+            
+            return True, CONFESSION_CONSTANTS["messages"]["success"]["reply_created"].format(id=reply_id), reply_id
+            
+        except Exception as e:
+            logger.error(CONFESSION_LOG_MESSAGES["reply"]["failed_create"].format(error=str(e)))
+            return False, f"Failed to create reply: {str(e)}", None
     
     def get_confession(self, confession_id: int) -> Optional[Confession]:
         """Get a confession by ID."""
         return self.confessions.get(confession_id)
     
-    def get_confession_replies(self, confession_id: int) -> List[ConfessionReply]:
-        """Get all replies for a confession."""
-        return self.replies.get(confession_id, [])
-    
-    def get_guild_confessions(self, guild_id: int, limit: int = 10) -> List[Confession]:
-        """Get recent confessions for a guild."""
-        guild_confessions = [
-            confession for confession in self.confessions.values()
-            if confession.guild_id == guild_id and confession.status == ConfessionStatus.APPROVED
-        ]
-        # Sort by creation time, newest first
-        guild_confessions.sort(key=lambda x: x.created_at, reverse=True)
-        return guild_confessions[:limit]
-    
-    def mark_confession_posted(self, confession_id: int, channel_id: int, message_id: int, thread_id: Optional[int] = None):
-        """Mark a confession as posted."""
-        if confession_id in self.confessions:
-            confession = self.confessions[confession_id]
-            confession.channel_id = channel_id
-            confession.message_id = message_id
-            confession.thread_id = thread_id
-            confession.posted_at = datetime.now()
-            self._save_data()
-    
-    def mark_reply_posted(self, reply_id: int, message_id: int):
-        """Mark a reply as posted."""
-        for replies in self.replies.values():
-            for reply in replies:
-                if reply.reply_id == reply_id:
-                    reply.message_id = message_id
-                    reply.posted_at = datetime.now()
-                    self._save_data()
-                    return
-    
     def get_confession_by_tag(self, tag: str, guild_id: int) -> Optional[Confession]:
-        """Get confession by tag (ID or partial ID)."""
-        # Try to parse as exact numeric ID first
+        """Get a confession by tag (e.g., 'CONF-001' or '1')."""
+        # Try to parse as direct ID first
         try:
             confession_id = int(tag)
             confession = self.get_confession(confession_id)
@@ -379,41 +367,66 @@ class ConfessionService:
         except ValueError:
             pass
         
-        # For partial matches with numeric IDs, try string prefix matching
-        matches = [
-            confession for confession in self.confessions.values()
-            if str(confession.confession_id).startswith(tag) and confession.guild_id == guild_id
-        ]
-        
-        if len(matches) == 1:
-            return matches[0]
+        # Try to parse as CONF-XXX format
+        confession_prefix = CONFESSION_CONSTANTS["ids"]["confession_prefix"]
+        if tag.upper().startswith(f'{confession_prefix}-'):
+            try:
+                confession_id = int(tag[len(confession_prefix)+1:])
+                confession = self.get_confession(confession_id)
+                if confession and confession.guild_id == guild_id:
+                    return confession
+            except ValueError:
+                pass
         
         return None
     
-    def _migrate_id_counters(self):
-        """Migrate existing data to set initial ID counters for guilds."""
-        for guild_id in self.guild_settings:
-            settings = self.guild_settings[guild_id]
-            
-            # Find the highest confession ID for this guild
-            max_confession_id = -1
-            for confession in self.confessions.values():
-                if confession.guild_id == guild_id and confession.confession_id > max_confession_id:
-                    max_confession_id = confession.confession_id
-            
-            # Find the highest reply ID for this guild
-            max_reply_id = -1
-            for replies in self.replies.values():
-                for reply in replies:
-                    if reply.guild_id == guild_id and reply.reply_id > max_reply_id:
-                        max_reply_id = reply.reply_id
-            
-            # Set next IDs only if they haven't been set yet (for backward compatibility)
-            if settings.next_confession_id == 0 and max_confession_id >= 0:
-                settings.next_confession_id = max_confession_id + 1
-                
-            if settings.next_reply_id == 0 and max_reply_id >= 0:
-                settings.next_reply_id = max_reply_id + 1
-        
-        # Save the updated settings
-        self._save_data()
+    def get_queue_status(self) -> Dict[str, int]:
+        """Get current queue status."""
+        return self.queue.get_queue_status()
+    
+    def process_queue_item(self, item: QueueItem) -> bool:
+        """Process a queue item (to be called by queue processor)."""
+        try:
+            if item.type.value == "confession":
+                # The confession was already created in create_confession
+                # Here we would handle any additional processing like posting to Discord
+                return True
+            elif item.type.value == "reply":
+                # The reply was already created in create_reply
+                # Here we would handle any additional processing like posting to Discord
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error processing queue item {item.id}: {e}")
+            return False
+    
+    def get_guild_confessions(self, guild_id: int, limit: int = 50) -> List[Confession]:
+        """Get confessions for a guild."""
+        confessions = [c for c in self.confessions.values() if c.guild_id == guild_id]
+        confessions.sort(key=lambda x: x.created_at, reverse=True)
+        return confessions[:limit]
+    
+    def get_confession_replies(self, confession_id: int) -> List[ConfessionReply]:
+        """Get replies for a confession."""
+        return self.replies.get(confession_id, [])
+    
+    def mark_confession_posted(self, confession_id: int, channel_id: int, message_id: int, thread_id: int):
+        """Mark a confession as posted."""
+        if confession_id in self.confessions:
+            confession = self.confessions[confession_id]
+            confession.channel_id = channel_id
+            confession.message_id = message_id
+            confession.thread_id = thread_id
+            confession.posted_at = datetime.now()
+            confession.status = ConfessionStatus.APPROVED
+            self._save_data()
+    
+    def mark_reply_posted(self, reply_id: str, message_id: int):
+        """Mark a reply as posted."""
+        for replies in self.replies.values():
+            for reply in replies:
+                if reply.reply_id == reply_id:
+                    reply.message_id = message_id
+                    reply.posted_at = datetime.now()
+                    self._save_data()
+                    return

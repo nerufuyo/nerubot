@@ -1,150 +1,265 @@
+#!/usr/bin/env python3
 """
-Demo script for the Anonymous Confession feature
-This script demonstrates the confession system functionality
+Demo script for the Anonymous Confession System
+
+This script demonstrates the new confession system implementation
+based on the specification requirements.
 """
+
 import asyncio
 import discord
 from discord.ext import commands
+from datetime import datetime
+import sys
+import os
+
+# Add the src directory to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
 from src.features.confession.services.confession_service import ConfessionService
-from src.features.confession.models.confession import ConfessionStatus
+from src.features.confession.models.confession import Confession, ConfessionReply, GuildConfessionSettings
 
 
-async def demo_confession_system():
-    """Demonstrate the confession system functionality."""
-    print("🔥 Anonymous Confession System Demo")
-    print("=" * 50)
+def print_section(title):
+    """Print a section header."""
+    print(f"\n{'='*60}")
+    print(f"  {title}")
+    print(f"{'='*60}")
+
+
+def print_confession_format(confession):
+    """Print confession in the expected format."""
+    print(f"\n📝 Confession #{confession.confession_id:03d}")
+    print(f"{confession.content}")
+    if confession.attachments:
+        print(f"📎 Attachments: {', '.join(confession.attachments)}")
+    print(f"ID: CONF-{confession.confession_id:03d} | 🔄 Reply")
+    print(f"Created: {confession.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+
+
+def print_reply_format(reply):
+    """Print reply in the expected format."""
+    print(f"\n↪️ {reply.reply_id}")
+    print(f"{reply.content}")
+    if reply.attachments:
+        print(f"📎 Attachments: {', '.join(reply.attachments)}")
+    print(f"ID: {reply.reply_id} | 🔄 Reply")
+    print(f"Created: {reply.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+
+
+def demo_confession_system():
+    """Demonstrate the confession system."""
     
-    # Create service instance
+    print_section("Anonymous Confession System Demo")
+    print("This demo shows the new confession system implementation")
+    print("based on the specification requirements.")
+    
+    # Initialize the service
     service = ConfessionService()
     
-    # Demo guild and user IDs
-    guild_id = 123456789
-    user1_id = 111111111
-    user2_id = 222222222
-    channel_id = 333333333
+    # Demo guild ID
+    guild_id = 12345
+    user_id_1 = 98765
+    user_id_2 = 54321
     
-    print("\n1. Setting up guild confession settings...")
-    settings = service.update_guild_settings(
-        guild_id,
-        confession_channel_id=channel_id,
-        moderation_enabled=False,
-        anonymous_replies=True,
+    print_section("1. Guild Setup")
+    
+    # Set up guild settings
+    service.update_guild_settings(
+        guild_id=guild_id,
+        confession_channel_id=9999,
         max_confession_length=2000,
-        cooldown_minutes=1  # Shorter cooldown for demo
+        max_reply_length=1000
     )
-    print(f"✅ Guild settings configured:")
-    print(f"   - Channel ID: {settings.confession_channel_id}")
-    print(f"   - Moderation: {settings.moderation_enabled}")
-    print(f"   - Anonymous replies: {settings.anonymous_replies}")
-    print(f"   - Cooldown: {settings.cooldown_minutes} minutes")
     
-    print("\n2. Creating first confession...")
-    success, message, confession1 = service.create_confession(
-        content="I've been struggling with anxiety lately and don't know who to talk to. Sometimes I feel like I'm drowning in my own thoughts.",
-        author_id=user1_id,
-        guild_id=guild_id
+    settings = service.get_guild_settings(guild_id)
+    print(f"✅ Guild {guild_id} configured")
+    print(f"   Confession Channel: {settings.confession_channel_id}")
+    print(f"   Max Confession Length: {settings.max_confession_length}")
+    print(f"   Max Reply Length: {settings.max_reply_length}")
+    print(f"   Next Confession ID: CONF-{settings.next_confession_id:03d}")
+    
+    print_section("2. Creating Confessions")
+    
+    # Create first confession
+    success, message, confession_id = service.create_confession(
+        content="I've been struggling with anxiety lately and don't know who to talk to.",
+        author_id=user_id_1,
+        guild_id=guild_id,
+        attachments=["https://example.com/image1.png"]
     )
     
     if success:
-        print(f"✅ {message}")
-        print(f"   - Confession ID: {confession1.confession_id}")
-        print(f"   - Status: {confession1.status.value}")
-        print(f"   - Content preview: {confession1.content[:50]}...")
+        print("✅ First confession created successfully!")
+        # Get the confession object
+        confession1 = service.get_confession(int(confession_id.split('-')[1]))
+        print_confession_format(confession1)
     else:
-        print(f"❌ {message}")
+        print(f"❌ Failed to create confession: {message}")
+        confession1 = None
     
-    print("\n3. Creating second confession...")
-    success, message, confession2 = service.create_confession(
-        content="I have a huge crush on someone in my class but I'm too shy to say anything. What should I do?",
-        author_id=user2_id,
-        guild_id=guild_id
+    # Create second confession
+    success, message, confession_id = service.create_confession(
+        content="I have a secret crush on my best friend but I'm too scared to tell them.",
+        author_id=user_id_2,
+        guild_id=guild_id,
+        attachments=["https://example.com/gif1.gif", "https://example.com/image2.jpg"]
     )
     
     if success:
-        print(f"✅ {message}")
-        print(f"   - Confession ID: {confession2.confession_id}")
-        print(f"   - Content preview: {confession2.content[:50]}...")
+        print("✅ Second confession created successfully!")
+        # Get the confession object
+        confession2 = service.get_confession(int(confession_id.split('-')[1]))
+        print_confession_format(confession2)
+    else:
+        print(f"❌ Failed to create confession: {message}")
+        confession2 = None
     
-    print("\n4. Testing cooldown system...")
-    success, message, confession3 = service.create_confession(
-        content="This should fail due to cooldown",
-        author_id=user1_id,
-        guild_id=guild_id
-    )
-    print(f"Expected failure: {message}")
+    print_section("3. Creating Replies")
     
-    print("\n5. Creating replies to first confession...")
-    
-    # Reply 1
-    success, message, reply1 = service.create_reply(
-        confession_id=confession1.confession_id,
-        content="I understand how you feel. Have you considered talking to a counselor or therapist? Sometimes professional help can make a huge difference.",
-        author_id=user2_id,
-        guild_id=guild_id
-    )
-    
-    if success:
-        print(f"✅ Reply 1: {message}")
-        print(f"   - Reply ID: {reply1.reply_id}")
-        print(f"   - Content preview: {reply1.content[:50]}...")
-    
-    # Reply 2  
-    success, message, reply2 = service.create_reply(
-        confession_id=confession1.confession_id,
-        content="You're not alone in feeling this way. Anxiety is more common than you think. Take it one day at a time. 💙",
-        author_id=user1_id,  # Same user can reply to their own confession anonymously
-        guild_id=guild_id
-    )
-    
-    if success:
-        print(f"✅ Reply 2: {message}")
-        print(f"   - Reply ID: {reply2.reply_id}")
-    
-    print("\n6. Testing confession lookup...")
-    
-    # Test exact ID lookup
-    found_confession = service.get_confession(confession1.confession_id)
-    if found_confession:
-        print(f"✅ Found confession by exact ID: {found_confession.confession_id}")
-    
-    # Test partial ID lookup
-    partial_id = confession1.confession_id[:4]
-    found_confession = service.get_confession_by_tag(partial_id, guild_id)
-    if found_confession:
-        print(f"✅ Found confession by partial ID '{partial_id}': {found_confession.confession_id}")
-    
-    print("\n7. Getting confession statistics...")
-    guild_confessions = service.get_guild_confessions(guild_id)
-    total_confessions = len(guild_confessions)
-    total_replies = sum(conf.reply_count for conf in guild_confessions)
-    
-    print(f"📊 Guild Statistics:")
-    print(f"   - Total confessions: {total_confessions}")
-    print(f"   - Total replies: {total_replies}")
-    print(f"   - Average replies per confession: {total_replies/total_confessions:.1f}")
-    
-    print("\n8. Listing all confessions and replies...")
-    for confession in guild_confessions:
-        print(f"\n📝 Confession #{confession.confession_id}")
-        print(f"   Content: {confession.content[:100]}...")
-        print(f"   Replies: {confession.reply_count}")
-        print(f"   Created: {confession.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+    # Create replies to first confession
+    if confession1:
+        success, message, reply_id = service.create_reply(
+            confession_id=confession1.confession_id,
+            content="You're not alone in this. Consider talking to a counselor or trusted friend.",
+            author_id=user_id_2,
+            guild_id=guild_id
+        )
         
-        replies = service.get_confession_replies(confession.confession_id)
-        for i, reply in enumerate(replies, 1):
-            print(f"   💬 Reply {i}: {reply.content[:60]}...")
+        if success:
+            print("✅ First reply created successfully!")
+            # Get the reply object
+            replies = service.get_confession_replies(confession1.confession_id)
+            reply1 = next((r for r in replies if r.reply_id == reply_id), None)
+            if reply1:
+                print_reply_format(reply1)
+        else:
+            print(f"❌ Failed to create reply: {message}")
+            reply1 = None
     
-    print("\n" + "=" * 50)
-    print("🎉 Demo completed successfully!")
-    print("\nKey Features Demonstrated:")
-    print("✅ Anonymous confession submission")
-    print("✅ Anonymous replies to confessions") 
-    print("✅ Confession ID system for easy reference")
-    print("✅ User cooldown system")
-    print("✅ Guild-specific settings")
-    print("✅ Data persistence")
-    print("✅ Statistics and moderation tools")
+    # Create another reply to first confession
+    if confession1:
+        success, message, reply_id = service.create_reply(
+            confession_id=confession1.confession_id,
+            content="I've been through something similar. Feel free to reach out if you need support.",
+            author_id=user_id_1,
+            guild_id=guild_id,
+            attachments=["https://example.com/supportive_image.png"]
+        )
+        
+        if success:
+            print("✅ Second reply created successfully!")
+            # Get the reply object
+            replies = service.get_confession_replies(confession1.confession_id)
+            reply2 = next((r for r in replies if r.reply_id == reply_id), None)
+            if reply2:
+                print_reply_format(reply2)
+        else:
+            print(f"❌ Failed to create reply: {message}")
+            reply2 = None
+    
+    # Create reply to second confession
+    if confession2:
+        success, message, reply_id = service.create_reply(
+            confession_id=confession2.confession_id,
+            content="Sometimes the best friendships grow into something more. Be honest about your feelings!",
+            author_id=user_id_1,
+            guild_id=guild_id
+        )
+        
+        if success:
+            print("✅ Third reply created successfully!")
+            # Get the reply object
+            replies = service.get_confession_replies(confession2.confession_id)
+            reply3 = next((r for r in replies if r.reply_id == reply_id), None)
+            if reply3:
+                print_reply_format(reply3)
+        else:
+            print(f"❌ Failed to create reply: {message}")
+            reply3 = None
+    
+    print_section("4. ID System Demonstration")
+    
+    print("📋 ID System Examples:")
+    if confession1 and confession2:
+        print(f"   Confession IDs: CONF-{confession1.confession_id:03d}, CONF-{confession2.confession_id:03d}")
+        
+        # Get all replies for demo
+        replies1 = service.get_confession_replies(confession1.confession_id)
+        replies2 = service.get_confession_replies(confession2.confession_id)
+        
+        if replies1 or replies2:
+            reply_ids = []
+            if replies1:
+                reply_ids.extend([r.reply_id for r in replies1])
+            if replies2:
+                reply_ids.extend([r.reply_id for r in replies2])
+            print(f"   Reply IDs: {', '.join(reply_ids)}")
+    
+    print("\n💡 ID System Features:")
+    print("   • Confessions: Sequential numbering (CONF-001, CONF-002, etc.)")
+    print("   • Replies: Parent ID + letter suffix (REPLY-001-A, REPLY-001-B, etc.)")
+    print("   • Easy reference for users to reply to specific messages")
+    print("   • Hierarchical organization for better thread management")
+    
+    print_section("5. Statistics")
+    
+    confessions = service.get_guild_confessions(guild_id)
+    total_replies = sum(confession.reply_count for confession in confessions)
+    
+    print(f"📊 Guild {guild_id} Statistics:")
+    print(f"   Total Confessions: {len(confessions)}")
+    print(f"   Total Replies: {total_replies}")
+    print(f"   Average Replies per Confession: {total_replies/len(confessions):.1f}")
+    if confessions:
+        print(f"   Latest Confession: CONF-{confessions[0].confession_id:03d}")
+    
+    print_section("6. Modal Interface Demo")
+    
+    print("🎭 Modal Interface Structure:")
+    print("\n📝 New Confession Modal:")
+    print("   Title: 'Create New Confession'")
+    print("   Fields:")
+    print("     1. Message (required) - Text area for confession content")
+    print("     2. Attachments (optional) - Text input for URLs")
+    print("\n💬 Reply Modal:")
+    print("   Title: 'Reply to Confession CONF-XXX'")
+    print("   Fields:")
+    print("     1. Message (required) - Text area for reply content")
+    print("     2. Confession ID (read-only) - Auto-populated with target message ID")
+    print("     3. Attachments (optional) - Text input for URLs")
+    
+    print_section("7. Thread Organization")
+    
+    print("🧵 Thread Structure:")
+    print("   • Each confession creates a dedicated thread")
+    print("   • Thread name: '💬 Confession #XXX'")
+    print("   • First message: Confession content with Reply button")
+    print("   • Subsequent messages: Replies with their own Reply buttons")
+    print("   • All messages maintain complete anonymity")
+    
+    print_section("8. Anonymity Features")
+    
+    print("🔒 Anonymity Protection:")
+    print("   • All messages posted by bot account")
+    print("   • No usernames, avatars, or user IDs visible")
+    print("   • User IDs stored internally but never displayed")
+    print("   • Consistent anonymous formatting for all messages")
+    print("   • No way to correlate messages with users")
+    
+    print_section("Demo Complete!")
+    print("The Anonymous Confession System has been successfully recreated")
+    print("according to the specification requirements.")
+    print("\n🎯 Key Features Implemented:")
+    print("   ✅ Exact modal structure (2 fields for confession, 3 for reply)")
+    print("   ✅ Proper ID system (CONF-XXX, REPLY-XXX-Y)")
+    print("   ✅ Thread-based organization")
+    print("   ✅ Complete anonymity protection")
+    print("   ✅ Attachment support")
+    print("   ✅ Persistent button interface")
+    print("   ✅ Sequential ID generation")
+    print("   ✅ Hierarchical reply system")
 
 
 if __name__ == "__main__":
-    asyncio.run(demo_confession_system())
+    demo_confession_system()

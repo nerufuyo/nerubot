@@ -135,7 +135,16 @@ MSG_HELP = {
         "news-start": "Start automatic news updates (Admin only)",
         "news-stop": "Stop automatic news updates (Admin only)",
         "news-add": "Add a news source (Admin only)",
-        "news-remove": "Remove a news source (Admin only)"
+        "news-remove": "Remove a news source (Admin only)",
+        # Roast commands
+        "roast": "Get a personalized roast based on your Discord behavior",
+        "roast-stats": "View roasting statistics and behavior analysis",
+        "behavior-analysis": "Get detailed analysis of Discord behavior patterns",
+        # AI Chatbot commands
+        "chat": "Start a conversation with NeruBot's AI",
+        "ai-provider": "Set your preferred AI provider",
+        "chat-stats": "View your chat statistics",
+        "ai-status": "Check AI services status"
     },
     "about": {
         "features": "• 🎵 Multi-source Music (YouTube, Spotify, SoundCloud)\n"
@@ -172,7 +181,6 @@ MSG_HELP = {
             "• Anonymous replies and interactions\n"
             "• Smart moderation with ID tracking\n"
             "• Customizable confession channels\n"
-            "• Cooldown protection and anti-spam\n"
             "• Image support for confessions\n\n"
             
             "**📰 Intelligent News System**\n"
@@ -250,6 +258,11 @@ MSG_HELP = {
             "`/news set-channel` - Set channel (Admin)\n"
             "`/news start/stop` - Control auto-posting (Admin)"
         ),
+        "roast_commands": (
+            "`/roast` - Get a personalized roast\n"
+            "`/roast-stats` - View roasting statistics\n"
+            "`/behavior-analysis` - Analyze Discord behavior patterns"
+        ),
         "general_commands": (
             "`/help` - Detailed help pages\n"
             "`/commands` - This command card\n"
@@ -315,7 +328,18 @@ CMD_DESCRIPTIONS = {
     "news-start": "Start automatic news updates (Admin only)",
     "news-stop": "Stop automatic news updates (Admin only)",
     "news-add": "Add a news source (Admin only)",
-    "news-remove": "Remove a news source (Admin only)"
+    "news-remove": "Remove a news source (Admin only)",
+    
+    # Roast commands
+    "roast": "Get a personalized roast based on your Discord behavior",
+    "roast-stats": "View roasting statistics and behavior analysis",
+    "behavior-analysis": "Get detailed analysis of Discord behavior patterns",
+    
+    # AI Chatbot commands
+    "chat": "Start a conversation with NeruBot's AI",
+    "ai-provider": "Set your preferred AI provider",
+    "chat-stats": "View your chat statistics",
+    "ai-status": "Check AI services status"
 }
 
 # ============================
@@ -459,28 +483,7 @@ MSG_NEWS = {
 }
 
 # ============================
-# CONFESSION MESSAGES
+# CONFESSION MESSAGES - DEPRECATED
 # ============================
-
-MSG_CONFESSION = {
-    "confession_submitted": "✅ Your confession has been submitted anonymously! (ID: `{confession_id}`)",
-    "reply_submitted": "✅ Your reply has been posted anonymously!",
-    "confession_not_found": "❌ No confession found with ID `{confession_id}` in this server.",
-    "channel_not_set": "❌ Confession channel is not set up for this server. Please ask an admin to set it up.",
-    "content_too_long": "❌ Content too long! Maximum {max_length} characters allowed.",
-    "on_cooldown": "❌ You're on cooldown! Please wait {time} before submitting another confession.",
-    "channel_set": "✅ Anonymous confessions will now be posted to {channel}",
-    "no_content": "❌ Please provide some content for your confession.",
-    "no_confessions": "📊 No confessions found for this server.",
-    "image_too_large": "❌ Image too large! Please use an image smaller than 8MB.",
-    "invalid_image": "❌ Please attach a valid image file (PNG, JPG, GIF, etc.)",
-    "help": {
-        "title": "📝 Anonymous Confession System",
-        "description": "Submit and reply to anonymous confessions safely with optional image attachments",
-        "confess": "Submit an anonymous confession (with optional image)",
-        "reply": "Reply to a confession using its ID (with optional image)",
-        "setup": "Set up confession channel (Admin only)",
-        "settings": "View confession settings (Admin only)",
-        "stats": "View confession statistics"
-    }
-}
+# Confession messages have been moved to src/core/constants.py
+# Use CONFESSION_CONSTANTS instead
