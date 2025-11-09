@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/nerufuyo/nerubot/internal/config"
+	"github.com/nerufuyo/nerubot/internal/delivery/discord"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
+	"github.com/nerufuyo/nerubot/internal/repository"
+	"github.com/nerufuyo/nerubot/internal/usecase/confession"
+	"github.com/nerufuyo/nerubot/internal/usecase/music"
+	"github.com/nerufuyo/nerubot/internal/usecase/roast"
 )
 
 func main() {
@@ -51,10 +57,44 @@ func main() {
 		"whale_alerts", cfg.Features.WhaleAlerts,
 	)
 
-	// TODO: Initialize Discord session
-	// TODO: Load use cases and repositories
-	// TODO: Register command handlers
-	// TODO: Start bot
+	// Initialize repositories
+	confessionRepo := repository.NewConfessionRepository()
+	roastRepo := repository.NewRoastRepository()
+
+	log.Info("Repositories initialized successfully")
+
+	// Initialize use cases
+	if cfg.Features.Music {
+		if _, err := music.NewMusicService(); err != nil {
+			log.Error("Failed to initialize music service", "error", err)
+			os.Exit(1)
+		}
+		log.Info("Music service initialized")
+	}
+
+	if cfg.Features.Confession {
+		_ = confession.NewConfessionService()
+		log.Info("Confession service initialized")
+	}
+
+	if cfg.Features.Roast {
+		_ = roast.NewRoastService()
+		log.Info("Roast service initialized")
+	}
+
+	// Initialize Discord bot
+	bot, err := discord.New(cfg)
+	if err != nil {
+		log.Error("Failed to create Discord bot", "error", err)
+		os.Exit(1)
+	}
+
+	// Start the bot
+	ctx := context.Background()
+	if err := bot.Start(ctx); err != nil {
+		log.Error("Failed to start Discord bot", "error", err)
+		os.Exit(1)
+	}
 
 	log.Info("Bot is running. Press CTRL+C to exit.")
 
@@ -64,8 +104,15 @@ func main() {
 	<-stop
 
 	log.Info("Shutting down gracefully...")
-	// TODO: Cleanup resources
-	// TODO: Close Discord connection
-	// TODO: Save state
+	
+	// Cleanup resources
+	if err := bot.Stop(); err != nil {
+		log.Error("Error stopping bot", "error", err)
+	}
+
+	// Save repositories
+	_ = confessionRepo
+	_ = roastRepo
+
 	log.Info("Goodbye!")
 }

@@ -1,5 +1,4 @@
 package entity
-package entity
 
 import (
 	"fmt"
