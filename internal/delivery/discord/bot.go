@@ -10,9 +10,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
+	"github.com/nerufuyo/nerubot/internal/usecase/chatbot"
 	"github.com/nerufuyo/nerubot/internal/usecase/confession"
 	"github.com/nerufuyo/nerubot/internal/usecase/music"
+	"github.com/nerufuyo/nerubot/internal/usecase/news"
 	"github.com/nerufuyo/nerubot/internal/usecase/roast"
+	"github.com/nerufuyo/nerubot/internal/usecase/whale"
 )
 
 // Bot represents the Discord bot
@@ -23,6 +26,9 @@ type Bot struct {
 	musicService      *music.MusicService
 	confessionService *confession.ConfessionService
 	roastService      *roast.RoastService
+	chatbotService    *chatbot.ChatbotService
+	newsService       *news.NewsService
+	whaleService      *whale.WhaleService
 }
 
 // New creates a new Discord bot instance
@@ -51,6 +57,9 @@ func New(cfg *config.Config) (*Bot, error) {
 		musicService:      musicService,
 		confessionService: confession.NewConfessionService(),
 		roastService:      roast.NewRoastService(),
+		chatbotService:    chatbot.NewChatbotService(cfg.AI.AnthropicKey, cfg.AI.GeminiKey, cfg.AI.OpenAIKey),
+		newsService:       news.NewNewsService(),
+		whaleService:      whale.NewWhaleService(cfg.Crypto.WhaleAlertAPIKey),
 	}
 
 	// Register event handlers
@@ -175,6 +184,14 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleConfess(s, i)
 	case "roast":
 		b.handleRoast(s, i)
+	case "chat":
+		b.handleChat(s, i)
+	case "chat-reset":
+		b.handleChatReset(s, i)
+	case "news":
+		b.handleNews(s, i)
+	case "whale":
+		b.handleWhale(s, i)
 	case "help":
 		b.handleHelp(s, i)
 	default:
@@ -232,6 +249,30 @@ func (b *Bot) registerCommands() error {
 					Required:    false,
 				},
 			},
+		},
+		{
+			Name:        "chat",
+			Description: "Chat with AI (supports Claude, Gemini, OpenAI)",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "message",
+					Description: "Your message to the AI",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "chat-reset",
+			Description: "Reset your chat history",
+		},
+		{
+			Name:        "news",
+			Description: "Get latest news from multiple sources",
+		},
+		{
+			Name:        "whale",
+			Description: "Get recent whale cryptocurrency transactions",
 		},
 		{
 			Name:        "help",
