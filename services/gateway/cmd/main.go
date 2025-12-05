@@ -12,6 +12,15 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	chatbotpb "github.com/nerufuyo/nerubot/api/proto/chatbot"
+	confessionpb "github.com/nerufuyo/nerubot/api/proto/confession"
+	musicpb "github.com/nerufuyo/nerubot/api/proto/music"
+	newspb "github.com/nerufuyo/nerubot/api/proto/news"
+	roastpb "github.com/nerufuyo/nerubot/api/proto/roast"
+	whalepb "github.com/nerufuyo/nerubot/api/proto/whale"
 )
 
 const (
@@ -20,15 +29,21 @@ const (
 )
 
 type Gateway struct {
-	config    *config.Config
-	logger    *logger.Logger
-	discord   *discordgo.Session
-	musicURL  string
-	confURL   string
-	roastURL  string
-	chatURL   string
-	newsURL   string
-	whaleURL  string
+	config        *config.Config
+	logger        *logger.Logger
+	discord       *discordgo.Session
+	musicClient   musicpb.MusicServiceClient
+	confClient    confessionpb.ConfessionServiceClient
+	roastClient   roastpb.RoastServiceClient
+	chatClient    chatbotpb.ChatbotServiceClient
+	newsClient    newspb.NewsServiceClient
+	whaleClient   whalepb.WhaleServiceClient
+	musicConn     *grpc.ClientConn
+	confConn      *grpc.ClientConn
+	roastConn     *grpc.ClientConn
+	chatConn      *grpc.ClientConn
+	newsConn      *grpc.ClientConn
+	whaleConn     *grpc.ClientConn
 }
 
 func main() {
@@ -58,12 +73,12 @@ func main() {
 	}
 
 	// Get service URLs from environment
-	musicURL := getEnvOrDefault("MUSIC_SERVICE_URL", "localhost:8081")
-	confURL := getEnvOrDefault("CONFESSION_SERVICE_URL", "localhost:8082")
-	roastURL := getEnvOrDefault("ROAST_SERVICE_URL", "localhost:8083")
-	chatURL := getEnvOrDefault("CHATBOT_SERVICE_URL", "localhost:8084")
-	newsURL := getEnvOrDefault("NEWS_SERVICE_URL", "localhost:8085")
-	whaleURL := getEnvOrDefault("WHALE_SERVICE_URL", "localhost:8086")
+	musicURL := getEnvOrDefault("MUSIC_SERVICE_URL", "localhost:50051")
+	confURL := getEnvOrDefault("CONFESSION_SERVICE_URL", "localhost:50052")
+	roastURL := getEnvOrDefault("ROAST_SERVICE_URL", "localhost:50053")
+	chatURL := getEnvOrDefault("CHATBOT_SERVICE_URL", "localhost:50054")
+	newsURL := getEnvOrDefault("NEWS_SERVICE_URL", "localhost:50055")
+	whaleURL := getEnvOrDefault("WHALE_SERVICE_URL", "localhost:50056")
 
 	log.Info("Service URLs configured",
 		"music", musicURL,
@@ -74,6 +89,51 @@ func main() {
 		"whale", whaleURL,
 	)
 
+	// Connect to gRPC services
+	musicConn, err := grpc.NewClient(musicURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error("Failed to connect to Music service", "error", err)
+		os.Exit(1)
+	}
+	defer musicConn.Close()
+
+	confConn, err := grpc.NewClient(confURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error("Failed to connect to Confession service", "error", err)
+		os.Exit(1)
+	}
+	defer confConn.Close()
+
+	roastConn, err := grpc.NewClient(roastURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error("Failed to connect to Roast service", "error", err)
+		os.Exit(1)
+	}
+	defer roastConn.Close()
+
+	chatConn, err := grpc.NewClient(chatURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error("Failed to connect to Chatbot service", "error", err)
+		os.Exit(1)
+	}
+	defer chatConn.Close()
+
+	newsConn, err := grpc.NewClient(newsURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error("Failed to connect to News service", "error", err)
+		os.Exit(1)
+	}
+	defer newsConn.Close()
+
+	whaleConn, err := grpc.NewClient(whaleURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error("Failed to connect to Whale service", "error", err)
+		os.Exit(1)
+	}
+	defer whaleConn.Close()
+
+	log.Info("gRPC connections established to all 6 backend services")
+
 	// Create Discord session
 	discord, err := discordgo.New("Bot " + cfg.Bot.Token)
 	if err != nil {
@@ -83,15 +143,21 @@ func main() {
 
 	// Create gateway instance
 	gw := &Gateway{
-		config:   cfg,
-		logger:   log,
-		discord:  discord,
-		musicURL: musicURL,
-		confURL:  confURL,
-		roastURL: roastURL,
-		chatURL:  chatURL,
-		newsURL:  newsURL,
-		whaleURL: whaleURL,
+		config:      cfg,
+		logger:      log,
+		discord:     discord,
+		musicClient: musicpb.NewMusicServiceClient(musicConn),
+		confClient:  confessionpb.NewConfessionServiceClient(confConn),
+		roastClient: roastpb.NewRoastServiceClient(roastConn),
+		chatClient:  chatbotpb.NewChatbotServiceClient(chatConn),
+		newsClient:  newspb.NewNewsServiceClient(newsConn),
+		whaleClient: whalepb.NewWhaleServiceClient(whaleConn),
+		musicConn:   musicConn,
+		confConn:    confConn,
+		roastConn:   roastConn,
+		chatConn:    chatConn,
+		newsConn:    newsConn,
+		whaleConn:   whaleConn,
 	}
 
 	// Register Discord handlers
@@ -286,44 +352,242 @@ func (gw *Gateway) handleInteraction(s *discordgo.Session, i *discordgo.Interact
 
 // Placeholder command handlers (to be implemented with gRPC calls)
 func (gw *Gateway) handlePlayCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	// TODO: Implement gRPC call to music service
-	gw.respondMessage(s, i, "🎵 Music feature coming soon! (Will connect to Music Service)")
+	// Get song parameter
+	options := i.ApplicationCommandData().Options
+	if len(options) == 0 {
+		gw.respondError(s, i, "Please provide a song URL or search query")
+		return
+	}
+
+	song := options[0].StringValue()
+	guildID := i.GuildID
+	userID := i.Member.User.ID
+
+	// Defer response to avoid timeout
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+	})
+	if err != nil {
+		gw.logger.Error("Failed to defer response", "error", err)
+		return
+	}
+
+	// Call Music service
+	resp, err := gw.musicClient.Play(ctx, &musicpb.PlayRequest{
+		GuildId:     guildID,
+		SongUrl:     song,
+		RequestedBy: userID,
+		ChannelId:   i.ChannelID,
+	})
+	if err != nil {
+		gw.followUp(s, i, fmt.Sprintf("❌ Failed to play song: %v", err))
+		return
+	}
+
+	if !resp.Success {
+		gw.followUp(s, i, fmt.Sprintf("❌ %s", resp.Message))
+		return
+	}
+
+	// Send response
+	message := fmt.Sprintf("🎵 %s", resp.Message)
+	if resp.Song != nil {
+		message = fmt.Sprintf("🎵 Now playing: **%s**\nRequested by: <@%s>", resp.Song.Title, resp.Song.RequestedBy)
+	}
+	gw.followUp(s, i, message)
 }
 
 func (gw *Gateway) handlePauseCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "⏸️ Pause feature coming soon!")
+	resp, err := gw.musicClient.Pause(ctx, &musicpb.PauseRequest{
+		GuildId: i.GuildID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to pause: %v", err))
+		return
+	}
+	gw.respondMessage(s, i, fmt.Sprintf("⏸️ %s", resp.Message))
 }
 
 func (gw *Gateway) handleResumeCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "▶️ Resume feature coming soon!")
+	resp, err := gw.musicClient.Resume(ctx, &musicpb.ResumeRequest{
+		GuildId: i.GuildID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to resume: %v", err))
+		return
+	}
+	gw.respondMessage(s, i, fmt.Sprintf("▶️ %s", resp.Message))
 }
 
 func (gw *Gateway) handleSkipCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "⏭️ Skip feature coming soon!")
+	resp, err := gw.musicClient.Skip(ctx, &musicpb.SkipRequest{
+		GuildId: i.GuildID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to skip: %v", err))
+		return
+	}
+	message := fmt.Sprintf("⏭️ %s", resp.Message)
+	if resp.NextSong != nil {
+		message += fmt.Sprintf("\nNow playing: **%s**", resp.NextSong.Title)
+	}
+	gw.respondMessage(s, i, message)
 }
 
 func (gw *Gateway) handleStopCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "⏹️ Stop feature coming soon!")
+	resp, err := gw.musicClient.Stop(ctx, &musicpb.StopRequest{
+		GuildId: i.GuildID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to stop: %v", err))
+		return
+	}
+	gw.respondMessage(s, i, fmt.Sprintf("⏹️ %s", resp.Message))
 }
 
 func (gw *Gateway) handleQueueCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "📋 Queue feature coming soon!")
+	resp, err := gw.musicClient.GetQueue(ctx, &musicpb.GetQueueRequest{
+		GuildId: i.GuildID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to get queue: %v", err))
+		return
+	}
+
+	if resp.TotalSongs == 0 {
+		gw.respondMessage(s, i, "📋 Queue is empty")
+		return
+	}
+
+	message := fmt.Sprintf("📋 **Queue** (%d songs)\n\n", resp.TotalSongs)
+	for idx, song := range resp.Songs {
+		if idx >= 10 { // Limit to 10 songs
+			message += fmt.Sprintf("\n... and %d more", resp.TotalSongs-10)
+			break
+		}
+		message += fmt.Sprintf("%d. **%s**\n", idx+1, song.Title)
+	}
+	gw.respondMessage(s, i, message)
 }
 
 func (gw *Gateway) handleNowPlayingCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "🎵 Now Playing feature coming soon!")
+	resp, err := gw.musicClient.NowPlaying(ctx, &musicpb.NowPlayingRequest{
+		GuildId: i.GuildID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to get now playing: %v", err))
+		return
+	}
+
+	if !resp.IsPlaying || resp.CurrentSong == nil {
+		gw.respondMessage(s, i, "🎵 Nothing is playing")
+		return
+	}
+
+	message := fmt.Sprintf("🎵 **Now Playing**\n%s\nRequested by: <@%s>\nVolume: %d%%\nLoop: %s",
+		resp.CurrentSong.Title,
+		resp.CurrentSong.RequestedBy,
+		resp.Volume,
+		resp.LoopMode,
+	)
+	gw.respondMessage(s, i, message)
 }
 
 func (gw *Gateway) handleConfessCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "🤐 Confession feature coming soon! (Will connect to Confession Service)")
+	options := i.ApplicationCommandData().Options
+	if len(options) == 0 {
+		gw.respondError(s, i, "Please provide a confession message")
+		return
+	}
+
+	content := options[0].StringValue()
+	userID := i.Member.User.ID
+
+	resp, err := gw.confClient.Submit(ctx, &confessionpb.SubmitRequest{
+		GuildId:     i.GuildID,
+		Content:     content,
+		SubmittedBy: userID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to submit confession: %v", err))
+		return
+	}
+
+	if !resp.Success {
+		gw.respondError(s, i, resp.Message)
+		return
+	}
+
+	gw.respondMessage(s, i, fmt.Sprintf("🤐 %s\nConfession ID: #%d", resp.Message, resp.ConfessionId))
 }
 
 func (gw *Gateway) handleRoastCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "🔥 Roast feature coming soon! (Will connect to Roast Service)")
+	// Get target user (default to command author)
+	targetID := i.Member.User.ID
+	options := i.ApplicationCommandData().Options
+	if len(options) > 0 && options[0].Type == discordgo.ApplicationCommandOptionUser {
+		targetID = options[0].UserValue(s).ID
+	}
+
+	resp, err := gw.roastClient.GenerateRoast(ctx, &roastpb.RoastRequest{
+		GuildId: i.GuildID,
+		UserId:  targetID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to generate roast: %v", err))
+		return
+	}
+
+	if !resp.Success {
+		if resp.CooldownRemaining > 0 {
+			gw.respondError(s, i, fmt.Sprintf("Roast on cooldown! Wait %d seconds", resp.CooldownRemaining))
+		} else {
+			gw.respondError(s, i, "Failed to generate roast")
+		}
+		return
+	}
+
+	message := fmt.Sprintf("🔥 **Roast for <@%s>**\n\n%s\n\n*Category: %s*", targetID, resp.RoastContent, resp.RoastCategory)
+	gw.respondMessage(s, i, message)
 }
 
 func (gw *Gateway) handleProfileCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	gw.respondMessage(s, i, "📊 Profile feature coming soon!")
+	// Get target user (default to command author)
+	targetID := i.Member.User.ID
+	options := i.ApplicationCommandData().Options
+	if len(options) > 0 && options[0].Type == discordgo.ApplicationCommandOptionUser {
+		targetID = options[0].UserValue(s).ID
+	}
+
+	resp, err := gw.roastClient.GetProfile(ctx, &roastpb.ProfileRequest{
+		GuildId: i.GuildID,
+		UserId:  targetID,
+	})
+	if err != nil {
+		gw.respondError(s, i, fmt.Sprintf("Failed to get profile: %v", err))
+		return
+	}
+
+	if resp.Profile == nil {
+		gw.respondMessage(s, i, fmt.Sprintf("📊 No profile found for <@%s>", targetID))
+		return
+	}
+
+	p := resp.Profile
+	message := fmt.Sprintf("📊 **Profile for <@%s>**\n\n"+
+		"Messages: %d\n"+
+		"Reactions: %d\n"+
+		"Voice Time: %d minutes\n"+
+		"Commands: %d\n"+
+		"Last Seen: %s",
+		targetID,
+		p.MessageCount,
+		p.ReactionCount,
+		p.VoiceMinutes,
+		p.CommandCount,
+		p.LastSeen,
+	)
+	gw.respondMessage(s, i, message)
 }
 
 func (gw *Gateway) handlePingCommand(ctx context.Context, s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -354,6 +618,16 @@ func (gw *Gateway) respondError(s *discordgo.Session, i *discordgo.InteractionCr
 	})
 	if err != nil {
 		gw.logger.Error("Failed to respond to interaction", "error", err)
+	}
+}
+
+// followUp sends a follow-up message after deferred response
+func (gw *Gateway) followUp(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
+	_, err := s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+		Content: message,
+	})
+	if err != nil {
+		gw.logger.Error("Failed to send follow-up message", "error", err)
 	}
 }
 
