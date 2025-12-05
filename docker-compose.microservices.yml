@@ -1,0 +1,250 @@
+# Docker Compose for NeruBot Microservices Development
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: nerubot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nerubot
+      POSTGRES_PASSWORD: nerubot_dev
+      POSTGRES_DB: nerubot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - nerubot_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nerubot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nerubot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - nerubot_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  # API Gateway Service
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    container_name: nerubot-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID}
+      - MUSIC_SERVICE_URL=music-service:8081
+      - CONFESSION_SERVICE_URL=confession-service:8082
+      - ROAST_SERVICE_URL=roast-service:8083
+      - CHATBOT_SERVICE_URL=chatbot-service:8084
+      - NEWS_SERVICE_URL=news-service:8085
+      - WHALE_SERVICE_URL=whale-service:8086
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      redis:
+        condition: service_healthy
+      music-service:
+        condition: service_started
+      confession-service:
+        condition: service_started
+      roast-service:
+        condition: service_started
+    networks:
+      - nerubot_network
+    volumes:
+      - ./logs:/root/logs
+
+  # Music Service
+  music-service:
+    build:
+      context: .
+      dockerfile: services/music/Dockerfile
+    container_name: nerubot-music
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - DATABASE_URL=postgresql://nerubot:nerubot_dev@postgres:5432/music_db
+      - REDIS_URL=redis://redis:6379
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+      - YTDLP_PATH=/usr/local/bin/yt-dlp
+      - MAX_QUEUE_SIZE=100
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nerubot_network
+    volumes:
+      - ./logs:/root/logs
+      - music_cache:/tmp/music
+
+  # Confession Service
+  confession-service:
+    build:
+      context: .
+      dockerfile: services/confession/Dockerfile
+    container_name: nerubot-confession
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - PORT=8082
+      - DATABASE_URL=postgresql://nerubot:nerubot_dev@postgres:5432/confession_db
+      - STORAGE_PATH=/data/confessions
+      - MAX_IMAGE_SIZE=10485760
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nerubot_network
+    volumes:
+      - ./logs:/root/logs
+      - confession_data:/data/confessions
+
+  # Roast Service
+  roast-service:
+    build:
+      context: .
+      dockerfile: services/roast/Dockerfile
+    container_name: nerubot-roast
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      - PORT=8083
+      - DATABASE_URL=postgresql://nerubot:nerubot_dev@postgres:5432/roast_db
+      - REDIS_URL=redis://redis:6379
+      - ROAST_COOLDOWN_SECONDS=300
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nerubot_network
+    volumes:
+      - ./logs:/root/logs
+      - roast_data:/data/roasts
+
+  # Chatbot Service
+  chatbot-service:
+    build:
+      context: .
+      dockerfile: services/chatbot/Dockerfile
+    container_name: nerubot-chatbot
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      - PORT=8084
+      - DATABASE_URL=postgresql://nerubot:nerubot_dev@postgres:5432/chat_db
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SESSION_TIMEOUT_MINUTES=30
+      - MAX_CONTEXT_MESSAGES=10
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nerubot_network
+    volumes:
+      - ./logs:/root/logs
+
+  # News Service
+  news-service:
+    build:
+      context: .
+      dockerfile: services/news/Dockerfile
+    container_name: nerubot-news
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      - PORT=8085
+      - DATABASE_URL=postgresql://nerubot:nerubot_dev@postgres:5432/news_db
+      - REDIS_URL=redis://redis:6379
+      - FETCH_INTERVAL_MINUTES=15
+      - MAX_ARTICLES_PER_FETCH=50
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nerubot_network
+    volumes:
+      - ./logs:/root/logs
+
+  # Whale Service
+  whale-service:
+    build:
+      context: .
+      dockerfile: services/whale/Dockerfile
+    container_name: nerubot-whale
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - PORT=8086
+      - DATABASE_URL=postgresql://nerubot:nerubot_dev@postgres:5432/whale_db
+      - WHALE_ALERT_API_KEY=${WHALE_ALERT_API_KEY}
+      - CHECK_INTERVAL_SECONDS=60
+      - DEFAULT_MIN_AMOUNT_USD=1000000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nerubot_network
+    volumes:
+      - ./logs:/root/logs
+
+networks:
+  nerubot_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  music_cache:
+    driver: local
+  confession_data:
+    driver: local
+  roast_data:
+    driver: local

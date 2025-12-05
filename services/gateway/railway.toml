@@ -1,0 +1,17 @@
+# Railway Configuration for API Gateway Service
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "services/gateway/Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+numReplicas = 1
+sleepApplication = false
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[[services]]
+name = "api-gateway"
+port = 8080
