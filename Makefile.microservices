@@ -1,0 +1,158 @@
+# Makefile for NeruBot Microservices
+
+# Go parameters
+GOCMD=go
+GOBUILD=$(GOCMD) build
+GOCLEAN=$(GOCMD) clean
+GOTEST=$(GOCMD) test
+GOGET=$(GOCMD) get
+GOMOD=$(GOCMD) mod
+
+# Docker parameters
+DOCKER=docker
+DOCKER_COMPOSE=docker-compose
+
+# Project parameters
+PROJECT_NAME=nerubot
+VERSION=1.0.0
+
+# Services
+GATEWAY_BINARY=gateway
+MUSIC_BINARY=music
+CONFESSION_BINARY=confession
+ROAST_BINARY=roast
+CHATBOT_BINARY=chatbot
+NEWS_BINARY=news
+WHALE_BINARY=whale
+
+# Build directories
+BUILD_DIR=build
+GATEWAY_BUILD=$(BUILD_DIR)/gateway
+MUSIC_BUILD=$(BUILD_DIR)/music
+CONFESSION_BUILD=$(BUILD_DIR)/confession
+ROAST_BUILD=$(BUILD_DIR)/roast
+CHATBOT_BUILD=$(BUILD_DIR)/chatbot
+NEWS_BUILD=$(BUILD_DIR)/news
+WHALE_BUILD=$(BUILD_DIR)/whale
+
+# Proto files
+PROTO_DIR=api/proto
+PROTO_FILES=$(wildcard $(PROTO_DIR)/*.proto)
+
+.PHONY: all build clean test run docker-build docker-up docker-down proto help
+
+# Default target
+all: clean proto build
+
+# Help target
+help:
+	@echo "NeruBot Microservices Build System"
+	@echo ""
+	@echo "Available targets:"
+	@echo "  make all              - Clean, generate proto, and build all services"
+	@echo "  make build            - Build all services"
+	@echo "  make build-gateway    - Build API Gateway service"
+	@echo "  make proto            - Generate gRPC code from proto files"
+	@echo "  make clean            - Remove build artifacts"
+	@echo "  make test             - Run tests"
+	@echo "  make docker-build     - Build Docker images"
+	@echo "  make docker-up        - Start services with docker-compose"
+	@echo "  make docker-down      - Stop services"
+	@echo "  make run-gateway      - Run API Gateway locally"
+	@echo "  make deps             - Download dependencies"
+
+# Build all services
+build: build-gateway
+	@echo "All services built successfully!"
+
+# Build individual services
+build-gateway:
+	@echo "Building API Gateway..."
+	@mkdir -p $(GATEWAY_BUILD)
+	@$(GOBUILD) -o $(GATEWAY_BUILD)/$(GATEWAY_BINARY) ./services/gateway/cmd
+	@echo "API Gateway built: $(GATEWAY_BUILD)/$(GATEWAY_BINARY)"
+
+# Generate gRPC code from proto files
+proto:
+	@echo "Generating gRPC code from proto files..."
+	@echo "Note: Install protoc and plugins first with 'make install-tools'"
+	@for proto in $(PROTO_FILES); do \
+		echo "Processing $$proto..."; \
+		protoc --go_out=. --go_opt=paths=source_relative \
+			--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+			$$proto; \
+	done
+	@echo "gRPC code generation completed!"
+
+# Clean build artifacts
+clean:
+	@echo "Cleaning build artifacts..."
+	@$(GOCLEAN)
+	@rm -rf $(BUILD_DIR)
+	@echo "Clean completed!"
+
+# Run tests
+test:
+	@echo "Running tests..."
+	@$(GOTEST) -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+	@echo "Tests completed!"
+
+# Download dependencies
+deps:
+	@echo "Downloading dependencies..."
+	@$(GOMOD) download
+	@echo "Dependencies downloaded!"
+
+# Tidy go modules
+tidy:
+	@echo "Tidying go modules..."
+	@$(GOMOD) tidy
+	@echo "Go modules tidied!"
+
+# Run services locally
+run-gateway: build-gateway
+	@echo "Running API Gateway..."
+	@./$(GATEWAY_BUILD)/$(GATEWAY_BINARY)
+
+# Docker operations
+docker-build:
+	@echo "Building Docker images..."
+	@$(DOCKER_COMPOSE) -f docker-compose.microservices.yml build
+	@echo "Docker images built successfully!"
+
+docker-up:
+	@echo "Starting services with docker-compose..."
+	@$(DOCKER_COMPOSE) -f docker-compose.microservices.yml up -d
+	@echo "Services started!"
+
+docker-down:
+	@echo "Stopping services..."
+	@$(DOCKER_COMPOSE) -f docker-compose.microservices.yml down
+	@echo "Services stopped!"
+
+docker-logs:
+	@$(DOCKER_COMPOSE) -f docker-compose.microservices.yml logs -f
+
+# Development helpers
+dev-setup:
+	@echo "Setting up development environment..."
+	@$(MAKE) install-tools
+	@$(MAKE) deps
+	@$(MAKE) proto
+	@echo "Development setup completed!"
+
+# Install tools
+install-tools:
+	@echo "Installing development tools..."
+	@$(GOGET) google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	@$(GOGET) google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	@echo "Tools installed!"
+	@echo "Note: You also need to install protoc separately"
+
+# Format code
+fmt:
+	@echo "Formatting code..."
+	@$(GOCMD) fmt ./...
+	@echo "Code formatted!"
+
+.DEFAULT_GOAL := help
