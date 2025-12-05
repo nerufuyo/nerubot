@@ -57,7 +57,7 @@ func New(cfg *config.Config) (*Bot, error) {
 		musicService:      musicService,
 		confessionService: confession.NewConfessionService(),
 		roastService:      roast.NewRoastService(),
-		chatbotService:    chatbot.NewChatbotService(cfg.AI.AnthropicKey, cfg.AI.GeminiKey, cfg.AI.OpenAIKey),
+		chatbotService:    chatbot.NewChatbotService(cfg.AI.DeepSeekKey),
 		newsService:       news.NewNewsService(),
 		whaleService:      whale.NewWhaleService(cfg.Crypto.WhaleAlertAPIKey),
 	}

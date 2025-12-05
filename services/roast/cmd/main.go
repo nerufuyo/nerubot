@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -92,18 +90,4 @@ func (s *RoastServer) startHealthServer(port string) {
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		s.logger.Error("Health server error", "error", err)
 	}
-}
-
-// TODO: Implement gRPC server
-func (s *RoastServer) startGRPCServer(port string) error {
-	lis, err := net.Listen("tcp", ":"+port)
-	if err != nil {
-		return fmt.Errorf("failed to listen: %w", err)
-	}
-
-	s.logger.Info("gRPC server listening", "port", port)
-
-	_ = lis
-	_ = context.Background()
-	return nil
 }
