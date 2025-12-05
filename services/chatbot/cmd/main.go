@@ -52,9 +52,7 @@ func main() {
 
 	// Initialize chatbot service
 	chatbotService := chatbot.NewChatbotService(
-		cfg.AI.AnthropicKey,
-		cfg.AI.GeminiKey,
-		cfg.AI.OpenAIKey,
+		cfg.AI.DeepSeekKey,
 	)
 	if chatbotService == nil {
 		log.Error("Failed to initialize chatbot service")

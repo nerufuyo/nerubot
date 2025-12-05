@@ -26,18 +26,12 @@ type ChatbotService struct {
 }
 
 // NewChatbotService creates a new chatbot service
-func NewChatbotService(claudeKey, geminiKey, openaiKey string) *ChatbotService {
+func NewChatbotService(deepseekKey string) *ChatbotService {
 	providers := make([]ai.AIProvider, 0)
 
-	// Add providers in order of preference
-	if claudeKey != "" {
-		providers = append(providers, ai.NewClaudeProvider(claudeKey))
-	}
-	if geminiKey != "" {
-		providers = append(providers, ai.NewGeminiProvider(geminiKey))
-	}
-	if openaiKey != "" {
-		providers = append(providers, ai.NewOpenAIProvider(openaiKey))
+	// Add DeepSeek provider
+	if deepseekKey != "" {
+		providers = append(providers, ai.NewDeepSeekProvider(deepseekKey))
 	}
 
 	service := &ChatbotService{

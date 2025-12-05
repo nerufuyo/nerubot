@@ -87,9 +87,7 @@ type DiscordConfig struct {
 
 // AIConfig holds AI service configuration
 type AIConfig struct {
-	OpenAIKey    string
-	AnthropicKey string
-	GeminiKey    string
+	DeepSeekKey string
 }
 
 // CryptoConfig holds cryptocurrency feature configuration
@@ -204,9 +202,7 @@ func Load() (*Config, error) {
 			SyncCommandsGlobally: true,
 		},
 		AI: AIConfig{
-			OpenAIKey:    os.Getenv("OPENAI_API_KEY"),
-			AnthropicKey: os.Getenv("ANTHROPIC_API_KEY"),
-			GeminiKey:    os.Getenv("GEMINI_API_KEY"),
+			DeepSeekKey: os.Getenv("DEEPSEEK_API_KEY"),
 		},
 		Crypto: CryptoConfig{
 			WhaleAlertAPIKey:    os.Getenv("WHALE_ALERT_API_KEY"),
@@ -254,9 +250,7 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 }
 
 func hasAnyAIKey() bool {
-	return os.Getenv("OPENAI_API_KEY") != "" ||
-		os.Getenv("ANTHROPIC_API_KEY") != "" ||
-		os.Getenv("GEMINI_API_KEY") != ""
+	return os.Getenv("DEEPSEEK_API_KEY") != ""
 }
 
 // Validate validates the configuration
