@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package news;
+
+option go_package = "github.com/nerufuyo/nerubot/api/proto/news";
+
+// News service definition
+service NewsService {
+  rpc FetchNews(FetchNewsRequest) returns (FetchNewsResponse);
+  rpc AddSource(AddSourceRequest) returns (AddSourceResponse);
+  rpc RemoveSource(RemoveSourceRequest) returns (RemoveSourceResponse);
+  rpc GetSources(GetSourcesRequest) returns (GetSourcesResponse);
+  rpc PublishNews(PublishNewsRequest) returns (PublishNewsResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Fetch news
+message FetchNewsRequest {
+  string guild_id = 1;
+  int32 limit = 2;
+}
+
+message FetchNewsResponse {
+  repeated Article articles = 1;
+  int32 total_articles = 2;
+}
+
+// Add source
+message AddSourceRequest {
+  string guild_id = 1;
+  string source_name = 2;
+  string source_url = 3;
+  string feed_type = 4;
+}
+
+message AddSourceResponse {
+  bool success = 1;
+  string message = 2;
+  int32 source_id = 3;
+}
+
+// Remove source
+message RemoveSourceRequest {
+  string guild_id = 1;
+  int32 source_id = 2;
+}
+
+message RemoveSourceResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Get sources
+message GetSourcesRequest {
+  string guild_id = 1;
+}
+
+message GetSourcesResponse {
+  repeated Source sources = 1;
+}
+
+// Publish news
+message PublishNewsRequest {
+  string guild_id = 1;
+  string channel_id = 2;
+  int32 article_id = 3;
+}
+
+message PublishNewsResponse {
+  bool success = 1;
+  string message = 2;
+  string message_id = 3;
+}
+
+// Health Check
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string service = 2;
+  string version = 3;
+}
+
+// Common message types
+message Article {
+  int32 id = 1;
+  string title = 2;
+  string url = 3;
+  string content = 4;
+  string published_at = 5;
+  string source_name = 6;
+}
+
+message Source {
+  int32 id = 1;
+  string guild_id = 2;
+  string source_name = 3;
+  string source_url = 4;
+  string feed_type = 5;
+  bool enabled = 6;
+  string last_fetched = 7;
+}

@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package confession;
+
+option go_package = "github.com/nerufuyo/nerubot/api/proto/confession";
+
+// Confession service definition
+service ConfessionService {
+  rpc Submit(SubmitRequest) returns (SubmitResponse);
+  rpc Approve(ApproveRequest) returns (ApproveResponse);
+  rpc Reject(RejectRequest) returns (RejectResponse);
+  rpc Reply(ReplyRequest) returns (ReplyResponse);
+  rpc GetPending(GetPendingRequest) returns (GetPendingResponse);
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Submit confession
+message SubmitRequest {
+  string guild_id = 1;
+  string content = 2;
+  string image_url = 3;
+  string submitted_by = 4; // Anonymous - not stored
+}
+
+message SubmitResponse {
+  bool success = 1;
+  string message = 2;
+  int32 confession_id = 3;
+}
+
+// Approve confession
+message ApproveRequest {
+  string guild_id = 1;
+  int32 confession_id = 2;
+  string approved_by = 3;
+}
+
+message ApproveResponse {
+  bool success = 1;
+  string message = 2;
+  int32 confession_number = 3;
+  string channel_id = 4;
+  string message_id = 5;
+}
+
+// Reject confession
+message RejectRequest {
+  string guild_id = 1;
+  int32 confession_id = 2;
+  string rejected_by = 3;
+  string reason = 4;
+}
+
+message RejectResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Reply to confession
+message ReplyRequest {
+  string guild_id = 1;
+  int32 confession_number = 2;
+  string reply_content = 3;
+}
+
+message ReplyResponse {
+  bool success = 1;
+  string message = 2;
+  string message_id = 3;
+}
+
+// Get pending confessions
+message GetPendingRequest {
+  string guild_id = 1;
+}
+
+message GetPendingResponse {
+  repeated Confession confessions = 1;
+  int32 total_pending = 2;
+}
+
+// Get settings
+message GetSettingsRequest {
+  string guild_id = 1;
+}
+
+message GetSettingsResponse {
+  Settings settings = 1;
+}
+
+// Update settings
+message UpdateSettingsRequest {
+  string guild_id = 1;
+  Settings settings = 2;
+}
+
+message UpdateSettingsResponse {
+  bool success = 1;
+  string message = 2;
+  Settings settings = 3;
+}
+
+// Health Check
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string service = 2;
+  string version = 3;
+}
+
+// Common message types
+message Confession {
+  int32 id = 1;
+  string guild_id = 2;
+  int32 confession_number = 3;
+  string content = 4;
+  string image_url = 5;
+  string status = 6;
+  string submitted_at = 7;
+  string approved_at = 8;
+}
+
+message Settings {
+  string guild_id = 1;
+  bool enabled = 2;
+  string mod_channel_id = 3;
+  string confession_channel_id = 4;
+  bool require_approval = 5;
+  bool allow_images = 6;
+  int32 max_length = 7;
+}

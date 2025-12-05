@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package roast;
+
+option go_package = "github.com/nerufuyo/nerubot/api/proto/roast";
+
+// Roast service definition
+service RoastService {
+  rpc TrackActivity(ActivityRequest) returns (ActivityResponse);
+  rpc GenerateRoast(RoastRequest) returns (RoastResponse);
+  rpc GetProfile(ProfileRequest) returns (ProfileResponse);
+  rpc GetLeaderboard(LeaderboardRequest) returns (LeaderboardResponse);
+  rpc GetStats(StatsRequest) returns (StatsResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Track activity
+message ActivityRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  ActivityType type = 3;
+  int32 count = 4;
+}
+
+enum ActivityType {
+  MESSAGE = 0;
+  REACTION = 1;
+  VOICE = 2;
+  COMMAND = 3;
+}
+
+message ActivityResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Generate roast
+message RoastRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message RoastResponse {
+  bool success = 1;
+  string roast_content = 2;
+  string roast_category = 3;
+  int32 cooldown_remaining = 4;
+}
+
+// Get profile
+message ProfileRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message ProfileResponse {
+  UserProfile profile = 1;
+}
+
+// Get leaderboard
+message LeaderboardRequest {
+  string guild_id = 1;
+  LeaderboardType type = 2;
+  int32 limit = 3;
+}
+
+enum LeaderboardType {
+  MESSAGES = 0;
+  REACTIONS = 1;
+  VOICE_TIME = 2;
+  COMMANDS = 3;
+}
+
+message LeaderboardResponse {
+  repeated LeaderboardEntry entries = 1;
+}
+
+// Get stats
+message StatsRequest {
+  string guild_id = 1;
+}
+
+message StatsResponse {
+  int32 total_roasts = 1;
+  int32 total_users = 2;
+  map<string, int32> category_counts = 3;
+}
+
+// Health Check
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string service = 2;
+  string version = 3;
+}
+
+// Common message types
+message UserProfile {
+  string guild_id = 1;
+  string user_id = 2;
+  int32 message_count = 3;
+  int32 reaction_count = 4;
+  int32 voice_minutes = 5;
+  int32 command_count = 6;
+  string last_seen = 7;
+}
+
+message LeaderboardEntry {
+  int32 rank = 1;
+  string user_id = 2;
+  string username = 3;
+  int32 value = 4;
+}

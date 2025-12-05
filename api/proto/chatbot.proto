@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package chatbot;
+
+option go_package = "github.com/nerufuyo/nerubot/api/proto/chatbot";
+
+// Chatbot service definition
+service ChatbotService {
+  rpc Chat(ChatRequest) returns (ChatResponse);
+  rpc GetSession(SessionRequest) returns (SessionResponse);
+  rpc ClearSession(ClearSessionRequest) returns (ClearSessionResponse);
+  rpc GetProviderStatus(ProviderStatusRequest) returns (ProviderStatusResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Chat request
+message ChatRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  string message = 3;
+  string channel_id = 4;
+}
+
+message ChatResponse {
+  bool success = 1;
+  string response = 2;
+  string provider_used = 3;
+  int32 tokens_used = 4;
+}
+
+// Get session
+message SessionRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message SessionResponse {
+  Session session = 1;
+  repeated Message messages = 2;
+}
+
+// Clear session
+message ClearSessionRequest {
+  string guild_id = 1;
+  string user_id = 2;
+}
+
+message ClearSessionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Get provider status
+message ProviderStatusRequest {}
+
+message ProviderStatusResponse {
+  repeated ProviderStatus providers = 1;
+}
+
+// Health Check
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string service = 2;
+  string version = 3;
+}
+
+// Common message types
+message Session {
+  int32 id = 1;
+  string guild_id = 2;
+  string user_id = 3;
+  string created_at = 4;
+  string last_interaction = 5;
+  int32 message_count = 6;
+}
+
+message Message {
+  int32 id = 1;
+  string role = 2;
+  string content = 3;
+  string provider = 4;
+  int32 tokens_used = 5;
+  string created_at = 6;
+}
+
+message ProviderStatus {
+  string provider_name = 1;
+  bool available = 2;
+  int32 total_requests = 3;
+  int32 successful_requests = 4;
+  int32 failed_requests = 5;
+  string last_used = 6;
+}

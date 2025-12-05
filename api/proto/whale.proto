@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package whale;
+
+option go_package = "github.com/nerufuyo/nerubot/api/proto/whale";
+
+// Whale service definition
+service WhaleService {
+  rpc GetTransactions(GetTransactionsRequest) returns (GetTransactionsResponse);
+  rpc GetAlertSettings(GetAlertSettingsRequest) returns (GetAlertSettingsResponse);
+  rpc UpdateAlertSettings(UpdateAlertSettingsRequest) returns (UpdateAlertSettingsResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Get transactions
+message GetTransactionsRequest {
+  string guild_id = 1;
+  int32 limit = 2;
+  string blockchain = 3;
+}
+
+message GetTransactionsResponse {
+  repeated Transaction transactions = 1;
+  int32 total_transactions = 2;
+}
+
+// Get alert settings
+message GetAlertSettingsRequest {
+  string guild_id = 1;
+}
+
+message GetAlertSettingsResponse {
+  AlertSettings settings = 1;
+}
+
+// Update alert settings
+message UpdateAlertSettingsRequest {
+  string guild_id = 1;
+  AlertSettings settings = 2;
+}
+
+message UpdateAlertSettingsResponse {
+  bool success = 1;
+  string message = 2;
+  AlertSettings settings = 3;
+}
+
+// Health Check
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string service = 2;
+  string version = 3;
+}
+
+// Common message types
+message Transaction {
+  int32 id = 1;
+  string blockchain = 2;
+  string transaction_hash = 3;
+  double amount = 4;
+  double amount_usd = 5;
+  string from_address = 6;
+  string to_address = 7;
+  string timestamp = 8;
+}
+
+message AlertSettings {
+  string guild_id = 1;
+  string channel_id = 2;
+  double min_amount_usd = 3;
+  bool enabled = 4;
+  repeated string blockchains = 5;
+}
