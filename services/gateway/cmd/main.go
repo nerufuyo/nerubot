@@ -75,7 +75,7 @@ func main() {
 	)
 
 	// Create Discord session
-	discord, err := discordgo.New("Bot " + cfg.Discord.Token)
+	discord, err := discordgo.New("Bot " + cfg.Bot.Token)
 	if err != nil {
 		log.Error("Failed to create Discord session", "error", err)
 		os.Exit(1)
