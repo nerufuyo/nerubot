@@ -1,202 +1,576 @@
-# NeruBot# NeruBot - Your Ultimate Discord Companion 🎵
+<div align="center">
 
+# 🎵 NeruBot
 
+### Your Ultimate Discord Companion
 
-A feature-rich Discord bot built with Golang, following Clean Architecture principles.<div align="center">
-
-
-
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org)![NeruBot Banner](https://imgur.com/yh3j7PK.png)
-
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-[![Discord](https://img.shields.io/badge/Discord-Bot-7289DA?style=flat&logo=discord)](https://discord.com)[![Discord Bot](https://img.shields.io/badge/Discord-Bot-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=yourid&permissions=8&scope=bot%20applications.commands)
-
+[![Discord Bot](https://img.shields.io/badge/Discord-Bot-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)
-
-## 🎯 Features[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-3.0.0-blue?style=for-the-badge)](CHANGELOG.md)
 
-### 🎵 Music System
+**A powerful, feature-rich Discord bot built with Go - bringing music, community engagement, and entertainment to your server**
 
-- YouTube audio streaming with high quality**A powerful, feature-rich Discord bot built with Go - bringing music, community engagement, and entertainment to your server**
-
-- Queue management (add, skip, pause, resume, stop)
-
-- Now playing information[🚀 Quick Start](#-quick-start) • [📋 Features](#-features) • [📖 Documentation](#-documentation) • [🤝 Support](#-support)
-
-- Playback controls
+[🚀 Quick Start](#-quick-start) • [📋 Features](#-features) • [📖 Documentation](#-documentation) • [🤝 Contributing](#-contributing)
 
 </div>
 
-### 🤐 Confession System
+---
 
-- Anonymous confession submission---
+## 📖 Table of Contents
 
-- Moderation queue with approval/rejection
+- [About](#-about-nerubot)
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Commands](#-commands)
+- [Configuration](#️-configuration)
+- [Architecture](#️-architecture)
+- [Deployment](#-deployment)
+- [Documentation](#-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-- Reply system for confessions## 🎯 About NeruBot
+---
 
-- Guild-specific settings
+## 🎯 About NeruBot
 
-NeruBot is a comprehensive Discord companion created by **[@nerufuyo](https://github.com/nerufuyo)** that transforms your server into an interactive entertainment hub. Built with Go for superior performance and reliability, NeruBot delivers high-quality multi-source music streaming, anonymous confession systems, personalized user roasting, and intuitive slash commands.
+NeruBot is a comprehensive Discord companion created by **[@nerufuyo](https://github.com/nerufuyo)** that transforms your server into an interactive entertainment hub. Built with Go for superior performance and reliability, NeruBot follows **Clean Architecture** principles for maintainability and scalability.
 
-### 🔥 Roast System
+### 🏆 Why Choose NeruBot?
 
-- User activity tracking (messages, voice time, commands)### 🏆 Why Choose NeruBot?
+- **⚡ Lightning Fast** - Built with Go for exceptional performance
+- **🎵 Premium Audio** - Crystal-clear YouTube streaming via yt-dlp
+- **🛡️ Privacy-First** - Anonymous features with robust security
+- **🏗️ Clean Architecture** - Maintainable, scalable codebase
+- **🔒 Production Ready** - Thread-safe operations and error handling
+- **💰 Completely Free** - No premium features, everything included!
 
-- AI-powered roast generation
+---
 
-- Statistics and leaderboards- **⚡ Lightning Fast** - Built with Go for exceptional performance and low resource usage
+## ✨ Features
 
-- Multiple roast categories- **🎵 Premium Audio Quality** - Crystal-clear streaming from YouTube with yt-dlp integration
-
-- **🛡️ Privacy-First Design** - Anonymous features with robust security measures
-
-### 🤖 AI Chatbot- **🏗️ Clean Architecture** - Maintainable, scalable codebase following industry best practices
-
-- Multi-provider AI integration (Claude, Gemini, OpenAI)- **🔒 Production Ready** - Enterprise-grade architecture with thread-safe operations
-
-- Automatic fallback between providers- **💰 Completely Free** - No premium features, everything included!
-
-- Session management with 30-minute timeout
-
-- Context-aware conversations---
-
-
-
-### 📰 News System## ✨ Features
-
-- RSS feed aggregation from multiple sources
-
-- Concurrent news fetching<table>
-
-- Customizable news sources<tr>
-
-- Auto-publishing capability<td width="50%">
-
-
-
-### 🐋 Whale Alerts### 🎵 **Music System**
-
-- Cryptocurrency whale transaction monitoring- **YouTube Support** - High-quality audio streaming via yt-dlp
-
-- Real-time alerts for large transactions- **Smart Queue Management** - Add, skip, stop, shuffle songs
-
-- Configurable minimum threshold- **Loop Modes** - None, single song, or entire queue
-
-- Support for multiple blockchains- **Voice State Detection** - Automatic channel validation
-
-- **Rich Embeds** - Beautiful now playing displays
-
-## 📋 Prerequisites- **Thread-Safe Operations** - Concurrent queue management
-
-
-
-- Go 1.21 or higher### 📝 **Anonymous Confession System**
-
-- FFmpeg (for audio processing)- **Complete Anonymity** - Secure, private confession sharing
-
-- yt-dlp (for YouTube downloads)- **Image Support** - Attach images to confessions
-
-- Discord Bot Token- **Reply System** - Anonymous community engagement
-
-- (Optional) AI API keys for chatbot feature- **Moderation Queue** - Admin approval workflow
-
-- **Settings Management** - Per-server configuration
-
-## 🚀 Quick Start- **Thread-Safe Storage** - JSON-based persistence
-
-
-
-### 1. Clone the Repository</td>
-
+<table>
+<tr>
 <td width="50%">
 
-```bash
+### 🎵 **Music System**
+- ✅ YouTube audio streaming (yt-dlp)
+- ✅ Queue management & controls
+- ✅ Loop modes (none/single/queue)
+- ✅ Now playing with rich embeds
+- ✅ Voice state detection
+- ✅ Thread-safe operations
 
-git clone https://github.com/nerufuyo/nerubot.git### � **User Roasting System**
-
-cd nerubot- **Activity Tracking** - Monitor messages, reactions, voice time
-
-```- **Smart Patterns** - 8 roast categories (spammer, lurker, etc.)
-
-- **Profile Analysis** - Detailed user behavior insights
-
-### 2. Install Dependencies- **Statistics** - Comprehensive roast metrics
-
-- **Safety Systems** - Cooldowns and friendly content
-
-```bash- **Persistent Data** - JSON storage for long-term tracking
-
-# Install Go dependencies
-
-go mod download### ℹ️ **User-Friendly Interface**
-
-- **Slash Commands** - Modern Discord command system
-
-# Install FFmpeg (macOS)- **Rich Embeds** - Beautiful, consistent message formatting
-
-brew install ffmpeg- **Error Handling** - Comprehensive error messages
-
-- **Interactive Components** - Buttons and modals
-
-# Install FFmpeg (Ubuntu/Debian)- **Multi-Feature Support** - Easy feature toggling via config
-
-sudo apt-get install ffmpeg
+### 📝 **Confession System**
+- ✅ Complete anonymity
+- ✅ Image attachment support
+- ✅ Moderation queue
+- ✅ Reply system
+- ✅ Per-guild settings
+- ✅ Confession numbering
 
 </td>
+<td width="50%">
 
-# Install yt-dlp</tr>
+### 🔥 **Roast System**
+- ✅ Activity tracking
+- ✅ Smart pattern detection
+- ✅ Profile analysis
+- ✅ Leaderboards & stats
+- ✅ Cooldown management
+- ✅ 8 roast categories
 
-pip install yt-dlp</table>
+### 🤖 **AI Chatbot** (Coming Soon)
+- 🚧 Multi-provider support
+- 🚧 DeepSeek integration
+- 🚧 Context-aware conversations
+- 🚧 Session management
 
-# or
+### 📰 **Additional Features** (Planned)
+- 🚧 RSS News aggregation
+- 🚧 Crypto whale alerts
+- 🚧 Advanced analytics
 
-brew install yt-dlp**🚧 Coming Soon:**
+</td>
+</tr>
+</table>
 
-```- 🤖 AI-Powered Chatbot (Claude, Gemini, OpenAI)
-
-- 📰 Real-Time News & Alerts
-
-### 3. Configure Environment- 💰 Crypto Whale Alerts
-
-- 📊 Advanced Analytics Dashboard
-
-```bash
-
-cp .env.example .env---
-
-```
+---
 
 ## 🚀 Quick Start
 
-Edit `.env` and add your configuration:
+### Prerequisites
 
-### 🖥️ Local Development
+- **Go 1.21+** - [Download](https://go.dev/dl/)
+- **FFmpeg** - For audio processing
+- **yt-dlp** - For YouTube downloads
+- **Discord Bot Token** - [Create a bot](https://discord.com/developers/applications)
 
-```env
+### Installation
 
-# Required```bash
-
-DISCORD_TOKEN=your_discord_bot_token# Clone the repository
-
-DISCORD_GUILD_ID=your_guild_idgit clone https://github.com/nerufuyo/nerubot.git
-
+```bash
+# Clone the repository
+git clone https://github.com/nerufuyo/nerubot.git
 cd nerubot
 
-# AI Providers (at least one required for chatbot)
+# Install dependencies
+go mod download
 
-ANTHROPIC_API_KEY=your_claude_api_key# Copy environment template
+# Copy environment template
+cp .env.example .env
 
-GEMINI_API_KEY=your_gemini_api_keycp .env.example .env
+# Edit .env with your configuration
+nano .env
 
-OPENAI_API_KEY=your_openai_api_key
+# Edit .env with your configuration
+nano .env
 
-# Edit .env with your Discord bot token and configuration
+# Install system dependencies
+# macOS
+brew install ffmpeg
+python -m pip install yt-dlp
 
-# Optionalnano .env  # or use your preferred editor
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y ffmpeg python3-pip
+pip3 install yt-dlp
+
+# Build and run
+make build
+make run
+```
+
+### Docker Setup
+
+```bash
+# Build and run with Docker
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop bot
+docker-compose down
+```
+
+---
+
+## 🎮 Commands
+
+### 🎵 Music Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/play <song>` | Play music from YouTube | `/play never gonna give you up` |
+| `/skip` | Skip to next song | `/skip` |
+| `/stop` | Stop playback and clear queue | `/stop` |
+| `/pause` | Pause current playback | `/pause` |
+| `/resume` | Resume playback | `/resume` |
+| `/queue` | Display current queue | `/queue` |
+| `/nowplaying` | Show current song info | `/nowplaying` |
+
+### 📝 Confession Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/confess` | Submit anonymous confession | Opens modal |
+| `/confess-approve <id>` | Approve confession (Admin) | `/confess-approve 5` |
+| `/confess-reject <id>` | Reject confession (Admin) | `/confess-reject 3` |
+| `/confess-reply <id>` | Reply to confession (Admin) | Opens modal |
+
+### 🔥 Roast Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/roast [@user]` | Generate personalized roast | `/roast @username` |
+| `/profile [@user]` | View user activity profile | `/profile @username` |
+| `/leaderboard` | Show roast leaderboard | `/leaderboard` |
+
+### ℹ️ Utility Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/ping` | Check bot response time | `/ping` |
+| `/help` | Display help information | `/help` |
+| `/about` | Show bot information | `/about` |
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+# === REQUIRED SETTINGS ===
+# Discord Bot Token (Get from: https://discord.com/developers/applications)
+DISCORD_TOKEN=your_discord_bot_token_here
+
+# === AI CHATBOT SETTINGS ===
+# DeepSeek API Key (Get from: https://platform.deepseek.com/)
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+# === OPTIONAL MUSIC SETTINGS ===
+# Spotify Integration (Optional - for better music search)
+# Get from: https://developer.spotify.com/dashboard/applications
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+
+# === BOT CONFIGURATION ===
+# Bot command prefix (default: !)
+COMMAND_PREFIX=!
+
+# Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+LOG_LEVEL=INFO
+
+# Enable/Disable Features
+ENABLE_MUSIC=true
+ENABLE_CHATBOT=true
+ENABLE_CONFESSION=true
+ENABLE_ROAST=true
+ENABLE_NEWS=false
+ENABLE_WHALE_ALERTS=false
+
+# === MUSIC SETTINGS ===
+# Maximum songs in queue per server
+MAX_QUEUE_SIZE=100
+
+# Auto-disconnect timeout in seconds (0 = disabled)
+AUTO_DISCONNECT_TIME=300
+
+# === ADVANCED SETTINGS ===
+# Bot activity status
+BOT_STATUS=🎵 Music for everyone!
+
+# Database settings (if using database features)
+DATABASE_URL=mongodb://localhost:27017
+
+# Redis settings (if using caching)
+REDIS_URL=redis://localhost:6379
+```
+
+### Feature Flags
+
+Control which features are enabled:
+
+```env
+ENABLE_MUSIC=true          # Music streaming
+ENABLE_CONFESSION=true     # Anonymous confessions
+ENABLE_ROAST=true          # User roasting
+ENABLE_CHATBOT=false       # AI chatbot (requires API key)
+ENABLE_NEWS=false          # News aggregation
+ENABLE_WHALE_ALERTS=false  # Crypto whale alerts
+```
+
+---
+
+## 🏗️ Architecture
+
+NeruBot follows **Clean Architecture** principles with clear separation of concerns:
+
+```
+nerubot/
+├── cmd/
+│   └── nerubot/              # Application entry point
+│       └── main.go
+├── internal/
+│   ├── config/               # Configuration management
+│   │   ├── config.go         # Main config structure
+│   │   ├── constants.go      # Constants and defaults
+│   │   └── messages.go       # Response messages
+│   ├── entity/               # Domain models
+│   │   ├── confession.go     # Confession entities
+│   │   ├── music.go          # Music entities
+│   │   ├── roast.go          # Roast entities
+│   │   └── ...
+│   ├── repository/           # Data persistence layer
+│   │   ├── confession_repository.go
+│   │   ├── roast_repository.go
+│   │   └── repository.go
+│   ├── usecase/              # Business logic layer
+│   │   ├── chatbot/          # AI chatbot service
+│   │   ├── confession/       # Confession management
+│   │   ├── music/            # Music streaming
+│   │   ├── news/             # News aggregation
+│   │   ├── roast/            # Roast generation
+│   │   └── whale/            # Whale alerts
+│   ├── delivery/             # External interfaces
+│   │   └── discord/          # Discord bot interface
+│   │       ├── bot.go        # Bot initialization
+│   │       └── handlers.go   # Command handlers
+│   └── pkg/                  # Shared utilities
+│       ├── ai/               # AI provider implementations
+│       │   └── deepseek.go   # DeepSeek integration
+│       ├── ffmpeg/           # FFmpeg wrapper
+│       ├── logger/           # Logging utilities
+│       └── ytdlp/            # yt-dlp wrapper
+├── data/                     # Data storage (JSON files)
+│   ├── confessions/          # Confession data
+│   └── roasts/               # Roast data & patterns
+├── deploy/                   # Deployment scripts
+│   ├── setup.sh              # VPS setup script
+│   ├── systemd/              # Systemd service files
+│   └── docker/               # Docker configurations
+├── docs/                     # Documentation
+├── .env.example              # Environment template
+├── docker-compose.yml        # Docker Compose config
+├── Dockerfile                # Docker build file
+├── Makefile                  # Build automation
+└── go.mod                    # Go dependencies
+```
+
+### Layer Responsibilities
+
+**1. Entity Layer** (`internal/entity/`)
+- Pure business objects
+- No external dependencies
+- Defines core domain models
+
+**2. Use Case Layer** (`internal/usecase/`)
+- Business logic implementation
+- Orchestrates data flow
+- Independent of frameworks
+
+**3. Repository Layer** (`internal/repository/`)
+- Data persistence abstraction
+- File/database operations
+- Interface-based design
+
+**4. Delivery Layer** (`internal/delivery/`)
+- External interfaces (Discord, HTTP)
+- Framework-specific code
+- Converts external requests to use cases
+
+**5. Infrastructure** (`internal/pkg/`)
+- Shared utilities and tools
+- External service wrappers
+- Logging, AI providers, FFmpeg
+
+### Design Principles
+
+- ✅ **Dependency Inversion** - High-level modules don't depend on low-level modules
+- ✅ **Single Responsibility** - Each module has one reason to change
+- ✅ **Interface Segregation** - Clients depend on interfaces they use
+- ✅ **Separation of Concerns** - Clear boundaries between layers
+- ✅ **Testability** - Easy to test each component independently
+
+For detailed architecture documentation, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+---
+
+## 🚀 Deployment
+
+### Local Development
+
+```bash
+# Run directly
+go run cmd/nerubot/main.go
+
+# Or use Makefile
+make run
+```
+
+### Docker Deployment
+
+```bash
+# Build image
+docker build -t nerubot:latest .
+
+# Run container
+docker run -d \
+  --name nerubot \
+  --env-file .env \
+  -v $(pwd)/data:/app/data \
+  nerubot:latest
+
+# View logs
+docker logs -f nerubot
+```
+
+### VPS Deployment (Ubuntu/Debian)
+
+```bash
+# One-command setup
+curl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/main/deploy/setup.sh | sudo bash
+
+# Manual setup
+sudo ./deploy/setup.sh
+
+# Check status
+sudo systemctl status nerubot
+
+# View logs
+sudo journalctl -u nerubot -f
+```
+
+### Production Checklist
+
+- [ ] Set `LOG_LEVEL=INFO` or `WARNING`
+- [ ] Configure proper `BOT_STATUS`
+- [ ] Enable only required features
+- [ ] Set up monitoring and alerts
+- [ ] Configure log rotation
+- [ ] Regular backups of `data/` directory
+- [ ] Use strong Discord bot token
+- [ ] Restrict file permissions (chmod 600 .env)
+
+For detailed deployment instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+
+---
+
+## 📖 Documentation
+
+### Available Documentation
+
+- 📘 [Architecture Guide](docs/ARCHITECTURE.md) - System design and structure
+- 🚀 [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment instructions
+- 🔧 [Project Structure](docs/PROJECT_STRUCTURE.md) - Detailed file organization
+- 🤝 [Contributing Guide](CONTRIBUTING.md) - How to contribute
+- 📝 [Changelog](CHANGELOG.md) - Version history
+
+### Additional Resources
+
+- [Discord.js Guide](https://discordjs.guide/) - Discord bot development
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) - Architecture principles
+- [Go Best Practices](https://golang.org/doc/effective_go.html) - Go programming guide
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'feat: Add amazing feature'`)
+4. **Push to branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
+
+### Commit Message Format
+
+Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+```
+<type>: <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation changes
+- `style:` Code style changes (formatting)
+- `refactor:` Code refactoring
+- `test:` Adding or updating tests
+- `chore:` Maintenance tasks
+
+**Examples:**
+```
+feat: Add playlist support to music system
+fix: Resolve queue management race condition
+docs: Update installation instructions
+```
+
+For more details, see [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+## 📊 Project Status
+
+### Current Version: 3.0.0
+
+**Completed Features:**
+- ✅ Music System (YouTube streaming)
+- ✅ Confession System (Anonymous submissions)
+- ✅ Roast System (Activity tracking & generation)
+- ✅ Slash Commands (Modern Discord interface)
+- ✅ Clean Architecture Implementation
+- ✅ Docker Support
+
+**In Development:**
+- 🚧 AI Chatbot (DeepSeek integration)
+- 🚧 News Aggregation System
+- 🚧 Crypto Whale Alerts
+
+**Planned:**
+- 📋 Web Dashboard
+- 📋 Database Migration (JSON → PostgreSQL)
+- 📋 Microservices Architecture
+- 📋 Advanced Analytics
+
+---
+
+## 🐛 Known Issues
+
+- Music playback may have occasional buffering on slow connections
+- Large confession images may take longer to process
+- Roast cooldown is per-guild, not global
+
+Report issues at: [GitHub Issues](https://github.com/nerufuyo/nerubot/issues)
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+```
+MIT License
+
+Copyright (c) 2024 nerufuyo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+```
+
+---
+
+## 🙏 Acknowledgments
+
+- **[@bwmarrin](https://github.com/bwmarrin)** - DiscordGo library
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** - YouTube download tool
+- **[FFmpeg](https://ffmpeg.org/)** - Audio processing
+- **Discord Community** - Feedback and support
+
+---
+
+## 📞 Support
+
+### Get Help
+
+- 📖 **Documentation:** Check [docs/](docs/) directory
+- 💬 **Discord Server:** [Join our community](#) (Coming soon)
+- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/nerufuyo/nerubot/issues)
+- ✨ **Feature Requests:** [GitHub Discussions](https://github.com/nerufuyo/nerubot/discussions)
+
+### Contact
+
+- **Author:** [@nerufuyo](https://github.com/nerufuyo)
+- **Email:** [Create an issue for contact](https://github.com/nerufuyo/nerubot/issues/new)
+- **Website:** [Coming soon](#)
+
+---
+
+<div align="center">
+
+**Made with ❤️ by [@nerufuyo](https://github.com/nerufuyo)**
+
+⭐ Star this repository if you find it helpful!
+
+[Report Bug](https://github.com/nerufuyo/nerubot/issues) · [Request Feature](https://github.com/nerufuyo/nerubot/issues) · [Documentation](docs/)
+
+</div>
 
 WHALE_ALERT_API_KEY=your_whale_alert_api_key
 
