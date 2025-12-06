@@ -69,9 +69,6 @@ NeruBot is a comprehensive Discord bot created by **[@nerufuyo](https://github.c
 - Per-guild settings
 - Confession numbering
 
-</td>
-<td width="50%">
-
 ### Roast System
 - Activity tracking
 - Smart pattern detection
@@ -80,16 +77,37 @@ NeruBot is a comprehensive Discord bot created by **[@nerufuyo](https://github.c
 - Cooldown management
 - 8 roast categories
 
-### AI Chatbot (Coming Soon)
-- Multi-provider support
+</td>
+<td width="50%">
+
+### AI Chatbot (Neru)
 - DeepSeek integration
+- Friendly personality
 - Context-aware conversations
 - Session management
+- Natural, helpful responses
+- Chat history tracking
 
-### Additional Features (Planned)
-- RSS News aggregation
-- Crypto whale alerts
-- Advanced analytics
+### News Aggregation
+- RSS feed integration
+- Multiple news sources
+- Latest headlines
+- Rich embed formatting
+- TechCrunch, The Verge, CNN, etc.
+
+### Crypto Whale Alerts
+- Real-time transaction tracking
+- Large transaction monitoring
+- Blockchain analysis
+- USD value formatting
+- Multiple chain support
+
+### Analytics System
+- Server statistics tracking
+- User activity profiles
+- Command usage analytics
+- Top users and commands
+- Historical data
 
 </td>
 </tr>
@@ -183,8 +201,27 @@ docker-compose down
 | Command | Description | Example |
 |---------|-------------|---------|
 | `/roast [@user]` | Generate personalized roast | `/roast @username` |
+
+### AI Chatbot Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/chat <message>` | Chat with Neru (AI assistant) | `/chat what's your favorite music?` |
+| `/chat-reset` | Clear your chat history | `/chat-reset` |
+
+### News & Crypto Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/news` | Get latest news headlines | `/news` |
+| `/whale` | View recent whale transactions | `/whale` |
+
+### Analytics Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/stats` | View server statistics | `/stats` |
 | `/profile [@user]` | View user activity profile | `/profile @username` |
-| `/leaderboard` | Show roast leaderboard | `/leaderboard` |
 
 ### Utility Commands
 
@@ -209,7 +246,13 @@ DISCORD_TOKEN=your_discord_bot_token_here
 
 # === AI CHATBOT SETTINGS ===
 # DeepSeek API Key (Get from: https://platform.deepseek.com/)
+# Required for /chat commands with Neru AI personality
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+# === CRYPTO WHALE ALERTS ===
+# Whale Alert API Key (Get from: https://whale-alert.io/)
+# Required for /whale commands to track large crypto transactions
+WHALE_ALERT_API_KEY=your_whale_alert_api_key
 
 # === OPTIONAL MUSIC SETTINGS ===
 # Spotify Integration (Optional - for better music search)
@@ -226,11 +269,8 @@ LOG_LEVEL=INFO
 
 # Enable/Disable Features
 ENABLE_MUSIC=true
-ENABLE_CHATBOT=true
 ENABLE_CONFESSION=true
 ENABLE_ROAST=true
-ENABLE_NEWS=false
-ENABLE_WHALE_ALERTS=false
 
 # === MUSIC SETTINGS ===
 # Maximum songs in queue per server
@@ -241,7 +281,7 @@ AUTO_DISCONNECT_TIME=300
 
 # === ADVANCED SETTINGS ===
 # Bot activity status
-BOT_STATUS=🎵 Music for everyone!
+BOT_STATUS=Your friendly Discord companion
 
 # Database settings (if using database features)
 DATABASE_URL=mongodb://localhost:27017
@@ -252,16 +292,15 @@ REDIS_URL=redis://localhost:6379
 
 ### Feature Flags
 
-Control which features are enabled:
+Features are automatically enabled/disabled based on API key availability:
 
-```env
-ENABLE_MUSIC=true          # Music streaming
-ENABLE_CONFESSION=true     # Anonymous confessions
-ENABLE_ROAST=true          # User roasting
-ENABLE_CHATBOT=false       # AI chatbot (requires API key)
-ENABLE_NEWS=false          # News aggregation
-ENABLE_WHALE_ALERTS=false  # Crypto whale alerts
-```
+- **Music System** - Controlled by `ENABLE_MUSIC` environment variable
+- **AI Chatbot** - Auto-enabled when `DEEPSEEK_API_KEY` is configured
+- **Confession System** - Controlled by `ENABLE_CONFESSION` (default: true)
+- **Roast System** - Controlled by `ENABLE_ROAST` (default: true)
+- **News Aggregation** - Always available (uses free RSS feeds)
+- **Whale Alerts** - Auto-enabled when `WHALE_ALERT_API_KEY` is configured
+- **Analytics** - Always enabled (no API key required)
 
 ---
 
@@ -484,23 +523,23 @@ For more details, see [CONTRIBUTING.md](CONTRIBUTING.md)
 ### Current Version: 3.0.0
 
 **Completed Features:**
-- Music System (YouTube streaming)
-- Confession System (Anonymous submissions)
-- Roast System (Activity tracking & generation)
+- Music System (YouTube streaming with yt-dlp)
+- Confession System (Anonymous submissions with moderation)
+- Roast System (Activity tracking & personalized generation)
+- AI Chatbot (Neru personality with DeepSeek)
+- News Aggregation (RSS feeds from multiple sources)
+- Crypto Whale Alerts (Real-time transaction monitoring)
+- Analytics System (Server & user statistics)
 - Slash Commands (Modern Discord interface)
 - Clean Architecture Implementation
 - Docker Support
-
-**In Development:**
-- AI Chatbot (DeepSeek integration)
-- News Aggregation System
-- Crypto Whale Alerts
 
 **Planned:**
 - Web Dashboard
 - Database Migration (JSON → PostgreSQL)
 - Microservices Architecture
-- Advanced Analytics
+- Advanced visualization
+- Mobile app companion
 
 ---
 
@@ -569,552 +608,6 @@ copies or substantial portions of the Software.
 [Report Bug](https://github.com/nerufuyo/nerubot/issues) · [Request Feature](https://github.com/nerufuyo/nerubot/issues) · [Documentation](docs/)
 
 </div>
-
-WHALE_ALERT_API_KEY=your_whale_alert_api_key
-
-# Build the bot
-
-# Feature Flagsmake build
-
-ENABLE_MUSIC=true
-
-ENABLE_CONFESSION=true# Run the bot
-
-ENABLE_ROAST=truemake run
-
-ENABLE_CHATBOT=true```
-
-ENABLE_NEWS=true
-
-ENABLE_WHALE_ALERT=true### Prerequisites
-
-```- **Go 1.21+** - [Download](https://go.dev/dl/)
-
-- **FFmpeg** - For audio processing
-
-### 4. Build and Run- **yt-dlp** - For YouTube downloads
-
-
-
-```bash**Install dependencies (macOS):**
-
-# Build the bot```bash
-
-make buildbrew install ffmpeg yt-dlp
-
-```
-
-# Run the bot
-
-./build/nerubot**Install dependencies (Ubuntu/Debian):**
-
-```bash
-
-# Or build and run in one stepsudo apt update
-
-make runsudo apt install -y ffmpeg
-
-```sudo wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/local/bin/yt-dlp
-
-sudo chmod a+rx /usr/local/bin/yt-dlp
-
-## 🎮 Commands```
-
-
-
-### Music Commands### 🌐 VPS Deployment (Production)
-
-- `/play <url>` - Play a YouTube video
-
-- `/skip` - Skip the current song```bash
-
-- `/pause` - Pause playback# One-command VPS setup (Ubuntu/Debian)
-
-- `/resume` - Resume playbackcurl -fsSL https://raw.githubusercontent.com/nerufuyo/nerubot/main/deploy/setup.sh | sudo bash
-
-- `/stop` - Stop playback and clear queue```
-
-- `/queue` - Show the current queue
-
-- `/nowplaying` - Show currently playing song**What this does:**
-
-- 🔧 Installs Go, FFmpeg, yt-dlp, and dependencies
-
-### Confession Commands- 👤 Creates secure `nerubot` user
-
-- `/confess <message>` - Submit an anonymous confession- 🛡️ Configures firewall (SSH only)
-
-- `/confess-reply <id> <message>` - Reply to a confession (Admin)- ⚙️ Sets up systemd service
-
-- `/confess-approve <id>` - Approve a confession (Admin)- 📊 Enables health monitoring
-
-- `/confess-reject <id>` - Reject a confession (Admin)
-
----
-
-### Roast Commands
-
-- `/roast <user>` - Roast a user based on their activity## 📋 Command Reference
-
-- `/roast-stats` - Show roast statistics
-
-- `/roast-leaderboard` - Show roast leaderboard### 🎵 Music Commands
-
-| Command | Description | Status |
-
-### AI Chatbot Commands|---------|-------------|--------|
-
-- `/chat <message>` - Chat with the AI bot| `/play <song>` | Play music from YouTube | ✅ |
-
-- `/chat-reset` - Clear your chat session history| `/skip` | Skip to the next song | ✅ |
-
-| `/stop` | Stop playback and clear queue | ✅ |
-
-### News Commands| `/queue` | Display current music queue | ✅ |
-
-- `/news [limit]` - Fetch latest news articles (default: 5)
-
-### 📝 Confession Commands
-
-### Whale Alert Commands| Command | Description | Status |
-
-- `/whale [limit]` - Get recent crypto whale transactions (default: 5)|---------|-------------|--------|
-
-| `/confess` | Submit anonymous confession (modal) | ✅ |
-
-### Utility Commands
-
-- `/help` - Show all available commands### 🔥 Roast Commands
-
-| Command | Description | Status |
-
-## 🏗️ Architecture|---------|-------------|--------|
-
-| `/roast [user]` | Generate personalized roast | ✅ |
-
-NeruBot follows Clean Architecture principles with clear separation of concerns:
-
-### ℹ️ Information Commands
-
-```| Command | Description | Status |
-
-nerubot/|---------|-------------|--------|
-
-├── cmd/nerubot/              # Application entry point| `/help` | Display help information | ✅ |
-
-│   └── main.go
-
-├── internal/**🚧 Additional commands will be added as features are completed**
-
-│   ├── config/               # Configuration management
-
-│   │   ├── config.go---
-
-│   │   ├── constants.go
-
-│   │   └── messages.go## ⚙️ Configuration
-
-│   ├── entity/               # Domain models
-
-│   │   ├── confession.go### 🔑 Environment Setup
-
-│   │   ├── music.go
-
-│   │   ├── news.go1. **Create `.env` file from template:**
-
-│   │   ├── roast.go```bash
-
-│   │   └── whale.gocp .env.example .env
-
-│   ├── repository/           # Data persistence```
-
-│   │   ├── confession_repository.go
-
-│   │   ├── roast_repository.go2. **Configure required settings:**
-
-│   │   └── repository.go```env
-
-│   ├── usecase/              # Business logic# Required
-
-│   │   ├── chatbot/BOT_TOKEN=your_discord_bot_token_here
-
-│   │   ├── confession/BOT_PREFIX=!
-
-│   │   ├── music/BOT_NAME=NeruBot
-
-│   │   ├── news/
-
-│   │   ├── roast/# Discord
-
-│   │   └── whale/DISCORD_GUILD_ID=your_guild_id_here
-
-│   ├── delivery/             # External interfacesDISCORD_OWNER_ID=your_user_id_here
-
-│   │   └── discord/
-
-│   │       ├── bot.go# Feature Toggles
-
-│   │       └── handlers.goFEATURE_MUSIC=true
-
-│   └── pkg/                  # Shared utilitiesFEATURE_CONFESSION=true
-
-│       ├── ai/               # AI provider implementationsFEATURE_ROAST=true
-
-│       ├── ffmpeg/           # FFmpeg wrapperFEATURE_CHATBOT=false
-
-│       ├── logger/           # Logging utilitiesFEATURE_NEWS=false
-
-│       └── ytdlp/            # yt-dlp wrapperFEATURE_WHALE_ALERTS=false
-
-├── data/                     # Data storage```
-
-│   ├── confessions/
-
-│   └── roasts/3. **Get Discord Bot Token:**
-
-└── deploy/                   # Deployment configurations   - Visit [Discord Developer Portal](https://discord.com/developers/applications)
-
-    ├── systemd/   - Create new application → Bot → Copy token
-
-    ├── nginx/   - Enable all necessary intents (Server Members, Message Content)
-
-    ├── logrotate/
-
-    └── cron/4. **Bot Permissions:**
-
-```   - Send Messages
-
-   - Embed Links
-
-### Architecture Layers   - Read Message History
-
-   - Connect to Voice
-
-1. **Config Layer** - Environment configuration and settings   - Speak in Voice
-
-2. **Delivery Layer** - Discord bot interface and command handlers   - Use Slash Commands
-
-3. **Use Case Layer** - Business logic and service orchestration
-
-4. **Entity Layer** - Domain models and data structures### 🎛️ Advanced Configuration
-
-5. **Repository Layer** - Data persistence (JSON files)
-
-6. **Pkg Layer** - Shared utilities and external integrationsAll configuration is managed through environment variables. See [`.env.example`](.env.example) for all available options:
-
-- Bot behavior and status
-
-## 🐳 Docker Deployment- Feature toggles
-
-- Resource limits
-
-### Build Docker Image- Audio settings
-
-- AI configuration
-
-```bash- Logging preferences
-
-docker build -t nerubot:latest .
-
-```---
-
-
-
-### Run with Docker## 🛠️ Management & Monitoring
-
-
-
-```bash### 📊 Service Management
-
-docker run -d \```bash
-
-  --name nerubot \# Check bot status
-
-  --env-file .env \sudo systemctl status nerubot
-
-  -v $(pwd)/data:/app/data \
-
-  -v $(pwd)/logs:/app/logs \# View real-time logs
-
-  nerubot:latestsudo journalctl -u nerubot -f
-
-```
-
-# Restart service
-
-### Docker Composesudo systemctl restart nerubot
-
-```
-
-```bash
-
-docker-compose up -d### 📈 Monitoring Tools
-
-``````bash
-
-# Quick status dashboard
-
-## 🔧 Development./deploy/status.sh
-
-
-
-### Building# Health monitoring
-
-./deploy/monitor.sh
-
-```bash
-
-# Development build# Update bot to latest version
-
-go build ./..../deploy/update.sh
-
-```
-
-# Production build (optimized)
-
-make build---
-
-
-
-# Clean build artifacts## 🏗️ Architecture
-
-make clean
-
-```NeruBot follows **Clean Architecture** principles for maximum maintainability and testability:
-
-
-
-### Testing```
-
-internal/
-
-```bash├── config/                 # Configuration and constants
-
-# Run all tests│   ├── config.go          # Environment configuration
-
-go test ./...│   ├── messages.go        # Bot messages and responses
-
-│   └── constants.go       # Application constants
-
-# Run tests with coverage├── entity/                # Domain models (business entities)
-
-go test -cover ./...│   ├── music.go           # Music domain models
-
-│   ├── confession.go      # Confession domain models
-
-# Run tests for specific package│   ├── roast.go           # Roast domain models
-
-go test ./internal/usecase/music/│   ├── news.go            # News domain models
-
-```│   └── whale.go           # Whale alert domain models
-
-├── repository/            # Data persistence layer
-
-### Code Quality│   ├── repository.go      # Base JSON repository
-
-│   ├── confession_repository.go
-
-```bash│   └── roast_repository.go
-
-# Format code├── usecase/               # Business logic layer
-
-go fmt ./...│   ├── music/             # Music service
-
-│   ├── confession/        # Confession service
-
-# Vet code│   ├── roast/             # Roast service
-
-go vet ./...│   ├── chatbot/           # AI chatbot service
-
-```│   ├── news/              # News service
-
-│   └── whale/             # Whale alerts service
-
-## 📊 Performance├── delivery/              # Interface layer
-
-│   └── discord/           # Discord bot implementation
-
-- **Binary Size:** ~8-10MB (optimized)│       ├── bot.go         # Bot lifecycle and setup
-
-- **Memory Usage:** ~50-100MB (varies with features)│       └── handlers.go    # Command handlers
-
-- **Startup Time:** <2 seconds└── pkg/                   # Shared utilities
-
-- **Audio Latency:** <100ms    ├── logger/            # Structured logging
-
-    ├── ffmpeg/            # FFmpeg wrapper
-
-## 🔒 Security    └── ytdlp/             # yt-dlp wrapper
-
-```
-
-- Environment variables for sensitive data
-
-- No hardcoded credentials**Key Principles:**
-
-- Secure session management- 🏛️ **Clean Architecture** - Clear separation of concerns
-
-- Rate limiting on commands- 🧹 **SOLID Principles** - Well-designed, maintainable code
-
-- Admin-only commands for moderation- 🔒 **Thread Safety** - Concurrent operations with sync.RWMutex
-
-- 📈 **Scalable** - Ready for high-traffic servers
-
-## 🤝 Contributing- 🧪 **Testable** - Dependency injection for easy testing
-
-
-
-Contributions are welcome! Please follow these guidelines:**Data Flow:**
-
-```
-
-1. Fork the repositoryDiscord → Delivery → Use Case → Entity
-
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)                ↓
-
-3. Commit your changes following [commit format guidelines](docs/format-commit.md)           Repository → JSON Files
-
-4. Push to the branch (`git push origin feature/AmazingFeature`)```
-
-5. Open a Pull Request
-
----
-
-## 📝 License
-
-## 📊 System Requirements
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### Minimum Requirements
-
-## 🙏 Acknowledgments- **OS:** Ubuntu 20.04+ / Debian 11+ / Windows 10+ / macOS 10.15+
-
-- **Go:** 1.21 or higher
-
-- [DiscordGo](https://github.com/bwmarrin/discordgo) - Discord API library for Go- **RAM:** 512MB
-
-- [gofeed](https://github.com/mmcdole/gofeed) - RSS feed parser- **Storage:** 2GB
-
-- [FFmpeg](https://ffmpeg.org/) - Audio processing- **Network:** Stable internet connection
-
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - YouTube download utility
-
-### Recommended (VPS)
-
-## 📞 Support- **CPU:** 2+ cores
-
-- **RAM:** 1GB+
-
-- **Issues:** [GitHub Issues](https://github.com/nerufuyo/nerubot/issues)- **Storage:** 5GB+
-
-- **Documentation:** [docs/](docs/)- **Bandwidth:** 500GB/month
-
-
-
-## 🗺️ Roadmap### Dependencies
-
-- **Go 1.21+** - Programming language
-
-- [ ] Unit tests for all packages- **FFmpeg** - Audio processing
-
-- [ ] Integration tests- **yt-dlp** - YouTube downloads
-
-- [ ] CI/CD pipeline- **Git** - Version control
-
-- [ ] Database support (PostgreSQL/MongoDB)
-
-- [ ] Web dashboard---
-
-- [ ] Metrics and monitoring
-
-- [ ] Multi-guild support improvements## 📖 Documentation
-
-- [ ] Additional music sources
-
-| Document | Description |
-
----|----------|-------------|
-
-| **[🚀 Deployment Guide](deploy/README.md)** | Complete VPS setup and management |
-
-**Made with ❤️ by [@nerufuyo](https://github.com/nerufuyo)**| **[🤝 Contributing Guide](CONTRIBUTING.md)** | Development guidelines and setup |
-
-| **[🏗️ Architecture Overview](ARCHITECTURE.md)** | Technical architecture details |
-| **[📝 Changelog](CHANGELOG.md)** | Version history and updates |
-| **[📋 Feature Guides](src/features/)** | Individual feature documentation |
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! NeruBot is built with ❤️ by the community.
-
-### Quick Contribution Guide
-1. **Fork** the repository
-2. **Clone** your fork: `git clone https://github.com/yourusername/nerubot.git`
-3. **Create** feature branch: `git checkout -b feature/amazing-feature`
-4. **Make** your changes following our [coding standards](CONTRIBUTING.md)
-5. **Test** thoroughly: `make test`
-6. **Build** to verify: `make build`
-7. **Submit** pull request
-
-### Development Setup
-```bash
-# Install Go dependencies
-go mod download
-
-# Build the project
-make build
-
-# Run tests
-make test
-
-# Run with hot reload (requires air)
-go install github.com/cosmtrek/air@latest
-air
-
-# Code formatting
-gofmt -s -w .
-go vet ./...
-```
-
-**Contribution Areas:**
-- 🎵 Music features and sources
-- 🛡️ Security improvements
-- 📱 Discord interaction enhancements
-- 📚 Documentation
-- 🧪 Testing coverage
-- 🌐 Internationalization
-- ⚡ Performance optimization
-
----
-
-## 💫 Support & Community
-
-### 🆘 Getting Help
-- **[GitHub Issues](https://github.com/nerufuyo/nerubot/issues)** - Bug reports and feature requests
-- **[Discussions](https://github.com/nerufuyo/nerubot/discussions)** - Questions and community chat
-- **[Discord Server](https://discord.gg/yourserver)** - Real-time support and community
-- **[Documentation](https://github.com/nerufuyo/nerubot/wiki)** - Comprehensive guides
-
-### 🏷️ Project Status
-- ✅ **Active Development** - Regular updates and improvements
-- 🛡️ **Production Ready** - Used in 100+ Discord servers
-- 🧪 **Well Tested** - Comprehensive test suite
-- 📚 **Documented** - Complete documentation and guides
-
----
-
-## 🙏 Acknowledgments
-
-**Created with ❤️ by [@nerufuyo](https://github.com/nerufuyo)**
-
-Special thanks to:
-- **Discord.py Community** - Amazing framework and support
-- **Contributors** - Everyone who helped improve NeruBot
-- **Users** - Servers and communities using NeruBot
-- **Open Source Projects** - Libraries and tools that make this possible
 
 ---
 

@@ -6,10 +6,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
+	"github.com/nerufuyo/nerubot/internal/usecase/analytics"
 	"github.com/nerufuyo/nerubot/internal/usecase/chatbot"
 	"github.com/nerufuyo/nerubot/internal/usecase/confession"
 	"github.com/nerufuyo/nerubot/internal/usecase/music"
@@ -29,6 +31,7 @@ type Bot struct {
 	chatbotService    *chatbot.ChatbotService
 	newsService       *news.NewsService
 	whaleService      *whale.WhaleService
+	analyticsService  *analytics.AnalyticsService
 }
 
 // New creates a new Discord bot instance
@@ -65,6 +68,7 @@ func New(cfg *config.Config) (*Bot, error) {
 		chatbotService:    chatbot.NewChatbotService(cfg.AI.DeepSeekKey),
 		newsService:       news.NewNewsService(),
 		whaleService:      whale.NewWhaleService(cfg.Crypto.WhaleAlertAPIKey),
+		analyticsService:  analytics.NewAnalyticsService("data/analytics"),
 	}
 
 	// Register event handlers
@@ -118,6 +122,13 @@ func (b *Bot) Start(ctx context.Context) error {
 func (b *Bot) Stop() error {
 	b.logger.Info("Shutting down bot...")
 
+	// Save analytics data
+	if b.analyticsService != nil {
+		if err := b.analyticsService.Stop(); err != nil {
+			b.logger.Error("Failed to save analytics", "error", err)
+		}
+	}
+
 	// Close Discord connection
 	if err := b.session.Close(); err != nil {
 		return fmt.Errorf("failed to close Discord connection: %w", err)
@@ -168,6 +179,7 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 
 	// Get command name
 	cmdName := i.ApplicationCommandData().Name
+	startTime := time.Now()
 
 	b.logger.Debug("Command received",
 		"command", cmdName,
@@ -197,12 +209,35 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleNews(s, i)
 	case "whale":
 		b.handleWhale(s, i)
+	case "stats":
+		b.handleStats(s, i)
+	case "profile":
+		b.handleProfile(s, i)
 	case "help":
 		b.handleHelp(s, i)
 	default:
 		b.respondError(s, i, "Unknown command")
 	}
+
+	// Record command usage in analytics
+	if b.analyticsService != nil {
+		executionTime := time.Since(startTime).Milliseconds()
+		guildName := i.GuildID
+		if guild, err := s.Guild(i.GuildID); err == nil {
+			guildName = guild.Name
+		}
+		b.analyticsService.RecordCommandUsage(
+			i.GuildID,
+			guildName,
+			i.Member.User.ID,
+			i.Member.User.Username,
+			cmdName,
+			true,
+			executionTime,
+		)
+	}
 }
+
 
 // registerCommands registers slash commands with Discord
 func (b *Bot) registerCommands() error {
@@ -278,6 +313,22 @@ func (b *Bot) registerCommands() error {
 		{
 			Name:        "whale",
 			Description: "Get recent whale cryptocurrency transactions",
+		},
+		{
+			Name:        "stats",
+			Description: "View server statistics and analytics",
+		},
+		{
+			Name:        "profile",
+			Description: "View user statistics and activity",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to view (optional, defaults to you)",
+					Required:    false,
+				},
+			},
 		},
 		{
 			Name:        "help",

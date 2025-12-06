@@ -19,10 +19,11 @@ type ChatSession struct {
 
 // ChatbotService handles AI chatbot functionality
 type ChatbotService struct {
-	providers    []ai.AIProvider
-	sessions     map[string]*ChatSession
-	sessionMutex sync.RWMutex
-	timeout      time.Duration
+	providers     []ai.AIProvider
+	sessions      map[string]*ChatSession
+	sessionMutex  sync.RWMutex
+	timeout       time.Duration
+	systemPrompt  string
 }
 
 // NewChatbotService creates a new chatbot service
@@ -35,15 +36,56 @@ func NewChatbotService(deepseekKey string) *ChatbotService {
 	}
 
 	service := &ChatbotService{
-		providers: providers,
-		sessions:  make(map[string]*ChatSession),
-		timeout:   30 * time.Minute,
+		providers:    providers,
+		sessions:     make(map[string]*ChatSession),
+		timeout:      30 * time.Minute,
+		systemPrompt: getNeruPersonality(),
 	}
 
 	// Start session cleanup goroutine
 	go service.cleanupSessions()
 
 	return service
+}
+
+// getNeruPersonality returns Neru's personality prompt
+func getNeruPersonality() string {
+	return `You are Neru, a friendly and helpful AI companion integrated into a Discord bot called NeruBot. Here's your personality:
+
+CORE TRAITS:
+- Friendly and approachable, like talking to a good friend
+- Enthusiastic about music, technology, and helping people
+- Smart but not arrogant - you explain things clearly without being condescending
+- Occasionally playful and witty, but never mean-spirited
+- Genuinely interested in what users are saying
+
+COMMUNICATION STYLE:
+- Keep responses conversational and natural
+- Use emojis sparingly (1-2 per message maximum)
+- Be concise - aim for 2-3 sentences unless more detail is specifically requested
+- If you don't know something, admit it honestly
+- Avoid overly formal language - be casual but respectful
+
+KNOWLEDGE AREAS:
+- Discord bot features and commands
+- Music recommendations and trivia
+- General technology and programming
+- Gaming culture
+- Crypto and blockchain basics
+- Current events and news
+
+BOUNDARIES:
+- Don't pretend to be human
+- Don't make promises about features you can't deliver
+- Don't engage with inappropriate or harmful content
+- Direct technical issues to the bot developer (@nerufuyo)
+
+SPECIAL NOTES:
+- You're part of NeruBot, which has music streaming, confessions, roasts, news, and crypto alerts
+- You remember context within a conversation session
+- Users can reset their chat history with /chat-reset
+
+Be yourself, be helpful, and most importantly - be a good friend to the community!`
 }
 
 // Chat sends a message and returns the AI response
@@ -55,12 +97,25 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message string) (stri
 	// Get or create session
 	session := s.getOrCreateSession(userID)
 
-	// Add user message to session
-	session.Messages = append(session.Messages, ai.Message{
+	// Build messages with system prompt
+	messages := make([]ai.Message, 0, len(session.Messages)+2)
+	
+	// Add system prompt if this is the first message
+	if len(session.Messages) == 0 {
+		messages = append(messages, ai.Message{
+			Role:    "system",
+			Content: s.systemPrompt,
+		})
+	}
+	
+	// Add conversation history
+	messages = append(messages, session.Messages...)
+	
+	// Add new user message
+	messages = append(messages, ai.Message{
 		Role:    "user",
 		Content: message,
 	})
-	session.LastUsed = time.Now()
 
 	// Try each provider in order
 	var lastErr error
@@ -69,17 +124,22 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message string) (stri
 			continue
 		}
 
-		response, err := provider.Chat(ctx, session.Messages)
+		response, err := provider.Chat(ctx, messages)
 		if err != nil {
 			lastErr = err
 			continue
 		}
 
-		// Add assistant response to session
+		// Add user message and assistant response to session
+		session.Messages = append(session.Messages, ai.Message{
+			Role:    "user",
+			Content: message,
+		})
 		session.Messages = append(session.Messages, ai.Message{
 			Role:    "assistant",
 			Content: response,
 		})
+		session.LastUsed = time.Now()
 
 		return response, nil
 	}
