@@ -92,3 +92,7 @@ docs/_build/
 .env
 .env.local
 .env.*.local
+
+# Documents
+projects/
+docs/

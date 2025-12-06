@@ -105,6 +105,21 @@ func NewWithPath(path string) (*YtDlp, error) {
 
 // detect attempts to find the yt-dlp binary
 func detect() (string, error) {
+	// Try Python module first (most reliable on Windows)
+	pythonPaths := []string{
+		"python",
+		"python3",
+		"C:/Users/listy/AppData/Local/Programs/Python/Python313/python.exe",
+	}
+	
+	for _, pythonPath := range pythonPaths {
+		cmd := exec.Command(pythonPath, "-m", "yt_dlp", "--version")
+		if err := cmd.Run(); err == nil {
+			// Return a special marker that tells us to use Python module
+			return pythonPath + " -m yt_dlp", nil
+		}
+	}
+	
 	// Common names
 	names := []string{"yt-dlp", "youtube-dl"}
 	
@@ -150,9 +165,21 @@ func (y *YtDlp) Path() string {
 	return y.path
 }
 
+// execCommand creates a command that works with both Python module and binary
+func (y *YtDlp) execCommand(ctx context.Context, args ...string) *exec.Cmd {
+	// Check if using Python module (contains space)
+	if strings.Contains(y.path, " -m yt_dlp") {
+		parts := strings.Split(y.path, " ")
+		// Python path is first part, rest are module args
+		allArgs := append(parts[1:], args...)
+		return exec.CommandContext(ctx, parts[0], allArgs...)
+	}
+	return exec.CommandContext(ctx, y.path, args...)
+}
+
 // Version returns the yt-dlp version
 func (y *YtDlp) Version(ctx context.Context) (string, error) {
-	cmd := exec.CommandContext(ctx, y.path, "--version")
+	cmd := y.execCommand(ctx, "--version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to get yt-dlp version: %w", err)
@@ -211,7 +238,7 @@ func (y *YtDlp) ExtractInfo(ctx context.Context, url string, opts *ExtractOption
 		defer cancel()
 	}
 	
-	cmd := exec.CommandContext(ctx, y.path, args...)
+	cmd := y.execCommand(ctx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("yt-dlp extraction failed: %w, output: %s", err, string(output))
@@ -250,7 +277,7 @@ func (y *YtDlp) ExtractPlaylist(ctx context.Context, url string, opts *ExtractOp
 	y.logger.Debug("Extracting playlist", "url", url)
 	
 	// Create command
-	cmd := exec.CommandContext(ctx, y.path, args...)
+	cmd := y.execCommand(ctx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("yt-dlp playlist extraction failed: %w", err)
@@ -314,7 +341,7 @@ func (y *YtDlp) GetStreamURL(ctx context.Context, url string, opts *ExtractOptio
 	y.logger.Debug("Getting stream URL", "url", url)
 	
 	// Create command
-	cmd := exec.CommandContext(ctx, y.path, args...)
+	cmd := y.execCommand(ctx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to get stream URL: %w", err)
@@ -362,7 +389,7 @@ func (y *YtDlp) Download(ctx context.Context, url, output string, opts *ExtractO
 	}
 	
 	// Create command
-	cmd := exec.CommandContext(ctx, y.path, args...)
+	cmd := y.execCommand(ctx, args...)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
@@ -389,7 +416,7 @@ func (y *YtDlp) Search(ctx context.Context, query string, maxResults int) ([]Vid
 	y.logger.Debug("Searching", "query", query, "max_results", maxResults)
 	
 	// Create command
-	cmd := exec.CommandContext(ctx, y.path, args...)
+	cmd := y.execCommand(ctx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("search failed: %w", err)

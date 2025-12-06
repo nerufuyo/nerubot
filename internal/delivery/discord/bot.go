@@ -45,9 +45,14 @@ func New(cfg *config.Config) (*Bot, error) {
 	session.Identify.Intents = discordgo.IntentsAll
 
 	// Initialize services
-	musicService, err := music.NewMusicService()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize music service: %w", err)
+	var musicService *music.MusicService
+	if cfg.Features.Music {
+		ms, err := music.NewMusicService()
+		if err != nil {
+			log.Warn("Music service disabled", "error", err)
+		} else {
+			musicService = ms
+		}
 	}
 
 	bot := &Bot{
