@@ -1,95 +1,95 @@
 <div align="center">
 
-# 🎵 NeruBot
+# NeruBot
 
-### Your Ultimate Discord Companion
+### A Production-Ready Discord Bot Built with Go
 
 [![Discord Bot](https://img.shields.io/badge/Discord-Bot-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-3.0.0-blue?style=for-the-badge)](CHANGELOG.md)
 
-**A powerful, feature-rich Discord bot built with Go - bringing music, community engagement, and entertainment to your server**
+**A powerful, feature-rich Discord bot featuring music streaming, anonymous confessions, and community engagement tools**
 
-[🚀 Quick Start](#-quick-start) • [📋 Features](#-features) • [📖 Documentation](#-documentation) • [🤝 Contributing](#-contributing)
+[Quick Start](#quick-start) • [Features](#features) • [Documentation](#documentation) • [Contributing](#contributing)
 
 </div>
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 
-- [About](#-about-nerubot)
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [Commands](#-commands)
-- [Configuration](#️-configuration)
-- [Architecture](#️-architecture)
-- [Deployment](#-deployment)
-- [Documentation](#-documentation)
-- [Contributing](#-contributing)
-- [License](#-license)
-
----
-
-## 🎯 About NeruBot
-
-NeruBot is a comprehensive Discord companion created by **[@nerufuyo](https://github.com/nerufuyo)** that transforms your server into an interactive entertainment hub. Built with Go for superior performance and reliability, NeruBot follows **Clean Architecture** principles for maintainability and scalability.
-
-### 🏆 Why Choose NeruBot?
-
-- **⚡ Lightning Fast** - Built with Go for exceptional performance
-- **🎵 Premium Audio** - Crystal-clear YouTube streaming via yt-dlp
-- **🛡️ Privacy-First** - Anonymous features with robust security
-- **🏗️ Clean Architecture** - Maintainable, scalable codebase
-- **🔒 Production Ready** - Thread-safe operations and error handling
-- **💰 Completely Free** - No premium features, everything included!
+- [About](#about-nerubot)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Commands](#commands)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## ✨ Features
+## About NeruBot
+
+NeruBot is a comprehensive Discord bot created by **[@nerufuyo](https://github.com/nerufuyo)** that transforms your server into an interactive entertainment hub. Built with Go for superior performance and reliability, NeruBot follows **Clean Architecture** principles for maintainability and scalability.
+
+### Why Choose NeruBot?
+
+- **Lightning Fast** - Built with Go for exceptional performance
+- **Premium Audio** - Crystal-clear YouTube streaming via yt-dlp
+- **Privacy-First** - Anonymous features with robust security
+- **Clean Architecture** - Maintainable, scalable codebase
+- **Production Ready** - Thread-safe operations and error handling
+- **Completely Free** - No premium features, everything included
+
+---
+
+## Features
 
 <table>
 <tr>
 <td width="50%">
 
-### 🎵 **Music System**
-- ✅ YouTube audio streaming (yt-dlp)
-- ✅ Queue management & controls
-- ✅ Loop modes (none/single/queue)
-- ✅ Now playing with rich embeds
-- ✅ Voice state detection
-- ✅ Thread-safe operations
+### Music System
+- YouTube audio streaming (yt-dlp)
+- Queue management & controls
+- Loop modes (none/single/queue)
+- Now playing with rich embeds
+- Voice state detection
+- Thread-safe operations
 
-### 📝 **Confession System**
-- ✅ Complete anonymity
-- ✅ Image attachment support
-- ✅ Moderation queue
-- ✅ Reply system
-- ✅ Per-guild settings
-- ✅ Confession numbering
+### Confession System
+- Complete anonymity
+- Image attachment support
+- Moderation queue
+- Reply system
+- Per-guild settings
+- Confession numbering
 
 </td>
 <td width="50%">
 
-### 🔥 **Roast System**
-- ✅ Activity tracking
-- ✅ Smart pattern detection
-- ✅ Profile analysis
-- ✅ Leaderboards & stats
-- ✅ Cooldown management
-- ✅ 8 roast categories
+### Roast System
+- Activity tracking
+- Smart pattern detection
+- Profile analysis
+- Leaderboards & stats
+- Cooldown management
+- 8 roast categories
 
-### 🤖 **AI Chatbot** (Coming Soon)
-- 🚧 Multi-provider support
-- 🚧 DeepSeek integration
-- 🚧 Context-aware conversations
-- 🚧 Session management
+### AI Chatbot (Coming Soon)
+- Multi-provider support
+- DeepSeek integration
+- Context-aware conversations
+- Session management
 
-### 📰 **Additional Features** (Planned)
-- 🚧 RSS News aggregation
-- 🚧 Crypto whale alerts
-- 🚧 Advanced analytics
+### Additional Features (Planned)
+- RSS News aggregation
+- Crypto whale alerts
+- Advanced analytics
 
 </td>
 </tr>
@@ -97,7 +97,7 @@ NeruBot is a comprehensive Discord companion created by **[@nerufuyo](https://gi
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -155,9 +155,9 @@ docker-compose down
 
 ---
 
-## 🎮 Commands
+## Commands
 
-### 🎵 Music Commands
+### Music Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
@@ -169,7 +169,7 @@ docker-compose down
 | `/queue` | Display current queue | `/queue` |
 | `/nowplaying` | Show current song info | `/nowplaying` |
 
-### 📝 Confession Commands
+### Confession Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
@@ -178,7 +178,7 @@ docker-compose down
 | `/confess-reject <id>` | Reject confession (Admin) | `/confess-reject 3` |
 | `/confess-reply <id>` | Reply to confession (Admin) | Opens modal |
 
-### 🔥 Roast Commands
+### Roast Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
@@ -186,7 +186,7 @@ docker-compose down
 | `/profile [@user]` | View user activity profile | `/profile @username` |
 | `/leaderboard` | Show roast leaderboard | `/leaderboard` |
 
-### ℹ️ Utility Commands
+### Utility Commands
 
 | Command | Description | Example |
 |---------|-------------|---------|
@@ -196,7 +196,7 @@ docker-compose down
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -265,7 +265,7 @@ ENABLE_WHALE_ALERTS=false  # Crypto whale alerts
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 NeruBot follows **Clean Architecture** principles with clear separation of concerns:
 
@@ -349,17 +349,17 @@ nerubot/
 
 ### Design Principles
 
-- ✅ **Dependency Inversion** - High-level modules don't depend on low-level modules
-- ✅ **Single Responsibility** - Each module has one reason to change
-- ✅ **Interface Segregation** - Clients depend on interfaces they use
-- ✅ **Separation of Concerns** - Clear boundaries between layers
-- ✅ **Testability** - Easy to test each component independently
+- **Dependency Inversion** - High-level modules don't depend on low-level modules
+- **Single Responsibility** - Each module has one reason to change
+- **Interface Segregation** - Clients depend on interfaces they use
+- **Separation of Concerns** - Clear boundaries between layers
+- **Testability** - Easy to test each component independently
 
 For detailed architecture documentation, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 ### Local Development
 
@@ -419,15 +419,15 @@ For detailed deployment instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.m
 
 ---
 
-## 📖 Documentation
+## Documentation
 
 ### Available Documentation
 
-- 📘 [Architecture Guide](docs/ARCHITECTURE.md) - System design and structure
-- 🚀 [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment instructions
-- 🔧 [Project Structure](docs/PROJECT_STRUCTURE.md) - Detailed file organization
-- 🤝 [Contributing Guide](CONTRIBUTING.md) - How to contribute
-- 📝 [Changelog](CHANGELOG.md) - Version history
+- [Architecture Guide](docs/ARCHITECTURE.md) - System design and structure
+- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment instructions
+- [Project Structure](docs/PROJECT_STRUCTURE.md) - Detailed file organization
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute
+- [Changelog](CHANGELOG.md) - Version history
 
 ### Additional Resources
 
@@ -479,32 +479,32 @@ For more details, see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
-## 📊 Project Status
+## Project Status
 
 ### Current Version: 3.0.0
 
 **Completed Features:**
-- ✅ Music System (YouTube streaming)
-- ✅ Confession System (Anonymous submissions)
-- ✅ Roast System (Activity tracking & generation)
-- ✅ Slash Commands (Modern Discord interface)
-- ✅ Clean Architecture Implementation
-- ✅ Docker Support
+- Music System (YouTube streaming)
+- Confession System (Anonymous submissions)
+- Roast System (Activity tracking & generation)
+- Slash Commands (Modern Discord interface)
+- Clean Architecture Implementation
+- Docker Support
 
 **In Development:**
-- 🚧 AI Chatbot (DeepSeek integration)
-- 🚧 News Aggregation System
-- 🚧 Crypto Whale Alerts
+- AI Chatbot (DeepSeek integration)
+- News Aggregation System
+- Crypto Whale Alerts
 
 **Planned:**
-- 📋 Web Dashboard
-- 📋 Database Migration (JSON → PostgreSQL)
-- 📋 Microservices Architecture
-- 📋 Advanced Analytics
+- Web Dashboard
+- Database Migration (JSON → PostgreSQL)
+- Microservices Architecture
+- Advanced Analytics
 
 ---
 
-## 🐛 Known Issues
+## Known Issues
 
 - Music playback may have occasional buffering on slow connections
 - Large confession images may take longer to process
@@ -514,7 +514,7 @@ Report issues at: [GitHub Issues](https://github.com/nerufuyo/nerubot/issues)
 
 ---
 
-## 📜 License
+## License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
@@ -545,14 +545,14 @@ copies or substantial portions of the Software.
 
 ---
 
-## 📞 Support
+## Support
 
 ### Get Help
 
-- 📖 **Documentation:** Check [docs/](docs/) directory
-- 💬 **Discord Server:** [Join our community](#) (Coming soon)
-- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/nerufuyo/nerubot/issues)
-- ✨ **Feature Requests:** [GitHub Discussions](https://github.com/nerufuyo/nerubot/discussions)
+- **Documentation:** Check [docs/](docs/) directory
+- **Discord Server:** [Join our community](#) (Coming soon)
+- **Bug Reports:** [GitHub Issues](https://github.com/nerufuyo/nerubot/issues)
+- **Feature Requests:** [GitHub Discussions](https://github.com/nerufuyo/nerubot/discussions)
 
 ### Contact
 
@@ -564,9 +564,7 @@ copies or substantial portions of the Software.
 
 <div align="center">
 
-**Made with ❤️ by [@nerufuyo](https://github.com/nerufuyo)**
-
-⭐ Star this repository if you find it helpful!
+**Made by [@nerufuyo](https://github.com/nerufuyo)**
 
 [Report Bug](https://github.com/nerufuyo/nerubot/issues) · [Request Feature](https://github.com/nerufuyo/nerubot/issues) · [Documentation](docs/)
 
