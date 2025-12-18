@@ -103,7 +103,16 @@ func (c *Client) SearchTracks(query string) ([]Track, error) {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
+	c.logger.Info("Search result from Lavalink", "load_type", result.LoadType, "tracks_count", len(result.Tracks), "body_preview", string(body[:minInt(200, len(body))]))
+
 	return result.Tracks, nil
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Play sends a play command to Lavalink
