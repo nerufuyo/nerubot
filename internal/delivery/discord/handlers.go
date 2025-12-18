@@ -51,13 +51,18 @@ func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	var message string
 	if queue.Size() == 1 {
-		// First song - check if Lavalink is enabled
+		// First song - try to join voice and start playback via Lavalink
 		b.logger.Info("Music playback initiated", 
 			"guild", i.GuildID, "channel", vs.ChannelID)
 		
 		if err := b.musicService.Play(i.GuildID); err != nil {
 			b.followUpError(s, i, fmt.Sprintf("Failed to start playback: %s", err.Error()))
 			return
+		}
+
+		// If Lavalink is enabled, join voice and play
+		if b.config.Lavalink.Enabled && b.lavalinkClient != nil {
+			go b.playWithLavalink(i.GuildID, vs.ChannelID, song)
 		}
 		
 		message = fmt.Sprintf("🎵 Now playing: **%s** by **%s**", song.Title, song.Artist)
@@ -678,4 +683,57 @@ func (b *Bot) handleProfile(s *discordgo.Session, i *discordgo.InteractionCreate
 	if err != nil {
 		b.logger.Error("Failed to send follow-up", "error", err)
 	}
+}
+
+// playWithLavalink handles voice joining and playback via Lavalink
+func (b *Bot) playWithLavalink(guildID, channelID string, song *entity.Song) {
+	b.logger.Info("Attempting to join voice and play with Lavalink",
+		"guild", guildID, "channel", channelID, "song", song.Title)
+
+	// Join voice channel
+	vc, err := b.session.ChannelVoiceJoin(guildID, channelID, false, false)
+	if err != nil {
+		b.logger.Error("Failed to join voice channel", "error", err, "channel", channelID)
+		return
+	}
+
+	b.logger.Info("Joined voice channel", "guild", guildID, "channel", channelID)
+
+	// Get session ID for Lavalink
+	sessionID := b.session.State.User.ID
+
+	// Search for track on Lavalink
+	query := fmt.Sprintf("ytsearch:%s %s", song.Title, song.Artist)
+	tracks, err := b.lavalinkClient.SearchTracks(query)
+	if err != nil {
+		b.logger.Error("Failed to search tracks on Lavalink", "error", err)
+		vc.Disconnect()
+		return
+	}
+
+	if len(tracks) == 0 {
+		b.logger.Warn("No tracks found on Lavalink", "query", query)
+		vc.Disconnect()
+		return
+	}
+
+	// Play the first track
+	track := tracks[0]
+	if err := b.lavalinkClient.Play(guildID, sessionID, channelID, track); err != nil {
+		b.logger.Error("Failed to play track on Lavalink", "error", err)
+		vc.Disconnect()
+		return
+	}
+
+	b.logger.Info("Track playing on Lavalink", "guild", guildID, "track", track.Info.Title)
+
+	// Auto-disconnect after track duration + buffer
+	duration := time.Duration(track.Info.Length) * time.Millisecond
+	go func() {
+		time.Sleep(duration + 3*time.Second)
+		if vc != nil {
+			vc.Disconnect()
+			b.logger.Info("Auto-disconnected from voice", "guild", guildID)
+		}
+	}()
 }

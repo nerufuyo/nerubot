@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/nerufuyo/nerubot/internal/config"
+	"github.com/nerufuyo/nerubot/internal/pkg/lavalink"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 	"github.com/nerufuyo/nerubot/internal/usecase/analytics"
 	"github.com/nerufuyo/nerubot/internal/usecase/chatbot"
@@ -32,6 +33,7 @@ type Bot struct {
 	newsService       *news.NewsService
 	whaleService      *whale.WhaleService
 	analyticsService  *analytics.AnalyticsService
+	lavalinkClient    *lavalink.Client
 }
 
 // New creates a new Discord bot instance
@@ -59,6 +61,18 @@ func New(cfg *config.Config) (*Bot, error) {
 		}
 	}
 
+	// Initialize Lavalink client if enabled
+	var lavalinkClient *lavalink.Client
+	if cfg.Lavalink.Enabled {
+		lavalinkClient = lavalink.NewClient(
+			cfg.Lavalink.Host,
+			cfg.Lavalink.Port,
+			cfg.Lavalink.Password,
+			"", // UserID will be set after bot connects
+		)
+		log.Info("Lavalink client initialized", "host", cfg.Lavalink.Host, "port", cfg.Lavalink.Port)
+	}
+
 	bot := &Bot{
 		session:           session,
 		config:            cfg,
@@ -70,6 +84,7 @@ func New(cfg *config.Config) (*Bot, error) {
 		newsService:       news.NewNewsService(),
 		whaleService:      whale.NewWhaleService(cfg.Crypto.WhaleAlertAPIKey),
 		analyticsService:  analytics.NewAnalyticsService("data/analytics"),
+		lavalinkClient:    lavalinkClient,
 	}
 
 	// Register event handlers
