@@ -69,7 +69,7 @@ func NewClient(host string, port int, password, userID string) *Client {
 func (c *Client) SearchTracks(query string) ([]Track, error) {
 	// Properly encode the query parameter
 	encodedQuery := url.QueryEscape(query)
-	baseURL := fmt.Sprintf("http://%s:%d/loadtracks", c.host, c.port)
+	baseURL := fmt.Sprintf("http://%s:%d/v4/loadtracks", c.host, c.port)
 	fullURL := fmt.Sprintf("%s?identifier=%s", baseURL, encodedQuery)
 	
 	req, err := http.NewRequest("GET", fullURL, nil)
@@ -108,7 +108,7 @@ func (c *Client) SearchTracks(query string) ([]Track, error) {
 
 // Play sends a play command to Lavalink
 func (c *Client) Play(guildID, sessionID, channelID string, track Track) error {
-	url := fmt.Sprintf("http://%s:%d/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
+	url := fmt.Sprintf("http://%s:%d/v4/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
 
 	payload := map[string]interface{}{
 		"track": track.Encoded,
@@ -145,7 +145,7 @@ func (c *Client) Play(guildID, sessionID, channelID string, track Track) error {
 
 // Stop sends a stop command to Lavalink
 func (c *Client) Stop(guildID, sessionID string) error {
-	url := fmt.Sprintf("http://%s:%d/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
+	url := fmt.Sprintf("http://%s:%d/v4/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
 
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
@@ -166,7 +166,7 @@ func (c *Client) Stop(guildID, sessionID string) error {
 
 // Pause sends a pause command to Lavalink
 func (c *Client) Pause(guildID, sessionID string, pause bool) error {
-	url := fmt.Sprintf("http://%s:%d/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
+	url := fmt.Sprintf("http://%s:%d/v4/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
 
 	payload := map[string]interface{}{
 		"paused": pause,
@@ -201,7 +201,7 @@ func (c *Client) Pause(guildID, sessionID string, pause bool) error {
 
 // UpdatePlayer updates player settings (like volume)
 func (c *Client) UpdatePlayer(guildID, sessionID string, volume int) error {
-	url := fmt.Sprintf("http://%s:%d/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
+	url := fmt.Sprintf("http://%s:%d/v4/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
 
 	payload := map[string]interface{}{
 		"volume": volume,
@@ -231,7 +231,7 @@ func (c *Client) UpdatePlayer(guildID, sessionID string, volume int) error {
 
 // JoinVoice tells Lavalink to join a voice channel
 func (c *Client) JoinVoice(guildID, sessionID, channelID, track string) error {
-	url := fmt.Sprintf("http://%s:%d/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
+	url := fmt.Sprintf("http://%s:%d/v4/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
 
 	payload := map[string]interface{}{
 		"voiceChannel": channelID,
