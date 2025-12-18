@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
@@ -66,9 +67,12 @@ func NewClient(host string, port int, password, userID string) *Client {
 
 // SearchTracks searches for tracks on Lavalink
 func (c *Client) SearchTracks(query string) ([]Track, error) {
-	url := fmt.Sprintf("http://%s:%d/loadtracks?identifier=%s", c.host, c.port, query)
+	// Properly encode the query parameter
+	encodedQuery := url.QueryEscape(query)
+	baseURL := fmt.Sprintf("http://%s:%d/loadtracks", c.host, c.port)
+	fullURL := fmt.Sprintf("%s?identifier=%s", baseURL, encodedQuery)
 	
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", fullURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -86,8 +90,16 @@ func (c *Client) SearchTracks(query string) ([]Track, error) {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
+	// Log response for debugging
+	c.logger.Info("Lavalink response", "status", resp.StatusCode, "body_length", len(body))
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("lavalink returned status %d: %s", resp.StatusCode, string(body))
+	}
+
 	var result SearchResult
 	if err := json.Unmarshal(body, &result); err != nil {
+		c.logger.Error("Failed to unmarshal response", "error", err, "body", string(body))
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
