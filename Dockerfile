@@ -1,45 +1,51 @@
-# NeruBot Docker Image
-FROM python:3.11-slim-bullseye
+# NeruBot Go Edition - Production Dockerfile
+FROM golang:1.25-alpine AS builder
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
+# Install build dependencies and required tools
+RUN apk add --no-cache git make ca-certificates tzdata python3 py3-pip ffmpeg
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libopus0 \
-    libopus-dev \
-    libffi-dev \
-    libnacl-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+# Install yt-dlp
+RUN pip3 install --break-system-packages yt-dlp
 
-# Create app directory
 WORKDIR /app
 
-# Create non-root user
-RUN groupadd -r nerubot && useradd -r -g nerubot nerubot
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Copy source code
+COPY . .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Build the bot
+RUN CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o nerubot ./cmd/nerubot
 
-# Copy application code
-COPY src/ ./src/
+# Final stage - using alpine for smaller image with required tools
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata python3 py3-pip ffmpeg && \
+    pip3 install --break-system-packages yt-dlp
+
+WORKDIR /app
+
+# Copy the binary from builder
+COPY --from=builder /app/nerubot .
+
+# Copy data directories
+COPY --from=builder /app/data ./data
 
 # Create logs directory
-RUN mkdir -p /app/logs && chown nerubot:nerubot /app/logs
+RUN mkdir -p /app/logs
 
-# Switch to non-root user
+# Create non-root user
+RUN addgroup -g 1000 nerubot && \
+    adduser -D -u 1000 -G nerubot nerubot && \
+    chown -R nerubot:nerubot /app
+
 USER nerubot
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import asyncio; import aiohttp; print('Bot is healthy')" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD pgrep -f nerubot || exit 1
 
-# Run the bot
-CMD ["python", "src/main.py"]
+CMD ["./nerubot"]

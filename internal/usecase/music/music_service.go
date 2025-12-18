@@ -128,14 +128,14 @@ func (s *MusicService) AddSong(ctx context.Context, guildID, voiceChannelID, tex
 // Play starts playback
 func (s *MusicService) Play(guildID string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	queue, exists := s.queues[guildID]
 	if !exists {
+		s.mu.Unlock()
 		return fmt.Errorf("no queue for guild")
 	}
 
 	if queue.IsEmpty() {
+		s.mu.Unlock()
 		return fmt.Errorf("queue is empty")
 	}
 
@@ -143,10 +143,18 @@ func (s *MusicService) Play(guildID string) error {
 		queue.CurrentIndex = 0
 	}
 
+	// Get current song
+	currentSong := queue.Current()
+	if currentSong == nil {
+		s.mu.Unlock()
+		return fmt.Errorf("no current song")
+	}
+
 	queue.IsPlaying = true
 	queue.IsPaused = false
+	s.mu.Unlock()
 
-	s.logger.Info("Playback started", "guild", guildID)
+	s.logger.Info("Playback started", "guild", guildID, "chat", queue.TextChannelID)
 	return nil
 }
 
@@ -203,16 +211,16 @@ func (s *MusicService) Skip(guildID string) (*entity.Song, error) {
 // Stop stops playback and clears the queue
 func (s *MusicService) Stop(guildID string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	queue, exists := s.queues[guildID]
 	if !exists {
+		s.mu.Unlock()
 		return fmt.Errorf("no queue for guild")
 	}
 
 	queue.Clear()
 	queue.IsPlaying = false
 	queue.IsPaused = false
+	s.mu.Unlock()
 
 	s.logger.Info("Playback stopped", "guild", guildID)
 	return nil

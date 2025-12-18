@@ -51,11 +51,15 @@ func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	var message string
 	if queue.Size() == 1 {
-		// First song, start playing
+		// First song - check if Lavalink is enabled
+		b.logger.Info("Music playback initiated", 
+			"guild", i.GuildID, "channel", vs.ChannelID)
+		
 		if err := b.musicService.Play(i.GuildID); err != nil {
 			b.followUpError(s, i, fmt.Sprintf("Failed to start playback: %s", err.Error()))
 			return
 		}
+		
 		message = fmt.Sprintf("🎵 Now playing: **%s** by **%s**", song.Title, song.Artist)
 	} else {
 		message = fmt.Sprintf("➕ Added to queue: **%s** by **%s** (Position: #%d)", 

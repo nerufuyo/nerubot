@@ -55,6 +55,7 @@ func New(cfg *config.Config) (*Bot, error) {
 			log.Warn("Music service disabled", "error", err)
 		} else {
 			musicService = ms
+			log.Info("Music service initialized")
 		}
 	}
 

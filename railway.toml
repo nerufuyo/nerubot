@@ -1,8 +1,9 @@
 # Railway Project Configuration
-# This file configures the Railway project for NeruBot microservices
+# This file configures the Railway project for NeruBot
 
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 numReplicas = 1

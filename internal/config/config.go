@@ -18,6 +18,7 @@ type Config struct {
 	Discord  DiscordConfig
 	AI       AIConfig
 	Crypto   CryptoConfig
+	Lavalink LavalinkConfig
 }
 
 // BotConfig holds basic bot configuration
@@ -97,6 +98,14 @@ type CryptoConfig struct {
 	TwitterAPISecret   string
 	TwitterAccessToken string
 	TwitterAccessSecret string
+}
+
+// LavalinkConfig holds Lavalink server configuration
+type LavalinkConfig struct {
+	Host     string
+	Port     int
+	Password string
+	Enabled  bool
 }
 
 // MusicSources holds configuration for music source providers
@@ -210,6 +219,12 @@ func Load() (*Config, error) {
 			TwitterAPISecret:    os.Getenv("TWITTER_API_SECRET"),
 			TwitterAccessToken:  os.Getenv("TWITTER_ACCESS_TOKEN"),
 			TwitterAccessSecret: os.Getenv("TWITTER_ACCESS_SECRET"),
+		},
+		Lavalink: LavalinkConfig{
+			Host:     getEnvOrDefault("LAVALINK_HOST", "localhost"),
+			Port:     getEnvAsInt("LAVALINK_PORT", 2333),
+			Password: getEnvOrDefault("LAVALINK_PASSWORD", "youshallnotpass"),
+			Enabled:  getEnvAsBool("LAVALINK_ENABLED", false),
 		},
 	}
 

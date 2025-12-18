@@ -24,7 +24,7 @@ type YtDlp struct {
 type VideoInfo struct {
 	ID          string   `json:"id"`
 	Title       string   `json:"title"`
-	Duration    int      `json:"duration"`
+	Duration    float64  `json:"duration"`
 	URL         string   `json:"url"`
 	Webpage     string   `json:"webpage_url"`
 	Thumbnail   string   `json:"thumbnail"`
@@ -344,7 +344,9 @@ func (y *YtDlp) GetStreamURL(ctx context.Context, url string, opts *ExtractOptio
 	cmd := y.execCommand(ctx, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to get stream URL: %w", err)
+		y.logger.Debug("Failed to get stream URL with --get-url", "error", err.Error(), "output", string(output))
+		// Fall back to extracting from video info
+		return y.getStreamURLFromInfo(ctx, url, opts)
 	}
 	
 	// Return first line (the URL)
@@ -353,7 +355,35 @@ func (y *YtDlp) GetStreamURL(ctx context.Context, url string, opts *ExtractOptio
 		return strings.TrimSpace(lines[0]), nil
 	}
 	
-	return "", fmt.Errorf("no stream URL found")
+	// Fall back to extracting from video info
+	return y.getStreamURLFromInfo(ctx, url, opts)
+}
+
+// getStreamURLFromInfo extracts stream URL from video info JSON
+func (y *YtDlp) getStreamURLFromInfo(ctx context.Context, url string, opts *ExtractOptions) (string, error) {
+	y.logger.Debug("Attempting to extract stream URL from video info", "url", url)
+	
+	// Extract video info to get format URLs
+	info, err := y.ExtractInfo(ctx, url, opts)
+	if err != nil {
+		return "", fmt.Errorf("failed to extract video info: %w", err)
+	}
+	
+	// Look for the best audio format
+	for _, format := range info.Formats {
+		if format.URL != "" && format.AudioCodec != "" {
+			y.logger.Debug("Found audio format", "format", format.FormatID, "quality", format.Bitrate)
+			return format.URL, nil
+		}
+	}
+	
+	// If no audio format found, return video URL as fallback
+	if info.URL != "" {
+		y.logger.Debug("Using video URL as fallback")
+		return info.URL, nil
+	}
+	
+	return "", fmt.Errorf("no stream URL found in video info")
 }
 
 // Download downloads a video to a file
@@ -432,9 +462,15 @@ func (y *YtDlp) Search(ctx context.Context, query string, maxResults int) ([]Vid
 			continue
 		}
 		
+		// Skip lines that don't start with { (not JSON)
+		if !strings.HasPrefix(line, "{") {
+			y.logger.Debug("Skipping non-JSON line", "line", line)
+			continue
+		}
+		
 		var info VideoInfo
 		if err := json.Unmarshal([]byte(line), &info); err != nil {
-			y.logger.Warn("Failed to parse search result", "error", err)
+			y.logger.Debug("Failed to parse search result", "error", err.Error())
 			continue
 		}
 		results = append(results, info)
