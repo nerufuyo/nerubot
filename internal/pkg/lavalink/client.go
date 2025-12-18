@@ -216,3 +216,40 @@ func (c *Client) UpdatePlayer(guildID, sessionID string, volume int) error {
 
 	return nil
 }
+
+// JoinVoice tells Lavalink to join a voice channel
+func (c *Client) JoinVoice(guildID, sessionID, channelID, track string) error {
+	url := fmt.Sprintf("http://%s:%d/sessions/%s/players?guildId=%s", c.host, c.port, sessionID, guildID)
+
+	payload := map[string]interface{}{
+		"voiceChannel": channelID,
+		"track":        track,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	req, err := http.NewRequest("PATCH", url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", c.password)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("join voice request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("join voice request failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	c.logger.Info("Joined voice channel via Lavalink", "guild", guildID, "channel", channelID)
+	return nil
+}
