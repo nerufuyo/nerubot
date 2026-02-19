@@ -10,10 +10,6 @@ import (
 	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/delivery/discord"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
-	"github.com/nerufuyo/nerubot/internal/repository"
-	"github.com/nerufuyo/nerubot/internal/usecase/confession"
-	"github.com/nerufuyo/nerubot/internal/usecase/music"
-	"github.com/nerufuyo/nerubot/internal/usecase/roast"
 )
 
 func main() {
@@ -26,7 +22,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Info("=== NeruBot v3.0.0 (Golang Edition) ===")
+	log.Info("=== NeruBot v" + config.AppVersion + " (Golang Edition) ===")
 	log.Info("Starting Discord bot...")
 
 	// Load configuration
@@ -57,40 +53,18 @@ func main() {
 		"whale_alerts", cfg.Features.WhaleAlerts,
 	)
 
-	// Initialize repositories
-	confessionRepo := repository.NewConfessionRepository()
-	roastRepo := repository.NewRoastRepository()
+	// Create cancellable context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	log.Info("Repositories initialized successfully")
-
-	// Initialize use cases
-	if cfg.Features.Music {
-		if _, err := music.NewMusicService(); err != nil {
-			log.Error("Failed to initialize music service", "error", err)
-			os.Exit(1)
-		}
-		log.Info("Music service initialized")
-	}
-
-	if cfg.Features.Confession {
-		_ = confession.NewConfessionService()
-		log.Info("Confession service initialized")
-	}
-
-	if cfg.Features.Roast {
-		_ = roast.NewRoastService()
-		log.Info("Roast service initialized")
-	}
-
-	// Initialize Discord bot
+	// Initialize Discord bot (services are initialized internally by the bot)
 	bot, err := discord.New(cfg)
 	if err != nil {
 		log.Error("Failed to create Discord bot", "error", err)
 		os.Exit(1)
 	}
 
-	// Start the bot
-	ctx := context.Background()
+	// Start the bot (non-blocking — opens connection and registers commands)
 	if err := bot.Start(ctx); err != nil {
 		log.Error("Failed to start Discord bot", "error", err)
 		os.Exit(1)
@@ -104,15 +78,14 @@ func main() {
 	<-stop
 
 	log.Info("Shutting down gracefully...")
-	
+
+	// Cancel context to signal all goroutines
+	cancel()
+
 	// Cleanup resources
 	if err := bot.Stop(); err != nil {
 		log.Error("Error stopping bot", "error", err)
 	}
-
-	// Save repositories
-	_ = confessionRepo
-	_ = roastRepo
 
 	log.Info("Goodbye!")
 }

@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-nerubot
+/nerubot
 cmd/nerubot/nerubot
 
 # Test
