@@ -2,6 +2,7 @@ package entity
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -276,11 +277,10 @@ func (q *Queue) RemainingDuration() time.Duration {
 	return total
 }
 
-// Helper function to shuffle songs
+// shuffleSongs performs an unbiased Fisher-Yates shuffle.
 func shuffleSongs(songs []*Song) {
-	// Fisher-Yates shuffle
 	for i := len(songs) - 1; i > 0; i-- {
-		j := int(time.Now().UnixNano()) % (i + 1)
+		j := rand.Intn(i + 1)
 		songs[i], songs[j] = songs[j], songs[i]
 	}
 }
@@ -290,19 +290,19 @@ func (s Source) String() string {
 	return string(s)
 }
 
-// Emoji returns the emoji for the source
-func (s Source) Emoji() string {
+// Label returns a short label for the source.
+func (s Source) Label() string {
 	switch s {
 	case SourceYouTube:
-		return "▶️"
+		return "YouTube"
 	case SourceSpotify:
-		return "💚"
+		return "Spotify"
 	case SourceSoundCloud:
-		return "🧡"
+		return "SoundCloud"
 	case SourceDirect:
-		return "🔗"
+		return "Direct"
 	default:
-		return "🎵"
+		return "Unknown"
 	}
 }
 

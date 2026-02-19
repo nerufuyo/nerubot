@@ -1,45 +1,18 @@
 package config
 
-// Emoji constants for Discord messages
+// Emoji constants used as semantic status indicators in Discord messages
 const (
-	// Music control
-	EmojiPlay     = "▶️"
-	EmojiPause    = "⏸️"
-	EmojiStop     = "⏹️"
-	EmojiSkip     = "⏭️"
-	EmojiPrevious = "⏮️"
-	EmojiVolume   = "🔊"
-	EmojiMute     = "🔇"
-	
-	// Loop modes
-	EmojiLoopOff    = "🔁"
-	EmojiLoopSingle = "🔂"
-	EmojiLoopQueue  = "🔁"
-	EmojiShuffle    = "🔀"
-	
+	// Music controls
+	EmojiPlay = ">>" // play indicator
+	EmojiPause = "||" // pause indicator
+	EmojiStop = "[]" // stop indicator
+	EmojiSkip = ">>|" // skip indicator
+
 	// Status
-	EmojiSuccess = "✅"
-	EmojiError   = "❌"
-	EmojiWarning = "⚠️"
-	EmojiInfo    = "ℹ️"
-	EmojiLoading = "⏱️"
-	EmojiMusic   = "🎵"
-	
-	// Voice
-	EmojiJoined   = "🔊"
-	EmojiLeft     = "👋"
-	EmojiDeafened = "🔇"
-	
-	// Navigation
-	EmojiLeftArrow  = "⬅️"
-	EmojiRightArrow = "➡️"
-	EmojiClose      = "❌"
-	
-	// Sources
-	EmojiYouTube    = "▶️"
-	EmojiSpotify    = "💚"
-	EmojiSoundCloud = "🧡"
-	EmojiDirect     = "🔗"
+	EmojiSuccess = "[OK]"
+	EmojiError = "[ERR]"
+	EmojiWarning = "[WARN]"
+	EmojiMusic = "[Music]"
 )
 
 // Color constants for Discord embeds (hex values)
@@ -80,8 +53,8 @@ const (
 // Application constants
 const (
 	AppName        = "NeruBot"
-	AppVersion     = "3.0.0"
-	AppDescription = "🎵 Your friendly Discord companion!"
+	AppVersion     = "4.0.0"
+	AppDescription = "Your friendly Discord companion!"
 	AppAuthor      = "nerufuyo"
 	AppWebsite     = "https://github.com/nerufuyo/nerubot"
 	AppRepository  = "https://github.com/nerufuyo/nerubot"
