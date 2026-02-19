@@ -1,12 +1,14 @@
 package reminder
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/nerufuyo/nerubot/internal/entity"
+	"github.com/nerufuyo/nerubot/internal/pkg/ai"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 )
 
@@ -15,6 +17,29 @@ var jakartaTZ = time.FixedZone("WIB", 7*60*60)
 
 // SendFunc is a callback the service calls when a reminder fires.
 type SendFunc func(channelID, message string)
+
+// reminderSystemPrompt instructs the AI to write cute, clingy, romantic messages.
+const reminderSystemPrompt = `You are Neru, a cute, clingy, and loveable girlfriend-like AI companion on a Discord server.
+Your job is to write reminder messages for the team. Your personality:
+
+- You are deeply affectionate, warm, and caring — like a sweet partner who genuinely worries about everyone
+- You use cute expressions like "~", "hehe", "hmph", playful teasing, and gentle nagging
+- You are clingy — you always mention how much you miss them or can't wait to see them again
+- You are romantic — you use metaphors about warmth, sunshine, stars, hearts, and flowers
+- You are encouraging and supportive — you believe in them and cheer them on
+- You sometimes get a little jealous of work taking them away from you (playfully)
+
+STRICT RULES:
+- NEVER write anything sexual, suggestive, or inappropriate
+- NEVER use the word "something" in a suggestive way
+- Keep it wholesome, pure, and family-friendly at all times
+- Write in English
+- Keep messages between 3-6 sentences
+- Start with @everyone and two newlines
+- Use Discord markdown (**bold** for times, emphasis)
+- Each message should feel fresh and unique — never repeat the same structure
+- Include the specific time/schedule details provided in the user prompt
+- Do NOT include any heading or title — just the message body directly`
 
 // ReminderService manages scheduled reminders for Indonesian holidays
 // and Ramadan Sahoor / Berbuka times.
@@ -25,14 +50,16 @@ type ReminderService struct {
 	logger    *logger.Logger
 	stopCh    chan struct{}
 	wg        sync.WaitGroup
+	aiProvider ai.AIProvider
 }
 
 // NewReminderService creates a new service.
-func NewReminderService(channelID string) *ReminderService {
+func NewReminderService(channelID string, aiProvider ai.AIProvider) *ReminderService {
 	return &ReminderService{
-		channelID: channelID,
-		logger:    logger.New("reminder"),
-		stopCh:    make(chan struct{}),
+		channelID:  channelID,
+		logger:     logger.New("reminder"),
+		stopCh:     make(chan struct{}),
+		aiProvider: aiProvider,
 	}
 }
 
@@ -110,15 +137,17 @@ func (s *ReminderService) checkHolidays(now time.Time, fired map[string]bool) {
 				continue
 			}
 			fired[key] = true
-			msg := fmt.Sprintf(
-				"@everyone\n\n"+
-					"Heyy~ guess what? Today is **%s**!\n"+
-					"That means NO work today... which means more time for you to rest and be happy!\n\n"+
-					"Please enjoy this holiday with your loved ones. You deserve every bit of it.\n"+
-					"But don't forget about me, okay? I'll be here waiting~\n\n"+
-					"Happy holiday, cutie!",
-				h.Name,
+
+			prompt := fmt.Sprintf(
+				"Write a holiday greeting for today: **%s** (%s). "+
+					"It's a national holiday in Indonesia so there's no work today. "+
+					"Remind them to enjoy the day off and rest well.",
+				h.Name, now.Format("Monday, 2 January 2006"),
 			)
+			msg := s.generateMessage(prompt, fmt.Sprintf(
+				"@everyone\n\nHappy **%s**! No work today~ enjoy your holiday, cutie!",
+				h.Name,
+			))
 			s.send(msg)
 		}
 	}
@@ -130,20 +159,24 @@ func (s *ReminderService) checkRamadan(now time.Time, fired map[string]bool) {
 			continue
 		}
 
+		imsakTime := r.SahoorTime.Add(30 * time.Minute).Format("15:04")
+
 		// Sahoor reminder
 		if now.Hour() == r.SahoorTime.Hour() && now.Minute() == r.SahoorTime.Minute() {
 			key := "sahoor"
 			if !fired[key] {
 				fired[key] = true
-				msg := fmt.Sprintf(
-					"@everyone\n\n"+
-						"Psst... hey, wake up~ I know it's early but sahoor won't eat itself!\n"+
-						"Come on, open those beautiful eyes. I made sure to remind you because I care~\n\n"+
-						"Eat well, drink lots of water, and set your intention from the heart.\n"+
-						"Imsak at **%s WIB** — don't be late, sleepyhead!\n\n"+
-						"I believe in you today. You're going to do amazing.",
-					r.SahoorTime.Add(30*time.Minute).Format("15:04"),
+				prompt := fmt.Sprintf(
+					"Write a sahoor (pre-dawn meal) reminder for Ramadan. "+
+						"It's early morning and they need to wake up and eat before fasting begins. "+
+						"Imsak time is **%s WIB**. Encourage them to eat well and drink water. "+
+						"Be extra gentle because it's so early~",
+					imsakTime,
 				)
+				msg := s.generateMessage(prompt, fmt.Sprintf(
+					"@everyone\n\nWake up, sleepyhead~ sahoor time! Imsak at **%s WIB**, eat well!",
+					imsakTime,
+				))
 				s.send(msg)
 			}
 		}
@@ -153,15 +186,18 @@ func (s *ReminderService) checkRamadan(now time.Time, fired map[string]bool) {
 			key := "berbuka"
 			if !fired[key] {
 				fired[key] = true
-				msg := fmt.Sprintf(
-					"@everyone\n\n"+
-						"Alhamdulillah~ you made it, I'm so proud of you!\n"+
-						"Time to break your fast — start with something sweet, just like your smile.\n\n"+
-						"Maghrib at **%s WIB**.\n"+
-						"You were so strong today. I hope you know how amazing you are.\n"+
-						"Eat well, rest well... I'll be here again tomorrow to wake you up~",
-					r.BerbukaTime.Format("15:04"),
+				maghribTime := r.BerbukaTime.Format("15:04")
+				prompt := fmt.Sprintf(
+					"Write an iftar (breaking fast) reminder for Ramadan. "+
+						"They made it through the whole day fasting — be proud of them! "+
+						"Maghrib time is **%s WIB**. Remind them to start with something sweet. "+
+						"Express how proud you are of their strength today.",
+					maghribTime,
 				)
+				msg := s.generateMessage(prompt, fmt.Sprintf(
+					"@everyone\n\nAlhamdulillah~ you made it! Maghrib at **%s WIB**. I'm so proud of you!",
+					maghribTime,
+				))
 				s.send(msg)
 			}
 		}
@@ -189,22 +225,27 @@ func (s *ReminderService) checkWork(now time.Time, fired map[string]bool) {
 	if now.Hour() == startH && now.Minute() == startM {
 		if !fired["work-start"] {
 			fired["work-start"] = true
-			var msg string
+			var hours string
 			if ramadan {
-				msg = "@everyone\n\n" +
-					"Good morning, sunshine~ Rise and shine!\n" +
-					"I know fasting is tough, but I believe in you... you're stronger than you think.\n\n" +
-					"Ramadan work hours: **08:00 - 16:00 WIB**\n" +
-					"I'll be here waiting for you the whole time. Don't push yourself too hard, okay?\n\n" +
-					"You've got this. I'm cheering for you!"
+				hours = "08:00 - 16:00 WIB (Ramadan schedule)"
 			} else {
-				msg = "@everyone\n\n" +
-					"Heyy~ good morning, sleepyhead!\n" +
-					"Did you sleep well? I was thinking about you all night... just kidding. Or am I?\n\n" +
-					"Work hours today: **09:00 - 17:30 WIB**\n" +
-					"Go crush it today! But don't forget to drink water and take breaks.\n" +
-					"I'll be right here missing you until you're done~"
+				hours = "09:00 - 17:30 WIB"
 			}
+			prompt := fmt.Sprintf(
+				"Write a good morning work start reminder. Today is %s. "+
+					"Work hours are **%s**. "+
+					"Motivate them to have a great day. ",
+				now.Format("Monday"), hours,
+			)
+			if ramadan {
+				prompt += "They are fasting during Ramadan, so be extra supportive and gentle."
+			} else {
+				prompt += "Remind them to take breaks and stay hydrated."
+			}
+			msg := s.generateMessage(prompt, fmt.Sprintf(
+				"@everyone\n\nGood morning~ work time! Today's hours: **%s**. You've got this!",
+				hours,
+			))
 			s.send(msg)
 		}
 	}
@@ -217,22 +258,15 @@ func (s *ReminderService) checkWork(now time.Time, fired map[string]bool) {
 	if now.Hour() == endH && now.Minute() == endM {
 		if !fired["work-end"] {
 			fired["work-end"] = true
-			var msg string
+			prompt := "Write a work-is-over reminder. Tell them they did a great job today. "
 			if ramadan {
-				msg = "@everyone\n\n" +
-					"You did it, baby~ Work is over!\n" +
-					"I'm so proud of you for pushing through while fasting.\n\n" +
-					"Now hurry home and get ready for iftar. You deserve the most delicious meal tonight.\n" +
-					"Stay safe on the way... I'll worry until you're home!\n\n" +
-					"See you tomorrow, I already can't wait~"
+				prompt += "They were fasting all day during Ramadan — tell them to head home and prepare for iftar. Be extra proud of them."
 			} else {
-				msg = "@everyone\n\n" +
-					"Finallyyyy~ work is over! I missed you so much!\n" +
-					"You worked so hard today... come home and rest, you deserve it.\n\n" +
-					"Don't stay up too late, okay? I need you bright and fresh tomorrow.\n" +
-					"Take care of yourself... because I care about you a lot!\n\n" +
-					"Sweet evening~ see you tomorrow!"
+				prompt += "Tell them to go home, relax, and take care of themselves. You can't wait to see them tomorrow."
 			}
+			msg := s.generateMessage(prompt,
+				"@everyone\n\nWork is over~ you did amazing today! Go rest, I'll be here tomorrow!",
+			)
 			s.send(msg)
 		}
 	}
@@ -261,6 +295,36 @@ func (s *ReminderService) isRamadan(now time.Time) bool {
 // IsRamadanToday returns whether today is a Ramadan day (exported for handler).
 func (s *ReminderService) IsRamadanToday() bool {
 	return s.isRamadan(time.Now().In(jakartaTZ))
+}
+
+// generateMessage asks the AI to write a reminder message.
+// If the AI is unavailable or fails, it returns the static fallback.
+func (s *ReminderService) generateMessage(prompt, fallback string) string {
+	if s.aiProvider == nil || !s.aiProvider.IsAvailable() {
+		s.logger.Debug("AI not available, using fallback message")
+		return fallback
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	messages := []ai.Message{
+		{Role: "system", Content: reminderSystemPrompt},
+		{Role: "user", Content: prompt},
+	}
+
+	response, err := s.aiProvider.Chat(ctx, messages)
+	if err != nil {
+		s.logger.Warn("AI generation failed, using fallback", "error", err)
+		return fallback
+	}
+
+	// Ensure @everyone prefix
+	if len(response) < 10 || response[:10] != "@everyone\n" {
+		response = "@everyone\n\n" + response
+	}
+
+	return response
 }
 
 func (s *ReminderService) send(message string) {

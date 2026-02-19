@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/nerufuyo/nerubot/internal/config"
+	"github.com/nerufuyo/nerubot/internal/pkg/ai"
 	"github.com/nerufuyo/nerubot/internal/pkg/lavalink"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 	"github.com/nerufuyo/nerubot/internal/pkg/mongodb"
@@ -104,6 +105,13 @@ func New(cfg *config.Config) (*Bot, error) {
 		log.Info("Lavalink client initialized", "host", cfg.Lavalink.Host, "port", cfg.Lavalink.Port)
 	}
 
+	// Initialize AI provider (shared between chatbot and reminder)
+	var aiProvider ai.AIProvider
+	if cfg.AI.DeepSeekKey != "" {
+		aiProvider = ai.NewDeepSeekProvider(cfg.AI.DeepSeekKey)
+		log.Info("AI provider initialized", "provider", "DeepSeek")
+	}
+
 	bot := &Bot{
 		session:           session,
 		config:            cfg,
@@ -122,7 +130,7 @@ func New(cfg *config.Config) (*Bot, error) {
 
 	// Initialize reminder service if enabled
 	if cfg.Features.Reminder {
-		bot.reminderService = reminder.NewReminderService(cfg.Reminder.ChannelID)
+		bot.reminderService = reminder.NewReminderService(cfg.Reminder.ChannelID, aiProvider)
 		bot.reminderService.SetSendFunc(func(channelID, message string) {
 			if _, err := bot.session.ChannelMessageSend(channelID, message); err != nil {
 				log.Error("Failed to send reminder", "error", err)
