@@ -19,6 +19,7 @@ type Config struct {
 	AI       AIConfig
 	Crypto   CryptoConfig
 	Lavalink LavalinkConfig
+	Reminder ReminderConfig
 }
 
 // BotConfig holds basic bot configuration
@@ -77,6 +78,7 @@ type FeatureFlags struct {
 	WhaleAlerts   bool
 	AutoDisconnect bool
 	Mode247       bool
+	Reminder      bool
 }
 
 // DiscordConfig holds Discord-specific configuration
@@ -106,6 +108,11 @@ type LavalinkConfig struct {
 	Port     int
 	Password string
 	Enabled  bool
+}
+
+// ReminderConfig holds reminder feature configuration.
+type ReminderConfig struct {
+	ChannelID string // Discord channel ID for posting reminders
 }
 
 // MusicSources holds configuration for music source providers
@@ -138,12 +145,12 @@ func Load() (*Config, error) {
 	// Build configuration with defaults
 	cfg := &Config{
 		Bot: BotConfig{
-			Name:        "NeruBot",
-			Version:     "3.0.0",
+			Name:        AppName,
+			Version:     AppVersion,
 			Token:       token,
 			Prefix:      getEnvOrDefault("COMMAND_PREFIX", "!"),
-			Status:      "🎵 Ready to rock your server!",
-			Description: "🎵 Your friendly Discord companion!",
+			Status:      "Ready to rock your server!",
+			Description: "Your friendly Discord companion!",
 			Author:      "nerufuyo",
 			Website:     "https://github.com/nerufuyo/nerubot",
 		},
@@ -192,8 +199,7 @@ func Load() (*Config, error) {
 			Roast:          getEnvAsBool("ENABLE_ROAST", true),
 			WhaleAlerts:    os.Getenv("WHALE_ALERT_API_KEY") != "",
 			AutoDisconnect: true,
-			Mode247:        getEnvAsBool("ENABLE_24_7", false),
-		},
+			Mode247:        getEnvAsBool("ENABLE_24_7", false),			Reminder:       getEnvAsBool("ENABLE_REMINDER", true),		},
 		Discord: DiscordConfig{
 			Colors: map[string]int{
 				"primary":    0x0099FF,
@@ -225,6 +231,9 @@ func Load() (*Config, error) {
 			Port:     getEnvAsInt("LAVALINK_PORT", 2333),
 			Password: getEnvOrDefault("LAVALINK_PASSWORD", "youshallnotpass"),
 			Enabled:  getEnvAsBool("LAVALINK_ENABLED", false),
+		},
+		Reminder: ReminderConfig{
+			ChannelID: os.Getenv("REMINDER_CHANNEL_ID"),
 		},
 	}
 

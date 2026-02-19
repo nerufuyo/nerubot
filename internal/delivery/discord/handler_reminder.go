@@ -1,0 +1,107 @@
+package discord
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
+	"github.com/nerufuyo/nerubot/internal/config"
+)
+
+// handleReminder shows upcoming Indonesian holidays and today's Ramadan schedule.
+func (b *Bot) handleReminder(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if b.reminderService == nil {
+		b.respondError(s, i, "Reminder service is not available")
+		return
+	}
+
+	if err := b.deferResponse(s, i); err != nil {
+		return
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:     "Upcoming Reminders",
+		Color:     config.ColorPrimary,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Fields:    make([]*discordgo.MessageEmbedField, 0),
+	}
+
+	// Upcoming holidays
+	holidays := b.reminderService.GetUpcomingHolidays(5)
+	if len(holidays) > 0 {
+		var lines []string
+		for _, h := range holidays {
+			lines = append(lines, fmt.Sprintf("**%s** — %s", h.Date.Format("2 Jan 2006"), h.Name))
+		}
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "National Holidays",
+			Value:  strings.Join(lines, "\n"),
+			Inline: false,
+		})
+	}
+
+	// Ramadan schedule for today
+	schedule := b.reminderService.GetTodayRamadanSchedule()
+	if schedule != nil {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name: "Today's Ramadan Schedule (WIB)",
+			Value: fmt.Sprintf("Sahoor: **%s**\nIftar: **%s**",
+				schedule.SahoorTime.Format("15:04"),
+				schedule.BerbukaTime.Format("15:04"),
+			),
+			Inline: false,
+		})
+	}
+
+	// Work schedule for today
+	if b.reminderService.IsRamadanToday() {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "Today's Work Hours (Ramadan)",
+			Value:  "Start: **08:00 WIB**\nEnd: **16:00 WIB**",
+			Inline: false,
+		})
+	} else {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "Today's Work Hours",
+			Value:  "Start: **09:00 WIB**\nEnd: **17:30 WIB**",
+			Inline: false,
+		})
+	}
+
+	if len(embed.Fields) == 0 {
+		b.followUp(s, i, "No upcoming reminders at the moment.")
+		return
+	}
+
+	b.followUpEmbed(s, i, embed)
+}
+
+// handleReminderSet allows admins to set the reminder channel via /reminder-set.
+func (b *Bot) handleReminderSet(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if b.reminderService == nil {
+		b.respondError(s, i, "Reminder service is not available")
+		return
+	}
+
+	options := i.ApplicationCommandData().Options
+	if len(options) == 0 {
+		b.respondError(s, i, "Please specify a channel.")
+		return
+	}
+
+	channel := options[0].ChannelValue(s)
+	if channel == nil {
+		b.respondError(s, i, "Invalid channel.")
+		return
+	}
+
+	// Only allow text channels
+	if channel.Type != discordgo.ChannelTypeGuildText {
+		b.respondError(s, i, "Please select a text channel.")
+		return
+	}
+
+	b.reminderService.SetChannelID(channel.ID)
+	b.respond(s, i, fmt.Sprintf("Reminders will now be sent to <#%s>.", channel.ID))
+}

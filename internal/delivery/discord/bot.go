@@ -3,9 +3,6 @@ package discord
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -17,6 +14,7 @@ import (
 	"github.com/nerufuyo/nerubot/internal/usecase/confession"
 	"github.com/nerufuyo/nerubot/internal/usecase/music"
 	"github.com/nerufuyo/nerubot/internal/usecase/news"
+	"github.com/nerufuyo/nerubot/internal/usecase/reminder"
 	"github.com/nerufuyo/nerubot/internal/usecase/roast"
 	"github.com/nerufuyo/nerubot/internal/usecase/whale"
 )
@@ -33,6 +31,7 @@ type Bot struct {
 	newsService       *news.NewsService
 	whaleService      *whale.WhaleService
 	analyticsService  *analytics.AnalyticsService
+	reminderService   *reminder.ReminderService
 	lavalinkClient    *lavalink.Client
 }
 
@@ -87,13 +86,29 @@ func New(cfg *config.Config) (*Bot, error) {
 		lavalinkClient:    lavalinkClient,
 	}
 
+	// Initialize reminder service if enabled
+	if cfg.Features.Reminder {
+		bot.reminderService = reminder.NewReminderService(cfg.Reminder.ChannelID)
+		bot.reminderService.SetSendFunc(func(channelID, message string) {
+			if _, err := bot.session.ChannelMessageSend(channelID, message); err != nil {
+				log.Error("Failed to send reminder", "error", err)
+			}
+		})
+		if cfg.Reminder.ChannelID != "" {
+			log.Info("Reminder service initialized", "channel", cfg.Reminder.ChannelID)
+		} else {
+			log.Info("Reminder service initialized (no channel set — use /reminder-set)")
+		}
+	}
+
 	// Register event handlers
 	bot.registerHandlers()
 
 	return bot, nil
 }
 
-// Start starts the bot
+// Start opens the Discord connection, registers commands, and sets bot status.
+// It returns once the bot is ready. Shutdown is handled externally via context cancellation + Stop().
 func (b *Bot) Start(ctx context.Context) error {
 	b.logger.Info("Starting Discord bot...")
 
@@ -120,18 +135,12 @@ func (b *Bot) Start(ctx context.Context) error {
 
 	b.logger.Info("Bot is ready and running")
 
-	// Wait for interrupt signal
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-
-	select {
-	case <-stop:
-		b.logger.Info("Received shutdown signal")
-	case <-ctx.Done():
-		b.logger.Info("Context cancelled")
+	// Start background services
+	if b.reminderService != nil {
+		b.reminderService.Start()
 	}
 
-	return b.Stop()
+	return nil
 }
 
 // Stop stops the bot gracefully
@@ -143,6 +152,11 @@ func (b *Bot) Stop() error {
 		if err := b.analyticsService.Stop(); err != nil {
 			b.logger.Error("Failed to save analytics", "error", err)
 		}
+	}
+
+	// Stop reminder service
+	if b.reminderService != nil {
+		b.reminderService.Stop()
 	}
 
 	// Close Discord connection
@@ -231,6 +245,10 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleProfile(s, i)
 	case "help":
 		b.handleHelp(s, i)
+	case "reminder":
+		b.handleReminder(s, i)
+	case "reminder-set":
+		b.handleReminderSet(s, i)
 	default:
 		b.respondError(s, i, "Unknown command")
 	}
@@ -257,6 +275,8 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 
 // registerCommands registers slash commands with Discord
 func (b *Bot) registerCommands() error {
+	adminPermission := int64(discordgo.PermissionAdministrator)
+
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "play",
@@ -350,6 +370,23 @@ func (b *Bot) registerCommands() error {
 			Name:        "help",
 			Description: "Show help information",
 		},
+		{
+			Name:        "reminder",
+			Description: "View upcoming Indonesian holidays and Ramadan schedule",
+		},
+		{
+			Name:                     "reminder-set",
+			Description:              "Set the channel for automatic reminders",
+			DefaultMemberPermissions: &adminPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionChannel,
+					Name:        "channel",
+					Description: "Channel to send reminders to",
+					Required:    true,
+				},
+			},
+		},
 	}
 
 	b.logger.Info("Registering slash commands", "count", len(commands))
@@ -363,34 +400,4 @@ func (b *Bot) registerCommands() error {
 	}
 
 	return nil
-}
-
-// Helper methods
-
-func (b *Bot) respond(s *discordgo.Session, i *discordgo.InteractionCreate, content string) {
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: content,
-		},
-	})
-	if err != nil {
-		b.logger.Error("Failed to respond to interaction", "error", err)
-	}
-}
-
-func (b *Bot) respondEmbed(s *discordgo.Session, i *discordgo.InteractionCreate, embed *discordgo.MessageEmbed) {
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{embed},
-		},
-	})
-	if err != nil {
-		b.logger.Error("Failed to respond to interaction", "error", err)
-	}
-}
-
-func (b *Bot) respondError(s *discordgo.Session, i *discordgo.InteractionCreate, message string) {
-	b.respond(s, i, "❌ "+message)
 }
