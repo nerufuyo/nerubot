@@ -1,97 +1,68 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
+# Binaries
+*.exe
+*.exe~
+*.dll
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+*.dylib
+nerubot
+cmd/nerubot/nerubot
 
-# Virtual environments
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
+# Test
+*.test
+*.out
+coverage.txt
+coverage.html
 
-# Environment variables
+# Vendor
+vendor/
+
+# Go workspace
+go.work
+
+# Environment
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Operating System
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
 # Logs
 *.log
 logs/
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# Data (keep structure, ignore content)
+data/confessions/confessions.json
+data/confessions/replies.json
+data/confessions/queue.json
+data/roasts/profiles.json
+data/roasts/activities.json
+data/roasts/stats.json
+data/analytics/global_stats.json
+data/analytics/server_stats.json
+data/analytics/user_stats.json
 
-# Cache files
-.cache/
-.pytest_cache/
-
-# Test coverage
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-
-# Bot specific
-bot.log
-config.json
-*.temp
+# Temporary
+tmp/
+temp/
 *.tmp
+.cache/
 
-# Documentation builds
-docs/_build/
-
-# Music downloads (temporary files from yt-dlp)
+# Music downloads
 *.webm
 *.m4a
 *.mp3
 *.opus
 *.ogg
 
-# Environment variables and secrets
-.env
-.env.local
-.env.*.local
-
-# Documents
-projects/
+# Build
+dist/
+build/
