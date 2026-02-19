@@ -439,12 +439,29 @@ func (b *Bot) registerCommands() error {
 		},
 	}
 
-	// Bulk-overwrite: atomically sets exactly these commands and removes any others.
+	// Bulk-overwrite global commands: atomically sets exactly these commands and removes any others.
 	b.logger.Info("Registering slash commands", "count", len(commands))
 
 	_, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, "", commands)
 	if err != nil {
 		return fmt.Errorf("failed to bulk-overwrite commands: %w", err)
+	}
+
+	// Clean up stale guild-specific commands left by older bot versions.
+	for _, guild := range b.session.State.Guilds {
+		guildCmds, err := b.session.ApplicationCommands(b.session.State.User.ID, guild.ID)
+		if err != nil {
+			b.logger.Warn("Failed to fetch guild commands", "guild", guild.ID, "error", err)
+			continue
+		}
+		if len(guildCmds) > 0 {
+			b.logger.Info("Removing stale guild commands", "guild", guild.ID, "count", len(guildCmds))
+			// Overwrite with empty list to remove all guild-level commands
+			_, err = b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guild.ID, []*discordgo.ApplicationCommand{})
+			if err != nil {
+				b.logger.Warn("Failed to clear guild commands", "guild", guild.ID, "error", err)
+			}
+		}
 	}
 
 	b.logger.Info("Slash commands registered successfully")
