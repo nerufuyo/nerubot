@@ -16,76 +16,76 @@ const (
 
 // Confession represents an anonymous confession
 type Confession struct {
-	ID           int              `json:"id"`
-	GuildID      string           `json:"guild_id"`
-	AuthorID     string           `json:"author_id"` // Anonymous, stored for moderation
-	Content      string           `json:"content"`
-	ImageURL     string           `json:"image_url,omitempty"`
-	Status       ConfessionStatus `json:"status"`
-	MessageID    string           `json:"message_id,omitempty"` // Discord message ID when posted
-	ChannelID    string           `json:"channel_id,omitempty"`
-	ReplyCount   int              `json:"reply_count"`
-	CreatedAt    time.Time        `json:"created_at"`
-	PostedAt     *time.Time       `json:"posted_at,omitempty"`
-	ModeratedBy  string           `json:"moderated_by,omitempty"`
-	ModeratedAt  *time.Time       `json:"moderated_at,omitempty"`
+	ID           int              `json:"id" bson:"id"`
+	GuildID      string           `json:"guild_id" bson:"guild_id"`
+	AuthorID     string           `json:"author_id" bson:"author_id"` // Anonymous, stored for moderation
+	Content      string           `json:"content" bson:"content"`
+	ImageURL     string           `json:"image_url,omitempty" bson:"image_url,omitempty"`
+	Status       ConfessionStatus `json:"status" bson:"status"`
+	MessageID    string           `json:"message_id,omitempty" bson:"message_id,omitempty"` // Discord message ID when posted
+	ChannelID    string           `json:"channel_id,omitempty" bson:"channel_id,omitempty"`
+	ReplyCount   int              `json:"reply_count" bson:"reply_count"`
+	CreatedAt    time.Time        `json:"created_at" bson:"created_at"`
+	PostedAt     *time.Time       `json:"posted_at,omitempty" bson:"posted_at,omitempty"`
+	ModeratedBy  string           `json:"moderated_by,omitempty" bson:"moderated_by,omitempty"`
+	ModeratedAt  *time.Time       `json:"moderated_at,omitempty" bson:"moderated_at,omitempty"`
 }
 
 // ConfessionReply represents a reply to a confession
 type ConfessionReply struct {
-	ID            int       `json:"id"`
-	ConfessionID  int       `json:"confession_id"`
-	GuildID       string    `json:"guild_id"`
-	AuthorID      string    `json:"author_id"` // Anonymous
-	Content       string    `json:"content"`
-	MessageID     string    `json:"message_id,omitempty"`
-	ThreadID      string    `json:"thread_id,omitempty"` // Discord thread ID
-	CreatedAt     time.Time `json:"created_at"`
+	ID            int       `json:"id" bson:"id"`
+	ConfessionID  int       `json:"confession_id" bson:"confession_id"`
+	GuildID       string    `json:"guild_id" bson:"guild_id"`
+	AuthorID      string    `json:"author_id" bson:"author_id"` // Anonymous
+	Content       string    `json:"content" bson:"content"`
+	MessageID     string    `json:"message_id,omitempty" bson:"message_id,omitempty"`
+	ThreadID      string    `json:"thread_id,omitempty" bson:"thread_id,omitempty"` // Discord thread ID
+	CreatedAt     time.Time `json:"created_at" bson:"created_at"`
 }
 
 // GuildConfessionSettings holds confession settings for a guild
 type GuildConfessionSettings struct {
-	GuildID             string        `json:"guild_id"`
-	Enabled             bool          `json:"enabled"`
-	ChannelID           string        `json:"channel_id"`
-	RequireApproval     bool          `json:"require_approval"`
-	ModeratorRoleID     string        `json:"moderator_role_id,omitempty"`
-	AllowImages         bool          `json:"allow_images"`
-	AllowReplies        bool          `json:"allow_replies"`
-	Cooldown            time.Duration `json:"cooldown"`
-	MaxLength           int           `json:"max_length"`
-	AllowedRoleIDs      []string      `json:"allowed_role_ids,omitempty"`
-	BannedUserIDs       []string      `json:"banned_user_ids,omitempty"`
-	CreatedAt           time.Time     `json:"created_at"`
-	UpdatedAt           time.Time     `json:"updated_at"`
+	GuildID             string        `json:"guild_id" bson:"guild_id"`
+	Enabled             bool          `json:"enabled" bson:"enabled"`
+	ChannelID           string        `json:"channel_id" bson:"channel_id"`
+	RequireApproval     bool          `json:"require_approval" bson:"require_approval"`
+	ModeratorRoleID     string        `json:"moderator_role_id,omitempty" bson:"moderator_role_id,omitempty"`
+	AllowImages         bool          `json:"allow_images" bson:"allow_images"`
+	AllowReplies        bool          `json:"allow_replies" bson:"allow_replies"`
+	Cooldown            time.Duration `json:"cooldown" bson:"cooldown"`
+	MaxLength           int           `json:"max_length" bson:"max_length"`
+	AllowedRoleIDs      []string      `json:"allowed_role_ids,omitempty" bson:"allowed_role_ids,omitempty"`
+	BannedUserIDs       []string      `json:"banned_user_ids,omitempty" bson:"banned_user_ids,omitempty"`
+	CreatedAt           time.Time     `json:"created_at" bson:"created_at"`
+	UpdatedAt           time.Time     `json:"updated_at" bson:"updated_at"`
 }
 
 // ConfessionQueue represents a queued confession waiting to be posted
 type ConfessionQueue struct {
-	Confession *Confession `json:"confession"`
-	Priority   int         `json:"priority"`
-	AddedAt    time.Time   `json:"added_at"`
+	Confession *Confession `json:"confession" bson:"confession"`
+	Priority   int         `json:"priority" bson:"priority"`
+	AddedAt    time.Time   `json:"added_at" bson:"added_at"`
 }
 
 // UserConfessionCooldown tracks user cooldowns
 type UserConfessionCooldown struct {
-	UserID    string    `json:"user_id"`
-	GuildID   string    `json:"guild_id"`
-	LastPost  time.Time `json:"last_post"`
-	ExpiresAt time.Time `json:"expires_at"`
+	UserID    string    `json:"user_id" bson:"user_id"`
+	GuildID   string    `json:"guild_id" bson:"guild_id"`
+	LastPost  time.Time `json:"last_post" bson:"last_post"`
+	ExpiresAt time.Time `json:"expires_at" bson:"expires_at"`
 }
 
 // ConfessionStats holds statistics for confessions
 type ConfessionStats struct {
-	GuildID          string    `json:"guild_id"`
-	TotalConfessions int       `json:"total_confessions"`
-	TotalReplies     int       `json:"total_replies"`
-	PendingCount     int       `json:"pending_count"`
-	ApprovedCount    int       `json:"approved_count"`
-	RejectedCount    int       `json:"rejected_count"`
-	PostedCount      int       `json:"posted_count"`
-	TopContributor   string    `json:"top_contributor,omitempty"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	GuildID          string    `json:"guild_id" bson:"guild_id"`
+	TotalConfessions int       `json:"total_confessions" bson:"total_confessions"`
+	TotalReplies     int       `json:"total_replies" bson:"total_replies"`
+	PendingCount     int       `json:"pending_count" bson:"pending_count"`
+	ApprovedCount    int       `json:"approved_count" bson:"approved_count"`
+	RejectedCount    int       `json:"rejected_count" bson:"rejected_count"`
+	PostedCount      int       `json:"posted_count" bson:"posted_count"`
+	TopContributor   string    `json:"top_contributor,omitempty" bson:"top_contributor,omitempty"`
+	UpdatedAt        time.Time `json:"updated_at" bson:"updated_at"`
 }
 
 // NewConfession creates a new Confession instance

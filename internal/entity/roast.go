@@ -6,34 +6,34 @@ import (
 
 // UserProfile represents a user's Discord activity profile
 type UserProfile struct {
-	UserID           string                `json:"user_id"`
-	GuildID          string                `json:"guild_id"`
-	Username         string                `json:"username"`
-	MessageCount     int                   `json:"message_count"`
-	VoiceMinutes     int                   `json:"voice_minutes"`
-	CommandsUsed     int                   `json:"commands_used"`
-	ReactionsGiven   int                   `json:"reactions_given"`
-	MentionsReceived int                   `json:"mentions_received"`
-	FirstSeen        time.Time             `json:"first_seen"`
-	LastSeen         time.Time             `json:"last_seen"`
-	ActivityHours    map[int]int           `json:"activity_hours"`    // Hour -> count
-	ActiveDays       map[string]int        `json:"active_days"`       // Day name -> count
-	ChannelActivity  map[string]int        `json:"channel_activity"`  // Channel ID -> count
-	TopEmojis        map[string]int        `json:"top_emojis"`        // Emoji -> count
-	Patterns         []string              `json:"patterns"`          // Detected patterns
-	CreatedAt        time.Time             `json:"created_at"`
-	UpdatedAt        time.Time             `json:"updated_at"`
+	UserID           string                `json:"user_id" bson:"user_id"`
+	GuildID          string                `json:"guild_id" bson:"guild_id"`
+	Username         string                `json:"username" bson:"username"`
+	MessageCount     int                   `json:"message_count" bson:"message_count"`
+	VoiceMinutes     int                   `json:"voice_minutes" bson:"voice_minutes"`
+	CommandsUsed     int                   `json:"commands_used" bson:"commands_used"`
+	ReactionsGiven   int                   `json:"reactions_given" bson:"reactions_given"`
+	MentionsReceived int                   `json:"mentions_received" bson:"mentions_received"`
+	FirstSeen        time.Time             `json:"first_seen" bson:"first_seen"`
+	LastSeen         time.Time             `json:"last_seen" bson:"last_seen"`
+	ActivityHours    map[int]int           `json:"activity_hours" bson:"activity_hours"`    // Hour -> count
+	ActiveDays       map[string]int        `json:"active_days" bson:"active_days"`       // Day name -> count
+	ChannelActivity  map[string]int        `json:"channel_activity" bson:"channel_activity"`  // Channel ID -> count
+	TopEmojis        map[string]int        `json:"top_emojis" bson:"top_emojis"`        // Emoji -> count
+	Patterns         []string              `json:"patterns" bson:"patterns"`          // Detected patterns
+	CreatedAt        time.Time             `json:"created_at" bson:"created_at"`
+	UpdatedAt        time.Time             `json:"updated_at" bson:"updated_at"`
 }
 
 // RoastPattern represents a roast template category
 type RoastPattern struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Category    string   `json:"category"`
-	Templates   []string `json:"templates"`
-	Conditions  []string `json:"conditions"`  // Conditions to trigger this pattern
-	Severity    int      `json:"severity"`    // 1-5, how harsh the roast is
-	MinActivity int      `json:"min_activity"` // Minimum activity required
+	ID          string   `json:"id" bson:"id"`
+	Name        string   `json:"name" bson:"name"`
+	Category    string   `json:"category" bson:"category"`
+	Templates   []string `json:"templates" bson:"templates"`
+	Conditions  []string `json:"conditions" bson:"conditions"`  // Conditions to trigger this pattern
+	Severity    int      `json:"severity" bson:"severity"`    // 1-5, how harsh the roast is
+	MinActivity int      `json:"min_activity" bson:"min_activity"` // Minimum activity required
 }
 
 // RoastCategory represents roast categories
@@ -52,45 +52,45 @@ const (
 
 // ActivityStats holds detailed activity statistics
 type ActivityStats struct {
-	GuildID         string             `json:"guild_id"`
-	UserID          string             `json:"user_id"`
-	TotalMessages   int                `json:"total_messages"`
-	TotalVoiceTime  int                `json:"total_voice_time"` // minutes
-	TotalCommands   int                `json:"total_commands"`
-	AveragePerDay   float64            `json:"average_per_day"`
-	MostActiveHour  int                `json:"most_active_hour"`
-	MostActiveDay   string             `json:"most_active_day"`
-	LongestStreak   int                `json:"longest_streak"`   // days
-	CurrentStreak   int                `json:"current_streak"`
-	ActivityScore   float64            `json:"activity_score"`
-	LastActivity    time.Time          `json:"last_activity"`
-	WeeklyActivity  map[string]int     `json:"weekly_activity"`  // ISO week -> count
-	MonthlyActivity map[string]int     `json:"monthly_activity"` // YYYY-MM -> count
-	UpdatedAt       time.Time          `json:"updated_at"`
+	GuildID         string             `json:"guild_id" bson:"guild_id"`
+	UserID          string             `json:"user_id" bson:"user_id"`
+	TotalMessages   int                `json:"total_messages" bson:"total_messages"`
+	TotalVoiceTime  int                `json:"total_voice_time" bson:"total_voice_time"` // minutes
+	TotalCommands   int                `json:"total_commands" bson:"total_commands"`
+	AveragePerDay   float64            `json:"average_per_day" bson:"average_per_day"`
+	MostActiveHour  int                `json:"most_active_hour" bson:"most_active_hour"`
+	MostActiveDay   string             `json:"most_active_day" bson:"most_active_day"`
+	LongestStreak   int                `json:"longest_streak" bson:"longest_streak"`   // days
+	CurrentStreak   int                `json:"current_streak" bson:"current_streak"`
+	ActivityScore   float64            `json:"activity_score" bson:"activity_score"`
+	LastActivity    time.Time          `json:"last_activity" bson:"last_activity"`
+	WeeklyActivity  map[string]int     `json:"weekly_activity" bson:"weekly_activity"`  // ISO week -> count
+	MonthlyActivity map[string]int     `json:"monthly_activity" bson:"monthly_activity"` // YYYY-MM -> count
+	UpdatedAt       time.Time          `json:"updated_at" bson:"updated_at"`
 }
 
 // RoastHistory represents a roast event
 type RoastHistory struct {
-	ID          int           `json:"id"`
-	GuildID     string        `json:"guild_id"`
-	TargetID    string        `json:"target_id"`
-	RequestedBy string        `json:"requested_by"`
-	Category    RoastCategory `json:"category"`
-	Roast       string        `json:"roast"`
-	Severity    int           `json:"severity"`
-	CreatedAt   time.Time     `json:"created_at"`
+	ID          int           `json:"id" bson:"id"`
+	GuildID     string        `json:"guild_id" bson:"guild_id"`
+	TargetID    string        `json:"target_id" bson:"target_id"`
+	RequestedBy string        `json:"requested_by" bson:"requested_by"`
+	Category    RoastCategory `json:"category" bson:"category"`
+	Roast       string        `json:"roast" bson:"roast"`
+	Severity    int           `json:"severity" bson:"severity"`
+	CreatedAt   time.Time     `json:"created_at" bson:"created_at"`
 }
 
 // UserRoastStats holds user-specific roast statistics
 type UserRoastStats struct {
-	UserID          string                   `json:"user_id"`
-	GuildID         string                   `json:"guild_id"`
-	TimesRoasted    int                      `json:"times_roasted"`
-	LastRoasted     *time.Time               `json:"last_roasted,omitempty"`
-	CooldownExpires *time.Time               `json:"cooldown_expires,omitempty"`
-	CategoryCounts  map[RoastCategory]int    `json:"category_counts"`
-	FavoriteRoast   string                   `json:"favorite_roast,omitempty"`
-	UpdatedAt       time.Time                `json:"updated_at"`
+	UserID          string                   `json:"user_id" bson:"user_id"`
+	GuildID         string                   `json:"guild_id" bson:"guild_id"`
+	TimesRoasted    int                      `json:"times_roasted" bson:"times_roasted"`
+	LastRoasted     *time.Time               `json:"last_roasted,omitempty" bson:"last_roasted,omitempty"`
+	CooldownExpires *time.Time               `json:"cooldown_expires,omitempty" bson:"cooldown_expires,omitempty"`
+	CategoryCounts  map[RoastCategory]int    `json:"category_counts" bson:"category_counts"`
+	FavoriteRoast   string                   `json:"favorite_roast,omitempty" bson:"favorite_roast,omitempty"`
+	UpdatedAt       time.Time                `json:"updated_at" bson:"updated_at"`
 }
 
 // NewUserProfile creates a new UserProfile instance

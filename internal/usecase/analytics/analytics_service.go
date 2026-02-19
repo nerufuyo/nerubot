@@ -1,42 +1,46 @@
 package analytics
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"sync"
 	"time"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+
 	"github.com/nerufuyo/nerubot/internal/entity"
+	"github.com/nerufuyo/nerubot/internal/pkg/mongodb"
 )
 
-// AnalyticsService handles bot analytics and statistics
+// AnalyticsService handles bot analytics and statistics.
+// It keeps in-memory caches and periodically flushes to MongoDB.
 type AnalyticsService struct {
 	serverStats  map[string]*entity.ServerStats
 	userStats    map[string]*entity.UserStats
 	globalStats  *entity.GlobalStats
 	mu           sync.RWMutex
-	dataDir      string
+	db           *mongodb.Client
 	autoSave     bool
 	saveInterval time.Duration
 	stopChan     chan struct{}
 }
 
-// NewAnalyticsService creates a new analytics service
-func NewAnalyticsService(dataDir string) *AnalyticsService {
+// NewAnalyticsService creates a new analytics service backed by MongoDB.
+func NewAnalyticsService(db *mongodb.Client) *AnalyticsService {
 	service := &AnalyticsService{
 		serverStats:  make(map[string]*entity.ServerStats),
 		userStats:    make(map[string]*entity.UserStats),
 		globalStats:  entity.NewGlobalStats(),
-		dataDir:      dataDir,
+		db:           db,
 		autoSave:     true,
 		saveInterval: 5 * time.Minute,
 		stopChan:     make(chan struct{}),
 	}
 
-	// Load existing stats
+	// Load existing stats from MongoDB
 	service.Load()
 
 	// Start auto-save goroutine
@@ -132,7 +136,6 @@ func (s *AnalyticsService) GetGlobalStats() *entity.GlobalStats {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Update counts
 	s.globalStats.TotalGuilds = len(s.serverStats)
 	s.globalStats.TotalUsers = len(s.userStats)
 	s.globalStats.Uptime = time.Since(s.globalStats.StartTime)
@@ -145,7 +148,6 @@ func (s *AnalyticsService) GetTopServers(limit int) []*entity.ServerStats {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Convert map to slice
 	servers := make([]*entity.ServerStats, 0, len(s.serverStats))
 	for _, stats := range s.serverStats {
 		servers = append(servers, stats)
@@ -155,7 +157,6 @@ func (s *AnalyticsService) GetTopServers(limit int) []*entity.ServerStats {
 		return servers[i].CommandsUsed > servers[j].CommandsUsed
 	})
 
-	// Limit results
 	if len(servers) > limit {
 		servers = servers[:limit]
 	}
@@ -168,7 +169,6 @@ func (s *AnalyticsService) GetTopUsers(limit int) []*entity.UserStats {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Convert map to slice
 	users := make([]*entity.UserStats, 0, len(s.userStats))
 	for _, stats := range s.userStats {
 		users = append(users, stats)
@@ -178,7 +178,6 @@ func (s *AnalyticsService) GetTopUsers(limit int) []*entity.UserStats {
 		return users[i].CommandsUsed > users[j].CommandsUsed
 	})
 
-	// Limit results
 	if len(users) > limit {
 		users = users[:limit]
 	}
@@ -186,65 +185,93 @@ func (s *AnalyticsService) GetTopUsers(limit int) []*entity.UserStats {
 	return users
 }
 
-// Save persists analytics data to disk
+// Save persists analytics data to MongoDB.
 func (s *AnalyticsService) Save() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Ensure data directory exists
-	if err := os.MkdirAll(s.dataDir, 0755); err != nil {
-		return fmt.Errorf("failed to create data directory: %w", err)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
 
 	// Save server stats
-	serverFile := filepath.Join(s.dataDir, "server_stats.json")
-	if err := s.saveJSON(serverFile, s.serverStats); err != nil {
-		return fmt.Errorf("failed to save server stats: %w", err)
+	serverColl := s.db.Collection("server_stats")
+	for _, stats := range s.serverStats {
+		filter := bson.M{"guild_id": stats.GuildID}
+		opts := options.Replace().SetUpsert(true)
+		if _, err := serverColl.ReplaceOne(ctx, filter, stats, opts); err != nil {
+			return fmt.Errorf("failed to save server stats: %w", err)
+		}
 	}
 
 	// Save user stats
-	userFile := filepath.Join(s.dataDir, "user_stats.json")
-	if err := s.saveJSON(userFile, s.userStats); err != nil {
-		return fmt.Errorf("failed to save user stats: %w", err)
+	userColl := s.db.Collection("user_stats")
+	for _, stats := range s.userStats {
+		filter := bson.M{"user_id": stats.UserID}
+		opts := options.Replace().SetUpsert(true)
+		if _, err := userColl.ReplaceOne(ctx, filter, stats, opts); err != nil {
+			return fmt.Errorf("failed to save user stats: %w", err)
+		}
 	}
 
-	// Save global stats
-	globalFile := filepath.Join(s.dataDir, "global_stats.json")
-	if err := s.saveJSON(globalFile, s.globalStats); err != nil {
+	// Save global stats (single document, keyed by "global")
+	globalColl := s.db.Collection("global_stats")
+	filter := bson.M{"_id": "global"}
+	opts := options.Replace().SetUpsert(true)
+	if _, err := globalColl.ReplaceOne(ctx, filter, s.globalStats, opts); err != nil {
 		return fmt.Errorf("failed to save global stats: %w", err)
 	}
 
 	return nil
 }
 
-// Load reads analytics data from disk
+// Load reads analytics data from MongoDB into memory.
 func (s *AnalyticsService) Load() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
 	// Load server stats
-	serverFile := filepath.Join(s.dataDir, "server_stats.json")
-	if err := s.loadJSON(serverFile, &s.serverStats); err != nil {
-		// It's okay if file doesn't exist yet
-		s.serverStats = make(map[string]*entity.ServerStats)
+	serverColl := s.db.Collection("server_stats")
+	cursor, err := serverColl.Find(ctx, bson.M{})
+	if err == nil {
+		defer cursor.Close(ctx)
+		for cursor.Next(ctx) {
+			var stats entity.ServerStats
+			if err := cursor.Decode(&stats); err == nil {
+				s.serverStats[stats.GuildID] = &stats
+			}
+		}
 	}
 
 	// Load user stats
-	userFile := filepath.Join(s.dataDir, "user_stats.json")
-	if err := s.loadJSON(userFile, &s.userStats); err != nil {
-		s.userStats = make(map[string]*entity.UserStats)
+	userColl := s.db.Collection("user_stats")
+	cursor2, err := userColl.Find(ctx, bson.M{})
+	if err == nil {
+		defer cursor2.Close(ctx)
+		for cursor2.Next(ctx) {
+			var stats entity.UserStats
+			if err := cursor2.Decode(&stats); err == nil {
+				s.userStats[stats.UserID] = &stats
+			}
+		}
 	}
 
 	// Load global stats
-	globalFile := filepath.Join(s.dataDir, "global_stats.json")
-	if err := s.loadJSON(globalFile, &s.globalStats); err != nil {
+	globalColl := s.db.Collection("global_stats")
+	var global entity.GlobalStats
+	err = globalColl.FindOne(ctx, bson.M{"_id": "global"}).Decode(&global)
+	if err == nil {
+		s.globalStats = &global
+	} else if err == mongo.ErrNoDocuments {
 		s.globalStats = entity.NewGlobalStats()
 	}
 
 	return nil
 }
 
-// Stop stops the auto-save loop and saves data
+// Stop stops the auto-save loop and saves data.
 func (s *AnalyticsService) Stop() error {
 	if s.autoSave {
 		close(s.stopChan)
@@ -252,7 +279,7 @@ func (s *AnalyticsService) Stop() error {
 	return s.Save()
 }
 
-// autoSaveLoop periodically saves data to disk
+// autoSaveLoop periodically saves data to MongoDB.
 func (s *AnalyticsService) autoSaveLoop() {
 	ticker := time.NewTicker(s.saveInterval)
 	defer ticker.Stop()
@@ -261,7 +288,6 @@ func (s *AnalyticsService) autoSaveLoop() {
 		select {
 		case <-ticker.C:
 			if err := s.Save(); err != nil {
-				// Log error but don't crash
 				fmt.Printf("Failed to auto-save analytics: %v\n", err)
 			}
 		case <-s.stopChan:
@@ -270,37 +296,17 @@ func (s *AnalyticsService) autoSaveLoop() {
 	}
 }
 
-// saveJSON saves data to a JSON file
-func (s *AnalyticsService) saveJSON(filename string, data interface{}) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(data)
-}
-
-// loadJSON loads data from a JSON file
-func (s *AnalyticsService) loadJSON(filename string, data interface{}) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-	return decoder.Decode(data)
-}
-
 // ResetServerStats resets statistics for a specific server
 func (s *AnalyticsService) ResetServerStats(guildID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	delete(s.serverStats, guildID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, _ = s.db.Collection("server_stats").DeleteOne(ctx, bson.M{"guild_id": guildID})
+
 	return nil
 }
 
@@ -310,5 +316,10 @@ func (s *AnalyticsService) ResetUserStats(userID string) error {
 	defer s.mu.Unlock()
 
 	delete(s.userStats, userID)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, _ = s.db.Collection("user_stats").DeleteOne(ctx, bson.M{"user_id": userID})
+
 	return nil
 }

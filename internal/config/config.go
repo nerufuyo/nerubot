@@ -20,6 +20,8 @@ type Config struct {
 	Crypto   CryptoConfig
 	Lavalink LavalinkConfig
 	Reminder ReminderConfig
+	Mongo    MongoConfig
+	Redis    RedisConfig
 }
 
 // BotConfig holds basic bot configuration
@@ -113,6 +115,17 @@ type LavalinkConfig struct {
 // ReminderConfig holds reminder feature configuration.
 type ReminderConfig struct {
 	ChannelID string // Discord channel ID for posting reminders
+}
+
+// MongoConfig holds MongoDB connection configuration.
+type MongoConfig struct {
+	URL      string
+	Database string
+}
+
+// RedisConfig holds Redis connection configuration.
+type RedisConfig struct {
+	URL string
 }
 
 // MusicSources holds configuration for music source providers
@@ -234,6 +247,13 @@ func Load() (*Config, error) {
 		},
 		Reminder: ReminderConfig{
 			ChannelID: os.Getenv("REMINDER_CHANNEL_ID"),
+		},
+		Mongo: MongoConfig{
+			URL:      os.Getenv("MONGO_URL"),
+			Database: getEnvOrDefault("MONGO_DB", "nerufuyo"),
+		},
+		Redis: RedisConfig{
+			URL: os.Getenv("REDIS_URL"),
 		},
 	}
 

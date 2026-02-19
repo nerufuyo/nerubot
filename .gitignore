@@ -39,17 +39,6 @@ Thumbs.db
 *.log
 logs/
 
-# Data (keep structure, ignore content)
-data/confessions/confessions.json
-data/confessions/replies.json
-data/confessions/queue.json
-data/roasts/profiles.json
-data/roasts/activities.json
-data/roasts/stats.json
-data/analytics/global_stats.json
-data/analytics/server_stats.json
-data/analytics/user_stats.json
-
 # Temporary
 tmp/
 temp/

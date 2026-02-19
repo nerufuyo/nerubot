@@ -59,18 +59,3 @@ const (
 	AppWebsite     = "https://github.com/nerufuyo/nerubot"
 	AppRepository  = "https://github.com/nerufuyo/nerubot"
 )
-
-// Data file paths
-const (
-	DataDir                = "data"
-	ConfessionDir          = "data/confessions"
-	RoastDir               = "data/roasts"
-	ConfessionsFile        = "data/confessions/confessions.json"
-	RepliesFile            = "data/confessions/replies.json"
-	ConfessionSettingsFile = "data/confessions/settings.json"
-	ConfessionQueueFile    = "data/confessions/queue.json"
-	RoastProfilesFile      = "data/roasts/profiles.json"
-	RoastActivitiesFile    = "data/roasts/activities.json"
-	RoastStatsFile         = "data/roasts/stats.json"
-	RoastPatternsFile      = "data/roasts/patterns.json"
-)

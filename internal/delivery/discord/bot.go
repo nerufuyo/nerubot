@@ -9,6 +9,9 @@ import (
 	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/pkg/lavalink"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
+	"github.com/nerufuyo/nerubot/internal/pkg/mongodb"
+	redispkg "github.com/nerufuyo/nerubot/internal/pkg/redis"
+	"github.com/nerufuyo/nerubot/internal/repository"
 	"github.com/nerufuyo/nerubot/internal/usecase/analytics"
 	"github.com/nerufuyo/nerubot/internal/usecase/chatbot"
 	"github.com/nerufuyo/nerubot/internal/usecase/confession"
@@ -33,11 +36,40 @@ type Bot struct {
 	analyticsService  *analytics.AnalyticsService
 	reminderService   *reminder.ReminderService
 	lavalinkClient    *lavalink.Client
+	mongoDB           *mongodb.Client
+	redisClient       *redispkg.Client
 }
 
 // New creates a new Discord bot instance
 func New(cfg *config.Config) (*Bot, error) {
 	log := logger.New("discord")
+
+	// --- Connect to MongoDB ---
+	mongoDB, err := mongodb.New(cfg.Mongo.URL, cfg.Mongo.Database)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
+	}
+
+	// Ensure indexes
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := mongoDB.EnsureIndexes(ctx); err != nil {
+		log.Warn("Failed to ensure MongoDB indexes", "error", err)
+	}
+
+	// Set the shared MongoDB client for repositories
+	repository.SetMongo(mongoDB)
+
+	// --- Connect to Redis ---
+	var redisClient *redispkg.Client
+	if cfg.Redis.URL != "" {
+		rc, err := redispkg.New(cfg.Redis.URL)
+		if err != nil {
+			log.Warn("Redis unavailable, sessions will be in-memory only", "error", err)
+		} else {
+			redisClient = rc
+		}
+	}
 
 	// Create Discord session
 	session, err := discordgo.New("Bot " + cfg.Bot.Token)
@@ -79,11 +111,13 @@ func New(cfg *config.Config) (*Bot, error) {
 		musicService:      musicService,
 		confessionService: confession.NewConfessionService(),
 		roastService:      roast.NewRoastService(),
-		chatbotService:    chatbot.NewChatbotService(cfg.AI.DeepSeekKey),
+		chatbotService:    chatbot.NewChatbotService(cfg.AI.DeepSeekKey, redisClient),
 		newsService:       news.NewNewsService(),
 		whaleService:      whale.NewWhaleService(cfg.Crypto.WhaleAlertAPIKey),
-		analyticsService:  analytics.NewAnalyticsService("data/analytics"),
+		analyticsService:  analytics.NewAnalyticsService(mongoDB),
 		lavalinkClient:    lavalinkClient,
+		mongoDB:           mongoDB,
+		redisClient:       redisClient,
 	}
 
 	// Initialize reminder service if enabled
@@ -161,7 +195,23 @@ func (b *Bot) Stop() error {
 
 	// Close Discord connection
 	if err := b.session.Close(); err != nil {
-		return fmt.Errorf("failed to close Discord connection: %w", err)
+		b.logger.Error("Failed to close Discord connection", "error", err)
+	}
+
+	// Disconnect Redis
+	if b.redisClient != nil {
+		if err := b.redisClient.Close(); err != nil {
+			b.logger.Error("Failed to close Redis", "error", err)
+		}
+	}
+
+	// Disconnect MongoDB
+	if b.mongoDB != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := b.mongoDB.Disconnect(ctx); err != nil {
+			b.logger.Error("Failed to close MongoDB", "error", err)
+		}
 	}
 
 	b.logger.Info("Bot stopped successfully")

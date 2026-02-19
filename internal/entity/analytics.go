@@ -6,68 +6,68 @@ import (
 
 // ServerStats represents analytics for a Discord server
 type ServerStats struct {
-	GuildID           string            `json:"guild_id"`
-	GuildName         string            `json:"guild_name"`
-	MemberCount       int               `json:"member_count"`
-	CommandsUsed      int               `json:"commands_used"`
-	MessagesProcessed int               `json:"messages_processed"`
-	SongsPlayed       int               `json:"songs_played"`
-	ConfessionsTotal  int               `json:"confessions_total"`
-	RoastsGenerated   int               `json:"roasts_generated"`
-	ChatMessages      int               `json:"chat_messages"`
-	NewsRequests      int               `json:"news_requests"`
-	WhaleAlerts       int               `json:"whale_alerts"`
-	TopCommands       map[string]int    `json:"top_commands"`
-	TopUsers          map[string]int    `json:"top_users"`
-	ActiveDays        []string          `json:"active_days"`
-	FirstSeen         time.Time         `json:"first_seen"`
-	LastActive        time.Time         `json:"last_active"`
-	UpdatedAt         time.Time         `json:"updated_at"`
+	GuildID           string            `json:"guild_id" bson:"guild_id"`
+	GuildName         string            `json:"guild_name" bson:"guild_name"`
+	MemberCount       int               `json:"member_count" bson:"member_count"`
+	CommandsUsed      int               `json:"commands_used" bson:"commands_used"`
+	MessagesProcessed int               `json:"messages_processed" bson:"messages_processed"`
+	SongsPlayed       int               `json:"songs_played" bson:"songs_played"`
+	ConfessionsTotal  int               `json:"confessions_total" bson:"confessions_total"`
+	RoastsGenerated   int               `json:"roasts_generated" bson:"roasts_generated"`
+	ChatMessages      int               `json:"chat_messages" bson:"chat_messages"`
+	NewsRequests      int               `json:"news_requests" bson:"news_requests"`
+	WhaleAlerts       int               `json:"whale_alerts" bson:"whale_alerts"`
+	TopCommands       map[string]int    `json:"top_commands" bson:"top_commands"`
+	TopUsers          map[string]int    `json:"top_users" bson:"top_users"`
+	ActiveDays        []string          `json:"active_days" bson:"active_days"`
+	FirstSeen         time.Time         `json:"first_seen" bson:"first_seen"`
+	LastActive        time.Time         `json:"last_active" bson:"last_active"`
+	UpdatedAt         time.Time         `json:"updated_at" bson:"updated_at"`
 }
 
 // UserStats represents analytics for a Discord user
 type UserStats struct {
-	UserID            string         `json:"user_id"`
-	Username          string         `json:"username"`
-	CommandsUsed      int            `json:"commands_used"`
-	SongsRequested    int            `json:"songs_requested"`
-	ConfessionsPosted int            `json:"confessions_posted"`
-	RoastsReceived    int            `json:"roasts_received"`
-	ChatMessages      int            `json:"chat_messages"`
-	NewsRequests      int            `json:"news_requests"`
-	WhaleChecks       int            `json:"whale_checks"`
-	FavoriteCommands  map[string]int `json:"favorite_commands"`
-	FirstSeen         time.Time      `json:"first_seen"`
-	LastActive        time.Time      `json:"last_active"`
-	UpdatedAt         time.Time      `json:"updated_at"`
+	UserID            string         `json:"user_id" bson:"user_id"`
+	Username          string         `json:"username" bson:"username"`
+	CommandsUsed      int            `json:"commands_used" bson:"commands_used"`
+	SongsRequested    int            `json:"songs_requested" bson:"songs_requested"`
+	ConfessionsPosted int            `json:"confessions_posted" bson:"confessions_posted"`
+	RoastsReceived    int            `json:"roasts_received" bson:"roasts_received"`
+	ChatMessages      int            `json:"chat_messages" bson:"chat_messages"`
+	NewsRequests      int            `json:"news_requests" bson:"news_requests"`
+	WhaleChecks       int            `json:"whale_checks" bson:"whale_checks"`
+	FavoriteCommands  map[string]int `json:"favorite_commands" bson:"favorite_commands"`
+	FirstSeen         time.Time      `json:"first_seen" bson:"first_seen"`
+	LastActive        time.Time      `json:"last_active" bson:"last_active"`
+	UpdatedAt         time.Time      `json:"updated_at" bson:"updated_at"`
 }
 
 // CommandUsage tracks usage of a specific command
 type CommandUsage struct {
-	CommandName string    `json:"command_name"`
-	UserID      string    `json:"user_id"`
-	GuildID     string    `json:"guild_id"`
-	ChannelID   string    `json:"channel_id"`
-	Success     bool      `json:"success"`
-	ErrorMsg    string    `json:"error_msg,omitempty"`
-	ExecutionTime int64   `json:"execution_time_ms"`
-	Timestamp   time.Time `json:"timestamp"`
+	CommandName   string    `json:"command_name" bson:"command_name"`
+	UserID        string    `json:"user_id" bson:"user_id"`
+	GuildID       string    `json:"guild_id" bson:"guild_id"`
+	ChannelID     string    `json:"channel_id" bson:"channel_id"`
+	Success       bool      `json:"success" bson:"success"`
+	ErrorMsg      string    `json:"error_msg,omitempty" bson:"error_msg,omitempty"`
+	ExecutionTime int64     `json:"execution_time_ms" bson:"execution_time_ms"`
+	Timestamp     time.Time `json:"timestamp" bson:"timestamp"`
 }
 
 // GlobalStats represents bot-wide statistics
 type GlobalStats struct {
-	TotalGuilds       int            `json:"total_guilds"`
-	TotalUsers        int            `json:"total_users"`
-	TotalCommands     int            `json:"total_commands"`
-	TotalSongsPlayed  int            `json:"total_songs_played"`
-	TotalConfessions  int            `json:"total_confessions"`
-	TotalRoasts       int            `json:"total_roasts"`
-	TotalChatMessages int            `json:"total_chat_messages"`
-	Uptime            time.Duration  `json:"uptime"`
-	TopGuilds         map[string]int `json:"top_guilds"`
-	TopCommands       map[string]int `json:"top_commands"`
-	StartTime         time.Time      `json:"start_time"`
-	UpdatedAt         time.Time      `json:"updated_at"`
+	TotalGuilds       int            `json:"total_guilds" bson:"total_guilds"`
+	TotalUsers        int            `json:"total_users" bson:"total_users"`
+	TotalCommands     int            `json:"total_commands" bson:"total_commands"`
+	TotalSongsPlayed  int            `json:"total_songs_played" bson:"total_songs_played"`
+	TotalConfessions  int            `json:"total_confessions" bson:"total_confessions"`
+	TotalRoasts       int            `json:"total_roasts" bson:"total_roasts"`
+	TotalChatMessages int            `json:"total_chat_messages" bson:"total_chat_messages"`
+	Uptime            time.Duration  `json:"uptime" bson:"uptime"`
+	TopGuilds         map[string]int `json:"top_guilds" bson:"top_guilds"`
+	TopCommands       map[string]int `json:"top_commands" bson:"top_commands"`
+	StartTime         time.Time      `json:"start_time" bson:"start_time"`
+	UpdatedAt         time.Time      `json:"updated_at" bson:"updated_at"`
 }
 
 // NewServerStats creates a new ServerStats instance

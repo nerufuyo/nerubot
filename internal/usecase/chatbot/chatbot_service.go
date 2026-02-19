@@ -7,27 +7,29 @@ import (
 	"time"
 
 	"github.com/nerufuyo/nerubot/internal/pkg/ai"
+	redispkg "github.com/nerufuyo/nerubot/internal/pkg/redis"
 )
 
 // ChatSession represents a user's chat session
 type ChatSession struct {
-	UserID    string
-	Messages  []ai.Message
-	CreatedAt time.Time
-	LastUsed  time.Time
+	UserID    string       `json:"user_id"`
+	Messages  []ai.Message `json:"messages"`
+	CreatedAt time.Time    `json:"created_at"`
+	LastUsed  time.Time    `json:"last_used"`
 }
 
 // ChatbotService handles AI chatbot functionality
 type ChatbotService struct {
-	providers     []ai.AIProvider
-	sessions      map[string]*ChatSession
-	sessionMutex  sync.RWMutex
-	timeout       time.Duration
-	systemPrompt  string
+	providers    []ai.AIProvider
+	sessions     map[string]*ChatSession
+	sessionMutex sync.RWMutex
+	timeout      time.Duration
+	systemPrompt string
+	redis        *redispkg.Client
 }
 
 // NewChatbotService creates a new chatbot service
-func NewChatbotService(deepseekKey string) *ChatbotService {
+func NewChatbotService(deepseekKey string, redis *redispkg.Client) *ChatbotService {
 	providers := make([]ai.AIProvider, 0)
 
 	// Add DeepSeek provider
@@ -40,6 +42,7 @@ func NewChatbotService(deepseekKey string) *ChatbotService {
 		sessions:     make(map[string]*ChatSession),
 		timeout:      30 * time.Minute,
 		systemPrompt: getNeruPersonality(),
+		redis:        redis,
 	}
 
 	// Start session cleanup goroutine
@@ -141,6 +144,9 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message string) (stri
 		})
 		session.LastUsed = time.Now()
 
+		// Persist session to Redis
+		s.saveSessionToRedis(userID, session)
+
 		return response, nil
 	}
 
@@ -157,6 +163,11 @@ func (s *ChatbotService) ResetSession(userID string) {
 	defer s.sessionMutex.Unlock()
 
 	delete(s.sessions, userID)
+
+	// Remove from Redis
+	if s.redis != nil {
+		_ = s.redis.Delete(context.Background(), "chat:session:"+userID)
+	}
 }
 
 // GetSessionInfo returns information about a user's session
@@ -178,17 +189,36 @@ func (s *ChatbotService) getOrCreateSession(userID string) *ChatSession {
 	defer s.sessionMutex.Unlock()
 
 	session, exists := s.sessions[userID]
-	if !exists {
-		session = &ChatSession{
-			UserID:    userID,
-			Messages:  make([]ai.Message, 0),
-			CreatedAt: time.Now(),
-			LastUsed:  time.Now(),
-		}
-		s.sessions[userID] = session
+	if exists {
+		return session
 	}
 
+	// Try loading from Redis
+	if s.redis != nil {
+		var cached ChatSession
+		found, err := s.redis.Get(context.Background(), "chat:session:"+userID, &cached)
+		if err == nil && found {
+			s.sessions[userID] = &cached
+			return &cached
+		}
+	}
+
+	session = &ChatSession{
+		UserID:    userID,
+		Messages:  make([]ai.Message, 0),
+		CreatedAt: time.Now(),
+		LastUsed:  time.Now(),
+	}
+	s.sessions[userID] = session
 	return session
+}
+
+// saveSessionToRedis persists a session to Redis with TTL.
+func (s *ChatbotService) saveSessionToRedis(userID string, session *ChatSession) {
+	if s.redis == nil {
+		return
+	}
+	_ = s.redis.Set(context.Background(), "chat:session:"+userID, session, s.timeout)
 }
 
 // cleanupSessions removes expired sessions

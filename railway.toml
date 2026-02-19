@@ -2,8 +2,10 @@
 # This file configures the Railway project for NeruBot
 
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+builder = "NIXPACKS"
+
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["...", "ffmpeg", "yt-dlp"]
 
 [deploy]
 numReplicas = 1
