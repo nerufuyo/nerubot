@@ -439,6 +439,27 @@ func (b *Bot) registerCommands() error {
 		},
 	}
 
+	// Clean up stale commands first
+	existingCmds, err := b.session.ApplicationCommands(b.session.State.User.ID, "")
+	if err != nil {
+		b.logger.Warn("Failed to fetch existing commands", "error", err)
+	} else {
+		// Build a set of our command names
+		wantedNames := make(map[string]bool, len(commands))
+		for _, cmd := range commands {
+			wantedNames[cmd.Name] = true
+		}
+		// Delete any global command that isn't in our list
+		for _, cmd := range existingCmds {
+			if !wantedNames[cmd.Name] {
+				b.logger.Info("Removing stale command", "name", cmd.Name)
+				if err := b.session.ApplicationCommandDelete(b.session.State.User.ID, "", cmd.ID); err != nil {
+					b.logger.Warn("Failed to delete stale command", "name", cmd.Name, "error", err)
+				}
+			}
+		}
+	}
+
 	b.logger.Info("Registering slash commands", "count", len(commands))
 
 	for _, cmd := range commands {
