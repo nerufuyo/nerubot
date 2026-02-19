@@ -5,6 +5,48 @@ All notable changes to NeruBot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-07-21
+
+### Added
+- **Indonesian Holiday Reminders** — automatic `@everyone` notifications at 07:00 WIB for national holidays (Tahun Baru, Idul Fitri, Kemerdekaan, Natal, Nyepi, Waisak, and more) covering 2025-2027
+- **Ramadan Sahoor & Berbuka Reminders** — automatic `@everyone` notifications at sahoor and Maghrib times during Ramadan, Jakarta timezone, with warm Indonesian-language messages
+- `/reminder` command to view upcoming holidays and today's Ramadan schedule
+- `.env.example` with clean configuration template
+- `.gitignore` (proper Go-focused ignore rules)
+- `docs/USER_GUIDE.md` — complete user-facing documentation
+- `docs/DEVELOPMENT.md` — developer setup and architecture guide
+
+### Changed
+- **Code Structure Overhaul**
+  - Split monolithic `handlers.go` (732 lines) into feature-specific handler files:
+    `handler_music.go`, `handler_confession.go`, `handler_roast.go`, `handler_chatbot.go`,
+    `handler_news.go`, `handler_whale.go`, `handler_analytics.go`, `handler_reminder.go`
+  - Moved shared response helpers (`respond`, `respondEmbed`, `followUp`, etc.) into `handlers.go`
+  - Simplified `main.go` — removed unused imports and redundant service initialization
+  - Fixed bot lifecycle: `Start()` is non-blocking; signal handling is in `main.go` only
+- **Emoji Cleanup** — replaced all decorative Unicode emojis with text indicators (`[OK]`, `[ERR]`, `>>`, `||`, etc.)
+- **Documentation** — rewrote README.md, added user guide and development guide
+
+### Removed
+- Unused gRPC microservices (`services/`, `api/proto/`)
+- Lavalink Docker/Railway configs (`Dockerfile.lavalink`, `application.yml`, `railway.lavalink.toml`)
+- Extra Docker Compose files (`docker-compose.microservices.yml`, `docker-compose.music.yml`)
+- Proto generation scripts, init-db.sql, test-services.ps1
+- Outdated documentation files (ARCHITECTURE.md, CONTRIBUTING.md, docs/*.md)
+- gRPC/protobuf dependencies from go.mod
+
+### Fixed
+- **Logger `sprintf`**: Was returning the format string unformatted; now uses `fmt.Sprintf`
+- **Music shuffle**: `shuffleSongs` used biased `time.Now().UnixNano() % n` — replaced with `math/rand`
+- **Reuters RSS URL**: Fixed invalid URL (`reedsnews`) — pointed to a working Google News / Reuters feed
+- **Sorting**: Replaced O(n²) bubble sort with `sort.Slice` in analytics and news services
+
+### Updated
+- All Go dependencies upgraded to latest versions
+- Version bumped from 3.0.0 to 4.0.0
+
+---
+
 ## [1.0.0] - 2025-11-10
 
 ### Added
