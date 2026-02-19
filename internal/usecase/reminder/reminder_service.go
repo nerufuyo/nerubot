@@ -111,7 +111,12 @@ func (s *ReminderService) checkHolidays(now time.Time, fired map[string]bool) {
 			}
 			fired[key] = true
 			msg := fmt.Sprintf(
-				"@everyone\n\nHappy **%s**!\n\nWishing everyone a wonderful holiday. Enjoy this national holiday with your loved ones.\n\nWarm regards from NeruBot.",
+				"@everyone\n\n"+
+					"Heyy~ guess what? Today is **%s**!\n"+
+					"That means NO work today... which means more time for you to rest and be happy!\n\n"+
+					"Please enjoy this holiday with your loved ones. You deserve every bit of it.\n"+
+					"But don't forget about me, okay? I'll be here waiting~\n\n"+
+					"Happy holiday, cutie!",
 				h.Name,
 			)
 			s.send(msg)
@@ -132,11 +137,11 @@ func (s *ReminderService) checkRamadan(now time.Time, fired map[string]bool) {
 				fired[key] = true
 				msg := fmt.Sprintf(
 					"@everyone\n\n"+
-						"Hey sweetie... wake up, don't oversleep!\n"+
-						"Sahoor time is almost over, eat something so you have the strength to fast today.\n\n"+
-						"Set your intention from the heart, may today's fast be full of blessings.\n"+
-						"Imsak at **%s WIB** — don't be late!\n\n"+
-						"Sahoor greetings from NeruBot.",
+						"Psst... hey, wake up~ I know it's early but sahoor won't eat itself!\n"+
+						"Come on, open those beautiful eyes. I made sure to remind you because I care~\n\n"+
+						"Eat well, drink lots of water, and set your intention from the heart.\n"+
+						"Imsak at **%s WIB** — don't be late, sleepyhead!\n\n"+
+						"I believe in you today. You're going to do amazing.",
 					r.SahoorTime.Add(30*time.Minute).Format("15:04"),
 				)
 				s.send(msg)
@@ -150,11 +155,11 @@ func (s *ReminderService) checkRamadan(now time.Time, fired map[string]bool) {
 				fired[key] = true
 				msg := fmt.Sprintf(
 					"@everyone\n\n"+
-						"Alhamdulillah... you made it through today's fast!\n"+
+						"Alhamdulillah~ you made it, I'm so proud of you!\n"+
 						"Time to break your fast — start with something sweet, just like your smile.\n\n"+
 						"Maghrib at **%s WIB**.\n"+
-						"May today's worship be accepted. You're amazing!\n\n"+
-						"Iftar greetings from NeruBot.",
+						"You were so strong today. I hope you know how amazing you are.\n"+
+						"Eat well, rest well... I'll be here again tomorrow to wake you up~",
 					r.BerbukaTime.Format("15:04"),
 				)
 				s.send(msg)
@@ -187,14 +192,18 @@ func (s *ReminderService) checkWork(now time.Time, fired map[string]bool) {
 			var msg string
 			if ramadan {
 				msg = "@everyone\n\n" +
-					"Good morning! Time to start work.\n" +
-					"Ramadan work hours: **08:00 - 16:00 WIB**\n\n" +
-					"Stay strong while fasting. Have a blessed day!"
+					"Good morning, sunshine~ Rise and shine!\n" +
+					"I know fasting is tough, but I believe in you... you're stronger than you think.\n\n" +
+					"Ramadan work hours: **08:00 - 16:00 WIB**\n" +
+					"I'll be here waiting for you the whole time. Don't push yourself too hard, okay?\n\n" +
+					"You've got this. I'm cheering for you!"
 			} else {
 				msg = "@everyone\n\n" +
-					"Good morning! Time to start work.\n" +
-					"Work hours today: **09:00 - 17:30 WIB**\n\n" +
-					"Have a productive day!"
+					"Heyy~ good morning, sleepyhead!\n" +
+					"Did you sleep well? I was thinking about you all night... just kidding. Or am I?\n\n" +
+					"Work hours today: **09:00 - 17:30 WIB**\n" +
+					"Go crush it today! But don't forget to drink water and take breaks.\n" +
+					"I'll be right here missing you until you're done~"
 			}
 			s.send(msg)
 		}
@@ -211,14 +220,18 @@ func (s *ReminderService) checkWork(now time.Time, fired map[string]bool) {
 			var msg string
 			if ramadan {
 				msg = "@everyone\n\n" +
-					"Work hours are over!\n" +
-					"Time to head home and get ready for iftar.\n\n" +
-					"Stay safe on the way. See you tomorrow!"
+					"You did it, baby~ Work is over!\n" +
+					"I'm so proud of you for pushing through while fasting.\n\n" +
+					"Now hurry home and get ready for iftar. You deserve the most delicious meal tonight.\n" +
+					"Stay safe on the way... I'll worry until you're home!\n\n" +
+					"See you tomorrow, I already can't wait~"
 			} else {
 				msg = "@everyone\n\n" +
-					"Work hours are over!\n" +
-					"Time to head home and rest up.\n\n" +
-					"Stay safe on the way. See you tomorrow!"
+					"Finallyyyy~ work is over! I missed you so much!\n" +
+					"You worked so hard today... come home and rest, you deserve it.\n\n" +
+					"Don't stay up too late, okay? I need you bright and fresh tomorrow.\n" +
+					"Take care of yourself... because I care about you a lot!\n\n" +
+					"Sweet evening~ see you tomorrow!"
 			}
 			s.send(msg)
 		}
