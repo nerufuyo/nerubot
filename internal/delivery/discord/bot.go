@@ -439,36 +439,14 @@ func (b *Bot) registerCommands() error {
 		},
 	}
 
-	// Clean up stale commands first
-	existingCmds, err := b.session.ApplicationCommands(b.session.State.User.ID, "")
-	if err != nil {
-		b.logger.Warn("Failed to fetch existing commands", "error", err)
-	} else {
-		// Build a set of our command names
-		wantedNames := make(map[string]bool, len(commands))
-		for _, cmd := range commands {
-			wantedNames[cmd.Name] = true
-		}
-		// Delete any global command that isn't in our list
-		for _, cmd := range existingCmds {
-			if !wantedNames[cmd.Name] {
-				b.logger.Info("Removing stale command", "name", cmd.Name)
-				if err := b.session.ApplicationCommandDelete(b.session.State.User.ID, "", cmd.ID); err != nil {
-					b.logger.Warn("Failed to delete stale command", "name", cmd.Name, "error", err)
-				}
-			}
-		}
-	}
-
+	// Bulk-overwrite: atomically sets exactly these commands and removes any others.
 	b.logger.Info("Registering slash commands", "count", len(commands))
 
-	for _, cmd := range commands {
-		_, err := b.session.ApplicationCommandCreate(b.session.State.User.ID, "", cmd)
-		if err != nil {
-			return fmt.Errorf("failed to create command %s: %w", cmd.Name, err)
-		}
-		b.logger.Debug("Command registered", "name", cmd.Name)
+	_, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, "", commands)
+	if err != nil {
+		return fmt.Errorf("failed to bulk-overwrite commands: %w", err)
 	}
 
+	b.logger.Info("Slash commands registered successfully")
 	return nil
 }

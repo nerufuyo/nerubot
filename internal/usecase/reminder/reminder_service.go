@@ -2,6 +2,7 @@ package reminder
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -371,29 +372,31 @@ func ramadanSchedules(year int) []entity.RamadanSchedule {
 	return schedules
 }
 
-// GetUpcomingHolidays returns the next N holidays from today.
+// GetUpcomingHolidays returns the next N holidays from today, sorted by date.
 func (s *ReminderService) GetUpcomingHolidays(limit int) []entity.Holiday {
 	now := time.Now().In(jakartaTZ)
-	holidays := indonesianHolidays(now.Year())
+	today := now.Truncate(24 * time.Hour)
 
+	// Collect upcoming holidays from this year and next
+	holidays := indonesianHolidays(now.Year())
+	holidays = append(holidays, indonesianHolidays(now.Year()+1)...)
+
+	// Filter to only future holidays
 	var upcoming []entity.Holiday
 	for _, h := range holidays {
-		if !h.Date.Before(now.Truncate(24 * time.Hour)) {
+		if !h.Date.Before(today) {
 			upcoming = append(upcoming, h)
-			if len(upcoming) >= limit {
-				break
-			}
 		}
 	}
 
-	if len(upcoming) < limit {
-		nextYear := indonesianHolidays(now.Year() + 1)
-		for _, h := range nextYear {
-			upcoming = append(upcoming, h)
-			if len(upcoming) >= limit {
-				break
-			}
-		}
+	// Sort by date
+	sort.Slice(upcoming, func(i, j int) bool {
+		return upcoming[i].Date.Before(upcoming[j].Date)
+	})
+
+	// Limit
+	if len(upcoming) > limit {
+		upcoming = upcoming[:limit]
 	}
 
 	return upcoming
