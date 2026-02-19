@@ -3,6 +3,7 @@ package news
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -30,7 +31,7 @@ func NewNewsService() *NewsService {
 	sources := []NewsSource{
 		{Name: "BBC News", URL: "http://feeds.bbci.co.uk/news/rss.xml"},
 		{Name: "CNN", URL: "http://rss.cnn.com/rss/edition.rss"},
-		{Name: "Reuters", URL: "https://www.reedsnews/feed/?best-news=world"},
+		{Name: "Reuters", URL: "https://news.google.com/rss/search?q=reuters+world+news&hl=en-US&gl=US&ceid=US:en"},
 		{Name: "TechCrunch", URL: "https://techcrunch.com/feed/"},
 		{Name: "The Verge", URL: "https://www.theverge.com/rss/index.xml"},
 	}
@@ -87,14 +88,9 @@ func (s *NewsService) FetchLatest(ctx context.Context, limit int) ([]*entity.New
 	wg.Wait()
 
 	// Sort by published date (most recent first)
-	// Simple sort implementation
-	for i := 0; i < len(items); i++ {
-		for j := i + 1; j < len(items); j++ {
-			if items[i].PublishedAt.Before(items[j].PublishedAt) {
-				items[i], items[j] = items[j], items[i]
-			}
-		}
-	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].PublishedAt.After(items[j].PublishedAt)
+	})
 
 	// Limit to requested count
 	if len(items) > limit {

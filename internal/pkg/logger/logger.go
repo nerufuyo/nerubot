@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -213,8 +214,7 @@ func sprintf(format string, args ...interface{}) string {
 	if len(args) == 0 {
 		return format
 	}
-	// Simple implementation, you might want to use fmt.Sprintf for real formatting
-	return format
+	return fmt.Sprintf(format, args...)
 }
 
 // Package-level functions for convenience

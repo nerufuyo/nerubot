@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -150,14 +151,9 @@ func (s *AnalyticsService) GetTopServers(limit int) []*entity.ServerStats {
 		servers = append(servers, stats)
 	}
 
-	// Simple bubble sort by commands used
-	for i := 0; i < len(servers); i++ {
-		for j := i + 1; j < len(servers); j++ {
-			if servers[i].CommandsUsed < servers[j].CommandsUsed {
-				servers[i], servers[j] = servers[j], servers[i]
-			}
-		}
-	}
+	sort.Slice(servers, func(i, j int) bool {
+		return servers[i].CommandsUsed > servers[j].CommandsUsed
+	})
 
 	// Limit results
 	if len(servers) > limit {
@@ -178,14 +174,9 @@ func (s *AnalyticsService) GetTopUsers(limit int) []*entity.UserStats {
 		users = append(users, stats)
 	}
 
-	// Simple bubble sort by commands used
-	for i := 0; i < len(users); i++ {
-		for j := i + 1; j < len(users); j++ {
-			if users[i].CommandsUsed < users[j].CommandsUsed {
-				users[i], users[j] = users[j], users[i]
-			}
-		}
-	}
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].CommandsUsed > users[j].CommandsUsed
+	})
 
 	// Limit results
 	if len(users) > limit {
