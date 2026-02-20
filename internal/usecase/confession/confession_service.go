@@ -6,29 +6,32 @@ import (
 	"time"
 
 	"github.com/nerufuyo/nerubot/internal/entity"
+	"github.com/nerufuyo/nerubot/internal/pkg/backend"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 	"github.com/nerufuyo/nerubot/internal/repository"
 )
 
 // ConfessionService handles confession operations
 type ConfessionService struct {
-	repo      *repository.ConfessionRepository
-	cooldowns map[string]*entity.UserConfessionCooldown
-	logger    *logger.Logger
+	repo          *repository.ConfessionRepository
+	cooldowns     map[string]*entity.UserConfessionCooldown
+	logger        *logger.Logger
+	backendClient *backend.Client
 }
 
 // NewConfessionService creates a new confession service
-func NewConfessionService() *ConfessionService {
+func NewConfessionService(backendClient *backend.Client) *ConfessionService {
 	return &ConfessionService{
-		repo:      repository.NewConfessionRepository(),
-		cooldowns: make(map[string]*entity.UserConfessionCooldown),
-		logger:    logger.New("confession"),
+		repo:          repository.NewConfessionRepository(),
+		cooldowns:     make(map[string]*entity.UserConfessionCooldown),
+		logger:        logger.New("confession"),
+		backendClient: backendClient,
 	}
 }
 
 // SubmitConfession submits a new confession
 func (s *ConfessionService) SubmitConfession(ctx context.Context, guildID, authorID, content string) (*entity.Confession, error) {
-	// Get settings
+	// Get guild-level settings
 	settings, err := s.repo.GetSettings(guildID)
 	if err != nil {
 		// Create default settings
@@ -36,6 +39,20 @@ func (s *ConfessionService) SubmitConfession(ctx context.Context, guildID, autho
 		if err := s.repo.SaveSettings(settings); err != nil {
 			return nil, fmt.Errorf("failed to create settings: %w", err)
 		}
+	}
+
+	// Override guild settings with global dashboard settings if available
+	if s.backendClient != nil {
+		cs := s.backendClient.GetSettings().ConfessionSettings
+		if cs.CooldownMinutes > 0 {
+			settings.Cooldown = time.Duration(cs.CooldownMinutes) * time.Minute
+		}
+		if cs.MaxLength > 0 {
+			settings.MaxLength = cs.MaxLength
+		}
+		settings.RequireApproval = cs.RequireApproval
+		settings.AllowImages = cs.AllowImages
+		settings.AllowReplies = cs.AllowReplies
 	}
 
 	// Check if enabled

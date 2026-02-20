@@ -7,28 +7,44 @@ import (
 	"time"
 
 	"github.com/nerufuyo/nerubot/internal/entity"
+	"github.com/nerufuyo/nerubot/internal/pkg/backend"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 	"github.com/nerufuyo/nerubot/internal/repository"
 )
 
 // RoastService handles roast operations
 type RoastService struct {
-	repo   *repository.RoastRepository
-	stats  map[string]*entity.UserRoastStats
-	logger *logger.Logger
+	repo          *repository.RoastRepository
+	stats         map[string]*entity.UserRoastStats
+	logger        *logger.Logger
+	backendClient *backend.Client
 }
 
 // NewRoastService creates a new roast service
-func NewRoastService() *RoastService {
+func NewRoastService(backendClient *backend.Client) *RoastService {
 	return &RoastService{
-		repo:   repository.NewRoastRepository(),
-		stats:  make(map[string]*entity.UserRoastStats),
-		logger: logger.New("roast"),
+		repo:          repository.NewRoastRepository(),
+		stats:         make(map[string]*entity.UserRoastStats),
+		logger:        logger.New("roast"),
+		backendClient: backendClient,
 	}
 }
 
 // GenerateRoast generates a roast for a user
 func (s *RoastService) GenerateRoast(ctx context.Context, userID, guildID, username string) (string, error) {
+	// Get configurable values from dashboard settings
+	cooldown := 5 * time.Minute
+	minMessages := 10
+	if s.backendClient != nil {
+		rs := s.backendClient.GetSettings().RoastSettings
+		if rs.CooldownMinutes > 0 {
+			cooldown = time.Duration(rs.CooldownMinutes) * time.Minute
+		}
+		if rs.MinMessages > 0 {
+			minMessages = rs.MinMessages
+		}
+	}
+
 	// Check cooldown
 	if s.isOnCooldown(userID, guildID) {
 		remaining := s.getRemainingCooldown(userID, guildID)
@@ -42,8 +58,8 @@ func (s *RoastService) GenerateRoast(ctx context.Context, userID, guildID, usern
 	}
 
 	// Check if enough data
-	if profile.MessageCount < 10 {
-		return "", fmt.Errorf("not enough data to roast. Need at least 10 messages!")
+	if profile.MessageCount < minMessages {
+		return "", fmt.Errorf("not enough data to roast. Need at least %d messages!", minMessages)
 	}
 
 	// Detect patterns
@@ -93,8 +109,8 @@ func (s *RoastService) GenerateRoast(ctx context.Context, userID, guildID, usern
 		s.logger.Warn("Failed to save roast history", "error", err)
 	}
 
-	// Set cooldown
-	s.setCooldown(userID, guildID, 5*time.Minute)
+	// Set cooldown from dashboard settings
+	s.setCooldown(userID, guildID, cooldown)
 
 	s.logger.Info("Roast generated",
 		"user", userID,

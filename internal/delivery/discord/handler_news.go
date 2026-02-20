@@ -10,6 +10,12 @@ import (
 
 // handleNews handles fetching latest news
 func (b *Bot) handleNews(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Check if news is enabled from dashboard
+	if b.backendClient != nil && !b.backendClient.GetSettings().Features.NewsEnabled {
+		b.respondError(s, i, "News feature is currently disabled by the admin.")
+		return
+	}
+
 	if b.newsService == nil {
 		b.respondError(s, i, "News service is not available")
 		return

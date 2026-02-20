@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/pkg/ai"
+	"github.com/nerufuyo/nerubot/internal/pkg/backend"
 	"github.com/nerufuyo/nerubot/internal/pkg/lavalink"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 	"github.com/nerufuyo/nerubot/internal/pkg/mongodb"
@@ -39,6 +40,7 @@ type Bot struct {
 	lavalinkClient    *lavalink.Client
 	mongoDB           *mongodb.Client
 	redisClient       *redispkg.Client
+	backendClient     *backend.Client
 }
 
 // New creates a new Discord bot instance
@@ -112,20 +114,25 @@ func New(cfg *config.Config) (*Bot, error) {
 		log.Info("AI provider initialized", "provider", "DeepSeek")
 	}
 
+	// Initialize backend API client for RAG knowledge and bot settings
+	backendClient := backend.New(cfg.BackendURL)
+	log.Info("Backend API client initialized", "url", cfg.BackendURL)
+
 	bot := &Bot{
 		session:           session,
 		config:            cfg,
 		logger:            log,
 		musicService:      musicService,
-		confessionService: confession.NewConfessionService(),
-		roastService:      roast.NewRoastService(),
-		chatbotService:    chatbot.NewChatbotService(cfg.AI.DeepSeekKey, redisClient),
+		confessionService: confession.NewConfessionService(backendClient),
+		roastService:      roast.NewRoastService(backendClient),
+		chatbotService:    chatbot.NewChatbotService(cfg.AI.DeepSeekKey, redisClient, backendClient),
 		newsService:       news.NewNewsService(),
 		whaleService:      whale.NewWhaleService(cfg.Crypto.WhaleAlertAPIKey),
 		analyticsService:  analytics.NewAnalyticsService(mongoDB),
 		lavalinkClient:    lavalinkClient,
 		mongoDB:           mongoDB,
 		redisClient:       redisClient,
+		backendClient:     backendClient,
 	}
 
 	// Initialize reminder service if enabled

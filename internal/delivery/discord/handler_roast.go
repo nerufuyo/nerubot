@@ -10,6 +10,12 @@ import (
 
 // handleRoast handles the roast command
 func (b *Bot) handleRoast(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Check if roast is enabled from dashboard
+	if b.backendClient != nil && !b.backendClient.GetSettings().Features.RoastEnabled {
+		b.respondError(s, i, "Roast feature is currently disabled by the admin.")
+		return
+	}
+
 	// Determine target user
 	targetUser := i.Member.User
 	options := i.ApplicationCommandData().Options

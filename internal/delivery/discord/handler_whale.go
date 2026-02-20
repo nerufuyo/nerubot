@@ -10,6 +10,12 @@ import (
 
 // handleWhale handles fetching whale transactions
 func (b *Bot) handleWhale(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Check if whale alerts are enabled from dashboard
+	if b.backendClient != nil && !b.backendClient.GetSettings().Features.WhaleEnabled {
+		b.respondError(s, i, "Whale alerts feature is currently disabled by the admin.")
+		return
+	}
+
 	if b.whaleService == nil {
 		b.respondError(s, i, "Whale alert service is not available")
 		return

@@ -11,6 +11,12 @@ import (
 
 // handleReminder shows upcoming Indonesian holidays and today's Ramadan schedule.
 func (b *Bot) handleReminder(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Check if reminders are enabled from dashboard
+	if b.backendClient != nil && !b.backendClient.GetSettings().Features.ReminderEnabled {
+		b.respondError(s, i, "Reminder feature is currently disabled by the admin.")
+		return
+	}
+
 	if b.reminderService == nil {
 		b.respondError(s, i, "Reminder service is not available")
 		return

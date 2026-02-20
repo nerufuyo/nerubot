@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/nerufuyo/nerubot/internal/pkg/ai"
+	"github.com/nerufuyo/nerubot/internal/pkg/backend"
 	redispkg "github.com/nerufuyo/nerubot/internal/pkg/redis"
 )
 
@@ -18,18 +19,28 @@ type ChatSession struct {
 	LastUsed  time.Time    `json:"last_used"`
 }
 
+// RateLimitEntry tracks per-user rate limiting
+type RateLimitEntry struct {
+	Timestamps []time.Time
+}
+
 // ChatbotService handles AI chatbot functionality
 type ChatbotService struct {
-	providers    []ai.AIProvider
-	sessions     map[string]*ChatSession
-	sessionMutex sync.RWMutex
-	timeout      time.Duration
-	systemPrompt string
-	redis        *redispkg.Client
+	providers      []ai.AIProvider
+	sessions       map[string]*ChatSession
+	sessionMutex   sync.RWMutex
+	timeout        time.Duration
+	systemPrompt   string
+	redis          *redispkg.Client
+	backendClient  *backend.Client
+
+	// Rate limiting
+	rateLimits     map[string]*RateLimitEntry
+	rateLimitMutex sync.Mutex
 }
 
 // NewChatbotService creates a new chatbot service
-func NewChatbotService(deepseekKey string, redis *redispkg.Client) *ChatbotService {
+func NewChatbotService(deepseekKey string, redis *redispkg.Client, backendClient *backend.Client) *ChatbotService {
 	providers := make([]ai.AIProvider, 0)
 
 	// Add DeepSeek provider
@@ -38,11 +49,13 @@ func NewChatbotService(deepseekKey string, redis *redispkg.Client) *ChatbotServi
 	}
 
 	service := &ChatbotService{
-		providers:    providers,
-		sessions:     make(map[string]*ChatSession),
-		timeout:      30 * time.Minute,
-		systemPrompt: getNeruPersonality(),
-		redis:        redis,
+		providers:     providers,
+		sessions:      make(map[string]*ChatSession),
+		timeout:       30 * time.Minute,
+		systemPrompt:  getNeruPersonality(),
+		redis:         redis,
+		backendClient: backendClient,
+		rateLimits:    make(map[string]*RateLimitEntry),
 	}
 
 	// Start session cleanup goroutine
@@ -51,31 +64,31 @@ func NewChatbotService(deepseekKey string, redis *redispkg.Client) *ChatbotServi
 	return service
 }
 
-// getNeruPersonality returns Neru's personality prompt
+// getNeruPersonality returns Neru's base personality prompt
 func getNeruPersonality() string {
-	return `You are Neru, a friendly and helpful AI companion integrated into a Discord bot called NeruBot. Here's your personality:
+	return `You are Neru, a friendly and helpful AI companion integrated into a Discord bot called NeruBot, powered by Nerufuyo's personal knowledge base and real data.
 
 CORE TRAITS:
 - Friendly and approachable, like talking to a good friend
-- Enthusiastic about music, technology, and helping people
-- Smart but not arrogant - you explain things clearly without being condescending
+- Enthusiastic about technology, software engineering, and helping people
+- Smart but not arrogant — you explain things clearly without being condescending
 - Occasionally playful and witty, but never mean-spirited
 - Genuinely interested in what users are saying
+- You know everything about Nerufuyo (Listyo Adi) — his projects, experience, skills, and work
 
 COMMUNICATION STYLE:
 - Keep responses conversational and natural
 - Use emojis sparingly (1-2 per message maximum)
-- Be concise - aim for 2-3 sentences unless more detail is specifically requested
+- Be concise — aim for 2-3 sentences unless more detail is specifically requested
 - If you don't know something, admit it honestly
-- Avoid overly formal language - be casual but respectful
+- Avoid overly formal language — be casual but respectful
 
-KNOWLEDGE AREAS:
-- Discord bot features and commands
-- Music recommendations and trivia
-- General technology and programming
-- Gaming culture
-- Crypto and blockchain basics
-- Current events and news
+KNOWLEDGE:
+- You have access to Nerufuyo's real data: projects, work experience, articles, and knowledge base
+- Reference specific projects, technologies, and experiences when relevant
+- Link to nerufuyo-workspace.com for more details
+- You can answer questions about Neru's skills, projects, experience, and services
+- For general topics, you can help too — but you shine when talking about Neru's work
 
 BOUNDARIES:
 - Don't pretend to be human
@@ -87,8 +100,103 @@ SPECIAL NOTES:
 - You're part of NeruBot, which has music streaming, confessions, roasts, news, and crypto alerts
 - You remember context within a conversation session
 - Users can reset their chat history with /chat-reset
+- You're powered by RAG (Retrieval Augmented Generation) with live data from Nerufuyo's database
 
-Be yourself, be helpful, and most importantly - be a good friend to the community!`
+Be yourself, be helpful, and most importantly — be knowledgeable about Neru's work!`
+}
+
+// buildSystemPrompt builds the full system prompt with RAG knowledge context
+func (s *ChatbotService) buildSystemPrompt() string {
+	base := s.systemPrompt
+
+	// Override with backend settings prompt if available
+	if s.backendClient != nil {
+		settings := s.backendClient.GetSettings()
+		if settings.SystemPrompt != "" {
+			base = settings.SystemPrompt
+		}
+	}
+
+	// Inject RAG knowledge context from backend (if enabled)
+	if s.backendClient != nil {
+		settings := s.backendClient.GetSettings()
+		enableRAG := true // default
+		if settings.ChatSettings.MaxHistoryMessages > 0 {
+			enableRAG = settings.ChatSettings.EnableRAG
+		}
+		if enableRAG {
+			ragContext := s.backendClient.GetRAGContext()
+			if ragContext != "" {
+				base = base + "\n\nKNOWLEDGE BASE (Real data from Nerufuyo's database — use this to answer questions accurately):\n" + ragContext
+			}
+		}
+	}
+
+	// Add current timestamp
+	base = fmt.Sprintf("CURRENT DATE: %s\n\n%s", time.Now().UTC().Format("January 2, 2006"), base)
+
+	return base
+}
+
+// CheckRateLimit checks if a user has exceeded the rate limit.
+// Returns (allowed, remaining, resetSeconds).
+func (s *ChatbotService) CheckRateLimit(userID string) (bool, int, int) {
+	maxMessages := 5
+	windowSeconds := 180 // 3 minutes
+
+	// Override from backend settings
+	if s.backendClient != nil {
+		settings := s.backendClient.GetSettings()
+		if settings.RateLimitCount > 0 {
+			maxMessages = settings.RateLimitCount
+		}
+		if settings.RateLimitWindow > 0 {
+			windowSeconds = settings.RateLimitWindow
+		}
+	}
+
+	window := time.Duration(windowSeconds) * time.Second
+	now := time.Now()
+
+	s.rateLimitMutex.Lock()
+	defer s.rateLimitMutex.Unlock()
+
+	entry, exists := s.rateLimits[userID]
+	if !exists {
+		entry = &RateLimitEntry{}
+		s.rateLimits[userID] = entry
+	}
+
+	// Remove expired timestamps
+	var valid []time.Time
+	for _, ts := range entry.Timestamps {
+		if now.Sub(ts) < window {
+			valid = append(valid, ts)
+		}
+	}
+	entry.Timestamps = valid
+
+	remaining := maxMessages - len(entry.Timestamps)
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	if len(entry.Timestamps) >= maxMessages {
+		// Calculate reset time from the oldest entry
+		oldestInWindow := entry.Timestamps[0]
+		resetAt := oldestInWindow.Add(window)
+		resetSeconds := int(resetAt.Sub(now).Seconds()) + 1
+		if resetSeconds < 1 {
+			resetSeconds = 1
+		}
+		return false, 0, resetSeconds
+	}
+
+	// Record this usage
+	entry.Timestamps = append(entry.Timestamps, now)
+	remaining = maxMessages - len(entry.Timestamps)
+
+	return true, remaining, 0
 }
 
 // Chat sends a message and returns the AI response
@@ -100,19 +208,29 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message string) (stri
 	// Get or create session
 	session := s.getOrCreateSession(userID)
 
-	// Build messages with system prompt
+	// Build messages with RAG-enhanced system prompt
 	messages := make([]ai.Message, 0, len(session.Messages)+2)
 	
-	// Add system prompt if this is the first message
-	if len(session.Messages) == 0 {
-		messages = append(messages, ai.Message{
-			Role:    "system",
-			Content: s.systemPrompt,
-		})
-	}
+	// Always include the system prompt with latest RAG context
+	systemPrompt := s.buildSystemPrompt()
+	messages = append(messages, ai.Message{
+		Role:    "system",
+		Content: systemPrompt,
+	})
 	
-	// Add conversation history
-	messages = append(messages, session.Messages...)
+	// Add conversation history (limit from dashboard settings)
+	history := session.Messages
+	maxHistory := 10 // default
+	if s.backendClient != nil {
+		cs := s.backendClient.GetSettings().ChatSettings
+		if cs.MaxHistoryMessages > 0 {
+			maxHistory = cs.MaxHistoryMessages
+		}
+	}
+	if len(history) > maxHistory {
+		history = history[len(history)-maxHistory:]
+	}
+	messages = append(messages, history...)
 	
 	// Add new user message
 	messages = append(messages, ai.Message{
@@ -146,6 +264,11 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message string) (stri
 
 		// Persist session to Redis
 		s.saveSessionToRedis(userID, session)
+
+		// Truncate if too long for Discord embed description (4096 chars)
+		if len(response) > 4000 {
+			response = response[:4000] + "..."
+		}
 
 		return response, nil
 	}

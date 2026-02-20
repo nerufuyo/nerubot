@@ -12,6 +12,12 @@ import (
 
 // handlePlay handles the play command
 func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Check if music is enabled from dashboard
+	if b.backendClient != nil && !b.backendClient.GetSettings().Features.MusicEnabled {
+		b.respondError(s, i, "Music feature is currently disabled by the admin.")
+		return
+	}
+
 	options := i.ApplicationCommandData().Options
 	if len(options) == 0 {
 		b.respondError(s, i, "Please provide a song name or URL")

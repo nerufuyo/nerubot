@@ -11,17 +11,18 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
-	Bot      BotConfig
-	Limits   Limits
-	Audio    AudioConfig
-	Features FeatureFlags
-	Discord  DiscordConfig
-	AI       AIConfig
-	Crypto   CryptoConfig
-	Lavalink LavalinkConfig
-	Reminder ReminderConfig
-	Mongo    MongoConfig
-	Redis    RedisConfig
+	Bot        BotConfig
+	Limits     Limits
+	Audio      AudioConfig
+	Features   FeatureFlags
+	Discord    DiscordConfig
+	AI         AIConfig
+	Crypto     CryptoConfig
+	Lavalink   LavalinkConfig
+	Reminder   ReminderConfig
+	Mongo      MongoConfig
+	Redis      RedisConfig
+	BackendURL string // nerufuyo-workspace-backend API URL for RAG & settings
 }
 
 // BotConfig holds basic bot configuration
@@ -255,6 +256,7 @@ func Load() (*Config, error) {
 		Redis: RedisConfig{
 			URL: os.Getenv("REDIS_URL"),
 		},
+		BackendURL: getEnvOrDefault("BACKEND_URL", "https://api.nerufuyo-workspace.com"),
 	}
 
 	return cfg, nil
