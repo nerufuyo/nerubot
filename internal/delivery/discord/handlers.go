@@ -90,6 +90,13 @@ func buildHelpEmbed(cfg *config.Config, lang string) *discordgo.MessageEmbed {
 				Inline: false,
 			},
 			{
+				Name: h["mentalhealth_title"],
+				Value: "`/mentalhealth [lang]` - " + h["mentalhealth"] + "\n" +
+					"`/mentalhealth-setup <channel> <interval> [tag] [everyone] [lang]` - " + h["mentalhealth_setup"] + "\n" +
+					"`/mentalhealth-stop` - " + h["mentalhealth_stop"],
+				Inline: false,
+			},
+			{
 				Name:   h["other"],
 				Value:  "`/help [lang]` - " + h["help_desc"],
 				Inline: false,
@@ -116,7 +123,10 @@ var helpText = map[string]map[string]string{
 		"reminder_set": "Set/change reminder channel (admin only)", "reminder_stop": "Stop automatic reminders (admin only)",
 		"fun": "Fun Commands", "dadjoke": "Get a random (clean) dad joke",
 		"dadjoke_setup": "Schedule dad jokes (admin only)", "meme": "Get a random meme from the internet",
-		"meme_setup": "Schedule memes (admin only)", "other": "Other Commands", "help_desc": "Show this help message",
+		"meme_setup": "Schedule memes (admin only)",
+		"mentalhealth_title": "Mental Health", "mentalhealth": "Get a mental health tip",
+		"mentalhealth_setup": "Schedule mental health reminders with tag (admin only)", "mentalhealth_stop": "Stop mental health reminders (admin only)",
+		"other": "Other Commands", "help_desc": "Show this help message",
 	},
 	"ID": {
 		"title": "Bantuan", "music": "Perintah Musik", "play": "Putar lagu atau tambah ke antrian",
@@ -131,7 +141,10 @@ var helpText = map[string]map[string]string{
 		"reminder_set": "Atur channel pengingat (admin)", "reminder_stop": "Hentikan pengingat otomatis (admin)",
 		"fun": "Perintah Fun", "dadjoke": "Dapatkan dad joke acak",
 		"dadjoke_setup": "Jadwalkan dad joke (admin)", "meme": "Dapatkan meme acak dari internet",
-		"meme_setup": "Jadwalkan meme (admin)", "other": "Perintah Lainnya", "help_desc": "Tampilkan pesan bantuan ini",
+		"meme_setup": "Jadwalkan meme (admin)",
+		"mentalhealth_title": "Kesehatan Mental", "mentalhealth": "Dapatkan tips kesehatan mental",
+		"mentalhealth_setup": "Jadwalkan pengingat kesehatan mental dengan tag (admin)", "mentalhealth_stop": "Hentikan pengingat kesehatan mental (admin)",
+		"other": "Perintah Lainnya", "help_desc": "Tampilkan pesan bantuan ini",
 	},
 	"JP": {
 		"title": "ヘルプ", "music": "音楽コマンド", "play": "曲を再生またはキューに追加",
@@ -146,7 +159,10 @@ var helpText = map[string]map[string]string{
 		"reminder_set": "リマインダーチャンネルを設定（管理者）", "reminder_stop": "自動リマインダーを停止（管理者）",
 		"fun": "お楽しみコマンド", "dadjoke": "ランダムなダジャレを取得",
 		"dadjoke_setup": "ダジャレをスケジュール（管理者）", "meme": "ランダムなミームを取得",
-		"meme_setup": "ミームをスケジュール（管理者）", "other": "その他のコマンド", "help_desc": "このヘルプメッセージを表示",
+		"meme_setup": "ミームをスケジュール（管理者）",
+		"mentalhealth_title": "メンタルヘルス", "mentalhealth": "メンタルヘルスのヒントを取得",
+		"mentalhealth_setup": "メンタルヘルスリマインダーをスケジュール（管理者）", "mentalhealth_stop": "メンタルヘルスリマインダーを停止（管理者）",
+		"other": "その他のコマンド", "help_desc": "このヘルプメッセージを表示",
 	},
 	"KR": {
 		"title": "도움말", "music": "음악 명령어", "play": "노래 재생 또는 대기열에 추가",
@@ -161,7 +177,10 @@ var helpText = map[string]map[string]string{
 		"reminder_set": "리마인더 채널 설정 (관리자)", "reminder_stop": "자동 리마인더 중지 (관리자)",
 		"fun": "재미 명령어", "dadjoke": "랜덤 아재 개그 가져오기",
 		"dadjoke_setup": "아재 개그 예약 (관리자)", "meme": "인터넷에서 랜덤 밈 가져오기",
-		"meme_setup": "밈 예약 (관리자)", "other": "기타 명령어", "help_desc": "이 도움말 메시지 표시",
+		"meme_setup": "밈 예약 (관리자)",
+		"mentalhealth_title": "정신 건강", "mentalhealth": "정신 건강 팁 가져오기",
+		"mentalhealth_setup": "정신 건강 리마인더 예약 (관리자)", "mentalhealth_stop": "정신 건강 리마인더 중지 (관리자)",
+		"other": "기타 명령어", "help_desc": "이 도움말 메시지 표시",
 	},
 	"ZH": {
 		"title": "帮助", "music": "音乐命令", "play": "播放歌曲或添加到队列",
@@ -176,7 +195,10 @@ var helpText = map[string]map[string]string{
 		"reminder_set": "设置提醒频道（管理员）", "reminder_stop": "停止自动提醒（管理员）",
 		"fun": "趣味命令", "dadjoke": "获取随机冷笑话",
 		"dadjoke_setup": "安排冷笑话（管理员）", "meme": "从互联网获取随机表情包",
-		"meme_setup": "安排表情包（管理员）", "other": "其他命令", "help_desc": "显示此帮助信息",
+		"meme_setup": "安排表情包（管理员）",
+		"mentalhealth_title": "心理健康", "mentalhealth": "获取心理健康小贴士",
+		"mentalhealth_setup": "安排心理健康提醒（管理员）", "mentalhealth_stop": "停止心理健康提醒（管理员）",
+		"other": "其他命令", "help_desc": "显示此帮助信息",
 	},
 }
 

@@ -10,12 +10,19 @@ type GuildConfig struct {
 
 	// Reminder settings
 	ReminderChannelID string `json:"reminder_channel_id" bson:"reminder_channel_id"`
+	ReminderLang      string `json:"reminder_lang" bson:"reminder_lang"` // Language code (EN, ID, JP, KR, ZH)
 
 	// Fun feature channels & scheduling
 	DadJokeChannelID  string `json:"dad_joke_channel_id" bson:"dad_joke_channel_id"`
 	DadJokeInterval   int    `json:"dad_joke_interval" bson:"dad_joke_interval"`     // interval in minutes (0 = disabled)
 	MemeChannelID     string `json:"meme_channel_id" bson:"meme_channel_id"`
 	MemeInterval      int    `json:"meme_interval" bson:"meme_interval"`             // interval in minutes (0 = disabled)
+
+	// Mental health reminder settings
+	MentalHealthChannelID string `json:"mental_health_channel_id" bson:"mental_health_channel_id"`
+	MentalHealthInterval  int    `json:"mental_health_interval" bson:"mental_health_interval"` // interval in minutes (0 = disabled)
+	MentalHealthTag       string `json:"mental_health_tag" bson:"mental_health_tag"`           // mention string (@everyone, <@&roleID>, <@userID>)
+	MentalHealthLang      string `json:"mental_health_lang" bson:"mental_health_lang"`         // language code
 
 	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`

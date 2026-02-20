@@ -194,11 +194,26 @@ func (b *Bot) loadSavedGuildConfigs() {
 			currentCh := b.reminderService.GetChannelID()
 			if currentCh == "" {
 				b.reminderService.SetChannelID(cfg.ReminderChannelID)
+				if cfg.ReminderLang != "" {
+					b.reminderService.SetLang(cfg.ReminderLang)
+				}
 				b.logger.Info("Restored reminder channel from DB",
 					"guild", cfg.GuildID,
 					"channel", cfg.ReminderChannelID,
+					"lang", cfg.ReminderLang,
 				)
 			}
+		}
+
+		// Log restored mental health config if set
+		if cfg.MentalHealthChannelID != "" && cfg.MentalHealthInterval > 0 {
+			b.logger.Info("Mental health reminder active from DB",
+				"guild", cfg.GuildID,
+				"channel", cfg.MentalHealthChannelID,
+				"interval", cfg.MentalHealthInterval,
+				"tag", cfg.MentalHealthTag,
+				"lang", cfg.MentalHealthLang,
+			)
 		}
 	}
 
@@ -207,7 +222,7 @@ func (b *Bot) loadSavedGuildConfigs() {
 
 // persistReminderChannel saves the reminder channel to guild config in DB
 // so it survives redeployments.
-func (b *Bot) persistReminderChannel(guildID, guildName, channelID string) {
+func (b *Bot) persistReminderChannel(guildID, guildName, channelID, lang string) {
 	repo := repository.NewGuildConfigRepository()
 	cfg, err := repo.Get(guildID)
 	if err != nil {
@@ -218,7 +233,173 @@ func (b *Bot) persistReminderChannel(guildID, guildName, channelID string) {
 		cfg = entity.NewGuildConfig(guildID, guildName)
 	}
 	cfg.ReminderChannelID = channelID
+	cfg.ReminderLang = lang
 	if err := repo.Save(cfg); err != nil {
 		b.logger.Warn("Failed to persist reminder channel", "error", err)
+	}
+}
+
+// --- Mental Health Commands ---
+
+// handleMentalHealth handles the /mentalhealth command — returns a random mental health tip.
+func (b *Bot) handleMentalHealth(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if b.funService == nil {
+		b.respondError(s, i, "Fun service is not available")
+		return
+	}
+
+	// Extract language option
+	lang := "EN"
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Name == "lang" {
+			lang = opt.StringValue()
+		}
+	}
+
+	title, tip := b.funService.GetMentalHealthTip(lang)
+
+	embed := &discordgo.MessageEmbed{
+		Title:       title,
+		Description: tip,
+		Color:       0x57F287, // green
+		Timestamp:   time.Now().Format(time.RFC3339),
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: "Take care of your mental health 💚",
+		},
+	}
+
+	b.respondEmbed(s, i, embed)
+}
+
+// handleMentalHealthSetup handles the /mentalhealth-setup command (admin only).
+func (b *Bot) handleMentalHealthSetup(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if b.funService == nil {
+		b.respondError(s, i, "Fun service is not available")
+		return
+	}
+
+	options := i.ApplicationCommandData().Options
+	if len(options) < 2 {
+		b.respondError(s, i, "Please specify a channel and interval.")
+		return
+	}
+
+	// Parse required options
+	var channelID string
+	var interval int64
+	var tag string
+	var everyone bool
+	var lang string
+
+	for _, opt := range options {
+		switch opt.Name {
+		case "channel":
+			ch := opt.ChannelValue(s)
+			if ch == nil || ch.Type != discordgo.ChannelTypeGuildText {
+				b.respondError(s, i, "Please select a valid text channel.")
+				return
+			}
+			channelID = ch.ID
+		case "interval":
+			interval = opt.IntValue()
+		case "tag":
+			// Mentionable can be a user or a role — build the mention string
+			// The value is a snowflake ID. We check if it's a role or user.
+			mentionID := opt.Value.(string)
+			// Try to find as role first
+			if guild, err := s.Guild(i.GuildID); err == nil {
+				isRole := false
+				for _, role := range guild.Roles {
+					if role.ID == mentionID {
+						tag = fmt.Sprintf("<@&%s>", mentionID)
+						isRole = true
+						break
+					}
+				}
+				if !isRole {
+					tag = fmt.Sprintf("<@%s>", mentionID)
+				}
+			} else {
+				tag = fmt.Sprintf("<@%s>", mentionID)
+			}
+		case "everyone":
+			everyone = opt.BoolValue()
+		case "lang":
+			lang = opt.StringValue()
+		}
+	}
+
+	if channelID == "" {
+		b.respondError(s, i, "Please specify a channel.")
+		return
+	}
+
+	if interval < 0 {
+		b.respondError(s, i, "Interval must be 0 (disabled) or a positive number of minutes.")
+		return
+	}
+
+	// If everyone is true, override tag
+	if everyone {
+		tag = "@everyone"
+	}
+
+	// Get guild name
+	guildName := i.GuildID
+	if guild, err := s.Guild(i.GuildID); err == nil {
+		guildName = guild.Name
+	}
+
+	// Save config
+	b.persistMentalHealthConfig(i.GuildID, guildName, channelID, int(interval), tag, lang)
+
+	if interval == 0 {
+		b.respond(s, i, fmt.Sprintf("Mental health reminders to <#%s> have been **disabled**.", channelID))
+	} else {
+		tagInfo := ""
+		if tag != "" {
+			tagInfo = fmt.Sprintf(" (mentioning %s)", tag)
+		}
+		langInfo := ""
+		if lang != "" {
+			langInfo = fmt.Sprintf(" in **%s**", lang)
+		}
+		b.respond(s, i, fmt.Sprintf("🧠 Mental health reminders will be posted to <#%s> every **%d minutes**%s%s! 💚", channelID, interval, tagInfo, langInfo))
+	}
+}
+
+// handleMentalHealthStop handles the /mentalhealth-stop command.
+func (b *Bot) handleMentalHealthStop(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if b.funService == nil {
+		b.respondError(s, i, "Fun service is not available")
+		return
+	}
+
+	guildName := i.GuildID
+	if guild, err := s.Guild(i.GuildID); err == nil {
+		guildName = guild.Name
+	}
+
+	b.persistMentalHealthConfig(i.GuildID, guildName, "", 0, "", "")
+	b.respond(s, i, "Mental health reminders have been **stopped**. Take care! 💚")
+}
+
+// persistMentalHealthConfig saves mental health reminder config to guild config in DB.
+func (b *Bot) persistMentalHealthConfig(guildID, guildName, channelID string, interval int, tag, lang string) {
+	repo := repository.NewGuildConfigRepository()
+	cfg, err := repo.Get(guildID)
+	if err != nil {
+		b.logger.Warn("Failed to get guild config for mental health persist", "error", err)
+		return
+	}
+	if cfg == nil {
+		cfg = entity.NewGuildConfig(guildID, guildName)
+	}
+	cfg.MentalHealthChannelID = channelID
+	cfg.MentalHealthInterval = interval
+	cfg.MentalHealthTag = tag
+	cfg.MentalHealthLang = lang
+	if err := repo.Save(cfg); err != nil {
+		b.logger.Warn("Failed to persist mental health config", "error", err)
 	}
 }

@@ -28,7 +28,7 @@ type Member struct {
 // MembersFunc returns non-bot members in the guild.
 type MembersFunc func() []Member
 
-// supportedLanguages for random language switching.
+// supportedLanguages for random language switching (when no lang is configured).
 var supportedLanguages = []string{"Indonesian", "Japanese", "Korean"}
 
 // reminderSystemPrompt instructs the AI to write short, warm, cute multilingual messages.
@@ -45,13 +45,14 @@ STRICT RULES:
 - No bullet points, no lists, no headings. Just natural short text.
 - NEVER use dashes. Write casually like a cute text message.
 - Each message must feel fresh and unique.
-- Write in the LANGUAGE specified in the prompt (Indonesian, Japanese, or Korean). Mix in a tiny bit of the cute expressions from that language naturally.`
+- Write in the LANGUAGE specified in the prompt (English, Indonesian, Japanese, Korean, or Chinese). Mix in a tiny bit of the cute expressions from that language naturally.`
 
 // ReminderService manages scheduled reminders for Indonesian holidays
 // and Ramadan Sahoor / Berbuka times.
 type ReminderService struct {
 	mu         sync.RWMutex
 	channelID  string
+	lang       string // Language code (EN, ID, JP, KR, ZH) — empty means random
 	sendFn     SendFunc
 	membersFn  MembersFunc
 	logger     *logger.Logger
@@ -95,6 +96,21 @@ func (s *ReminderService) GetChannelID() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.channelID
+}
+
+// SetLang updates the reminder language at runtime.
+func (s *ReminderService) SetLang(lang string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lang = lang
+	s.logger.Info("Reminder language updated", "lang", lang)
+}
+
+// GetLang returns the current language code.
+func (s *ReminderService) GetLang() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.lang
 }
 
 // Start begins the background ticker that checks every minute.
@@ -143,8 +159,28 @@ func (s *ReminderService) loop() {
 	}
 }
 
-// pickLanguage returns a random language for this message.
+// pickLanguage returns the configured language name, or a random one if not set.
 func (s *ReminderService) pickLanguage() string {
+	s.mu.RLock()
+	lang := s.lang
+	s.mu.RUnlock()
+
+	if lang != "" {
+		// Map lang code to AI-friendly name
+		switch lang {
+		case "ID":
+			return "Indonesian"
+		case "JP":
+			return "Japanese"
+		case "KR":
+			return "Korean"
+		case "ZH":
+			return "Chinese"
+		case "EN":
+			return "English"
+		}
+	}
+	// Fallback: random from Indonesian, Japanese, Korean
 	return supportedLanguages[s.rng.Intn(len(supportedLanguages))]
 }
 
@@ -522,7 +558,8 @@ func (s *ReminderService) send(message string) {
 
 // SendIntroduction sends a cute intro message to the reminder channel to confirm it works.
 func (s *ReminderService) SendIntroduction() {
-	prompt := "Write a short cute intro in Indonesian. You're Nerubot, reminder assistant. 2-3 sentences max. End with kaomoji."
+	lang := s.pickLanguage()
+	prompt := fmt.Sprintf("Write a short cute intro in %s. You're Nerubot, reminder assistant. 2-3 sentences max. End with kaomoji.", lang)
 
 	fallback := "Hii~ aku **Nerubot**! 💕 Aku bakal ingetin kalian soal kerja, standup, makan siang, Jumat, libur, sama Ramadan~ (｡♥‿♥｡)"
 

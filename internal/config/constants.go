@@ -99,3 +99,19 @@ func LanguagePromptInstruction(lang string) string {
 		return "Respond in English."
 	}
 }
+
+// LanguageAIName returns the full language name used in AI prompts for the given code.
+func LanguageAIName(lang string) string {
+	switch lang {
+	case LangID:
+		return "Indonesian"
+	case LangJP:
+		return "Japanese"
+	case LangKR:
+		return "Korean"
+	case LangZH:
+		return "Chinese"
+	default:
+		return "English"
+	}
+}

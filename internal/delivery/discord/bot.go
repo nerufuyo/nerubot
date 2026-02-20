@@ -187,8 +187,19 @@ func New(cfg *config.Config) (*Bot, error) {
 		if embed.ImageURL != "" {
 			discordEmbed.Image = &discordgo.MessageEmbedImage{URL: embed.ImageURL}
 		}
-		if _, err := bot.session.ChannelMessageSendEmbed(channelID, discordEmbed); err != nil {
-			log.Error("Failed to send scheduled fun embed", "channel", channelID, "error", err)
+		if embed.Content != "" {
+			// Send with text content (for mentions) + embed
+			msg := &discordgo.MessageSend{
+				Content: embed.Content,
+				Embeds:  []*discordgo.MessageEmbed{discordEmbed},
+			}
+			if _, err := bot.session.ChannelMessageSendComplex(channelID, msg); err != nil {
+				log.Error("Failed to send scheduled fun message", "channel", channelID, "error", err)
+			}
+		} else {
+			if _, err := bot.session.ChannelMessageSendEmbed(channelID, discordEmbed); err != nil {
+				log.Error("Failed to send scheduled fun embed", "channel", channelID, "error", err)
+			}
 		}
 	})
 	log.Info("Fun service initialized (dad jokes + memes)")
@@ -380,6 +391,12 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleMeme(s, i)
 	case "meme-setup":
 		b.handleMemeSetup(s, i)
+	case "mentalhealth":
+		b.handleMentalHealth(s, i)
+	case "mentalhealth-setup":
+		b.handleMentalHealthSetup(s, i)
+	case "mentalhealth-stop":
+		b.handleMentalHealthStop(s, i)
 	default:
 		b.respondError(s, i, "Unknown command")
 	}
@@ -560,6 +577,21 @@ func (b *Bot) registerCommands() error {
 		{
 			Name:        "reminder",
 			Description: "View upcoming Indonesian holidays and Ramadan schedule",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "lang",
+					Description: "Response language (default: EN)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "English", Value: "EN"},
+						{Name: "Bahasa Indonesia", Value: "ID"},
+						{Name: "日本語 (Japanese)", Value: "JP"},
+						{Name: "한국어 (Korean)", Value: "KR"},
+						{Name: "中文 (Chinese)", Value: "ZH"},
+					},
+				},
+			},
 		},
 		{
 			Name:                     "reminder-set",
@@ -571,6 +603,19 @@ func (b *Bot) registerCommands() error {
 					Name:        "channel",
 					Description: "Channel to send reminders to",
 					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "lang",
+					Description: "Language for auto-reminders (default: random)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "English", Value: "EN"},
+						{Name: "Bahasa Indonesia", Value: "ID"},
+						{Name: "日本語 (Japanese)", Value: "JP"},
+						{Name: "한국어 (Korean)", Value: "KR"},
+						{Name: "中文 (Chinese)", Value: "ZH"},
+					},
 				},
 			},
 		},
@@ -625,6 +670,76 @@ func (b *Bot) registerCommands() error {
 					Required:    true,
 				},
 			},
+		},
+
+		// --- Mental health ---
+		{
+			Name:        "mentalhealth",
+			Description: "Get a mental health tip & self-care reminder",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "lang",
+					Description: "Language (default: EN)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "English", Value: "EN"},
+						{Name: "Bahasa Indonesia", Value: "ID"},
+						{Name: "日本語 (Japanese)", Value: "JP"},
+						{Name: "한국어 (Korean)", Value: "KR"},
+						{Name: "中文 (Chinese)", Value: "ZH"},
+					},
+				},
+			},
+		},
+		{
+			Name:                     "mentalhealth-setup",
+			Description:              "Schedule mental health reminders in a channel with mentioning",
+			DefaultMemberPermissions: &adminPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionChannel,
+					Name:        "channel",
+					Description: "Channel to post mental health reminders in",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "interval",
+					Description: "Interval in minutes (e.g. 60 for hourly, 0 to disable)",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionMentionable,
+					Name:        "tag",
+					Description: "User or role to mention in each reminder (optional)",
+					Required:    false,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionBoolean,
+					Name:        "everyone",
+					Description: "Mention @everyone in each reminder (default: false)",
+					Required:    false,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "lang",
+					Description: "Language for tips (default: EN)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "English", Value: "EN"},
+						{Name: "Bahasa Indonesia", Value: "ID"},
+						{Name: "日本語 (Japanese)", Value: "JP"},
+						{Name: "한국어 (Korean)", Value: "KR"},
+						{Name: "中文 (Chinese)", Value: "ZH"},
+					},
+				},
+			},
+		},
+		{
+			Name:                     "mentalhealth-stop",
+			Description:              "Stop scheduled mental health reminders",
+			DefaultMemberPermissions: &adminPermission,
 		},
 	}
 
