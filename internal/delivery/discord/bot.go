@@ -370,6 +370,8 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleReminder(s, i)
 	case "reminder-set":
 		b.handleReminderSet(s, i)
+	case "reminder-stop":
+		b.handleReminderStop(s, i)
 	case "dadjoke":
 		b.handleDadJoke(s, i)
 	case "dadjoke-setup":
@@ -515,6 +517,11 @@ func (b *Bot) registerCommands() error {
 					Required:    true,
 				},
 			},
+		},
+		{
+			Name:                     "reminder-stop",
+			Description:              "Stop automatic reminders",
+			DefaultMemberPermissions: &adminPermission,
 		},
 		// --- Fun commands ---
 		{

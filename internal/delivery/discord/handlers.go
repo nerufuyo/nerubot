@@ -57,7 +57,8 @@ func (b *Bot) handleHelp(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			{
 				Name: "Reminder Commands",
 				Value: "`/reminder` - View upcoming holidays and Ramadan schedule\n" +
-					"`/reminder-set <channel>` - Set reminder channel (admin only)",
+					"`/reminder-set <channel>` - Set/change reminder channel (admin only)\n" +
+					"`/reminder-stop` - Stop automatic reminders (admin only)",
 				Inline: false,
 			},
 			{

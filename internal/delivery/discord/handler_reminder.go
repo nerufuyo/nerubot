@@ -149,3 +149,23 @@ func (b *Bot) handleReminderSet(s *discordgo.Session, i *discordgo.InteractionCr
 	// Send introduction message to the channel to confirm it works
 	go b.reminderService.SendIntroduction()
 }
+
+// handleReminderStop allows admins to stop/disable automatic reminders via /reminder-stop.
+func (b *Bot) handleReminderStop(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if b.reminderService == nil {
+		b.respondError(s, i, "Reminder service is not available")
+		return
+	}
+
+	// Clear channel ID (stops all scheduled messages)
+	b.reminderService.SetChannelID("")
+
+	// Persist the cleared channel to DB
+	guildName := i.GuildID
+	if guild, err := s.Guild(i.GuildID); err == nil {
+		guildName = guild.Name
+	}
+	go b.persistReminderChannel(i.GuildID, guildName, "")
+
+	b.respond(s, i, "Reminders have been **stopped**. Use `/reminder-set` to enable them again~")
+}
