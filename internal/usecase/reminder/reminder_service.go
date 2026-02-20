@@ -3,6 +3,7 @@ package reminder
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"sort"
 	"sync"
 	"time"
@@ -17,6 +18,15 @@ var jakartaTZ = time.FixedZone("WIB", 7*60*60)
 
 // SendFunc is a callback the service calls when a reminder fires.
 type SendFunc func(channelID, message string)
+
+// Member represents a Discord guild member for love messages.
+type Member struct {
+	ID       string // Discord user ID (for <@ID> mentions)
+	Username string
+}
+
+// MembersFunc returns non-bot members in the guild.
+type MembersFunc func() []Member
 
 // reminderSystemPrompt instructs the AI to write cute, clingy, romantic messages.
 const reminderSystemPrompt = `You are Neru, a cute, clingy, and loveable girlfriend-like AI companion on a Discord server.
@@ -44,13 +54,15 @@ STRICT RULES:
 // ReminderService manages scheduled reminders for Indonesian holidays
 // and Ramadan Sahoor / Berbuka times.
 type ReminderService struct {
-	mu        sync.RWMutex
-	channelID string
-	sendFn    SendFunc
-	logger    *logger.Logger
-	stopCh    chan struct{}
-	wg        sync.WaitGroup
+	mu         sync.RWMutex
+	channelID  string
+	sendFn     SendFunc
+	membersFn  MembersFunc
+	logger     *logger.Logger
+	stopCh     chan struct{}
+	wg         sync.WaitGroup
 	aiProvider ai.AIProvider
+	rng        *rand.Rand
 }
 
 // NewReminderService creates a new service.
@@ -60,12 +72,18 @@ func NewReminderService(channelID string, aiProvider ai.AIProvider) *ReminderSer
 		logger:     logger.New("reminder"),
 		stopCh:     make(chan struct{}),
 		aiProvider: aiProvider,
+		rng:        rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
 // SetSendFunc sets the callback used to post messages.
 func (s *ReminderService) SetSendFunc(fn SendFunc) {
 	s.sendFn = fn
+}
+
+// SetMembersFunc sets the callback used to fetch guild members.
+func (s *ReminderService) SetMembersFunc(fn MembersFunc) {
+	s.membersFn = fn
 }
 
 // SetChannelID updates the target channel at runtime.
@@ -121,6 +139,10 @@ func (s *ReminderService) loop() {
 			s.checkHolidays(now, firedToday)
 			s.checkRamadan(now, firedToday)
 			s.checkWork(now, firedToday)
+			s.checkStandup(now, firedToday)
+			s.checkLunchBreak(now, firedToday)
+			s.checkFridayPrayer(now, firedToday)
+			s.checkLoveMessage(now, firedToday)
 		}
 	}
 }
@@ -272,6 +294,168 @@ func (s *ReminderService) checkWork(now time.Time, fired map[string]bool) {
 	}
 }
 
+// checkStandup sends a standup reminder on workdays.
+// 09:00 WIB during Ramadan, 09:30 WIB on normal days.
+func (s *ReminderService) checkStandup(now time.Time, fired map[string]bool) {
+	if now.Weekday() == time.Saturday || now.Weekday() == time.Sunday {
+		return
+	}
+	if s.isHoliday(now) {
+		return
+	}
+
+	ramadan := s.isRamadan(now)
+	standupH, standupM := 9, 30
+	if ramadan {
+		standupH, standupM = 9, 0
+	}
+
+	if now.Hour() != standupH || now.Minute() != standupM {
+		return
+	}
+	if fired["standup"] {
+		return
+	}
+	fired["standup"] = true
+
+	standupTime := fmt.Sprintf("%02d:%02d WIB", standupH, standupM)
+	prompt := fmt.Sprintf(
+		"Write a daily standup meeting reminder. It's **%s** — time for standup! "+
+			"Today is %s. Remind them to share what they did yesterday, what they'll do today, "+
+			"and any blockers. Keep it fun and motivating. ",
+		standupTime, now.Format("Monday"),
+	)
+	if ramadan {
+		prompt += "They are fasting during Ramadan, so give extra encouragement."
+	}
+	msg := s.generateMessage(prompt, fmt.Sprintf(
+		"@everyone\n\nStandup time~ **%s**! Share your updates, sweetie!",
+		standupTime,
+	))
+	s.send(msg)
+}
+
+// checkLunchBreak sends a lunch/break reminder on workdays at 12:00 WIB.
+// Skipped during Ramadan (they're fasting).
+func (s *ReminderService) checkLunchBreak(now time.Time, fired map[string]bool) {
+	if now.Weekday() == time.Saturday || now.Weekday() == time.Sunday {
+		return
+	}
+	if s.isHoliday(now) {
+		return
+	}
+	if now.Hour() != 12 || now.Minute() != 0 {
+		return
+	}
+	if fired["lunch"] {
+		return
+	}
+
+	// During Ramadan, send a rest reminder instead of lunch
+	if s.isRamadan(now) {
+		fired["lunch"] = true
+		prompt := "Write a midday break reminder during Ramadan fasting. " +
+			"They can't eat but remind them to take a short break, rest their eyes, " +
+			"stretch, and maybe do a quick prayer. Be gentle and caring about their fasting."
+		msg := s.generateMessage(prompt,
+			"@everyone\n\nIt's noon~ take a little break, rest those eyes. You're doing great fasting today!",
+		)
+		s.send(msg)
+		return
+	}
+
+	fired["lunch"] = true
+	prompt := "Write a lunch break reminder. It's **12:00 WIB** — time to take a break and eat! " +
+		"Remind them to step away from their desk, eat properly (not just snacks!), " +
+		"stretch, and recharge. Be playful about them not skipping meals."
+	msg := s.generateMessage(prompt,
+		"@everyone\n\nLunch time~ **12:00 WIB**! Go eat properly, don't skip meals!",
+	)
+	s.send(msg)
+}
+
+// checkFridayPrayer sends a Friday prayer reminder at 11:30 WIB on Fridays.
+func (s *ReminderService) checkFridayPrayer(now time.Time, fired map[string]bool) {
+	if now.Weekday() != time.Friday {
+		return
+	}
+	if now.Hour() != 11 || now.Minute() != 30 {
+		return
+	}
+	if fired["friday-prayer"] {
+		return
+	}
+	fired["friday-prayer"] = true
+
+	prompt := "Write a Friday prayer (Sholat Jumat) reminder for Muslim team members. " +
+		"It's **11:30 WIB** on Friday — time to prepare for Jumat prayer at the mosque. " +
+		"Remind them to get ready, do wudhu, and head to the mosque. " +
+		"Be respectful and warm. Mention that non-Muslim friends can enjoy their break too."
+	msg := s.generateMessage(prompt,
+		"@everyone\n\nIt's **11:30 WIB** — Friday prayer time! Head to the mosque, stay blessed~",
+	)
+	s.send(msg)
+}
+
+// checkLoveMessage picks a random guild member and sends them a sweet AI-generated
+// personal message at 11:00 and 15:00 WIB on workdays.
+func (s *ReminderService) checkLoveMessage(now time.Time, fired map[string]bool) {
+	if now.Weekday() == time.Saturday || now.Weekday() == time.Sunday {
+		return
+	}
+	if s.isHoliday(now) {
+		return
+	}
+	if s.membersFn == nil {
+		return
+	}
+
+	var key string
+	var timeLabel string
+	if now.Hour() == 11 && now.Minute() == 0 {
+		key = "love-11"
+		timeLabel = "mid-morning"
+	} else if now.Hour() == 15 && now.Minute() == 0 {
+		key = "love-15"
+		timeLabel = "afternoon"
+	} else {
+		return
+	}
+
+	if fired[key] {
+		return
+	}
+	fired[key] = true
+
+	members := s.membersFn()
+	if len(members) == 0 {
+		return
+	}
+
+	// Pick a random member — use day-of-year + hour as extra seed for variety
+	idx := s.rng.Intn(len(members))
+	chosen := members[idx]
+
+	prompt := fmt.Sprintf(
+		"Write a short, sweet, personal love message for a team member named **%s**. "+
+			"It's %s on %s. Mention their name and use <@%s> to tag them at the start. "+
+			"Tell them how appreciated they are, how amazing they are, or give them encouragement. "+
+			"Make it feel personal and heartfelt — like a sweet note from someone who adores them. "+
+			"Do NOT start with @everyone — this is a personal shoutout. "+
+			"Keep it 2-4 sentences. Be creative, make each one feel unique.",
+		chosen.Username, timeLabel, now.Format("Monday"),
+		chosen.ID,
+	)
+
+	fallback := fmt.Sprintf(
+		"Hey <@%s>~ just wanted you to know you're amazing and I appreciate you so much! Keep being wonderful!",
+		chosen.ID,
+	)
+
+	msg := s.generatePersonalMessage(prompt, fallback)
+	s.send(msg)
+}
+
 // isHoliday checks if the given date falls on an Indonesian national holiday.
 func (s *ReminderService) isHoliday(now time.Time) bool {
 	for _, h := range indonesianHolidays(now.Year()) {
@@ -322,6 +506,35 @@ func (s *ReminderService) generateMessage(prompt, fallback string) string {
 	// Ensure @everyone prefix
 	if len(response) < 10 || response[:10] != "@everyone\n" {
 		response = "@everyone\n\n" + response
+	}
+
+	return response
+}
+
+// generatePersonalMessage generates a personal love message (no @everyone prefix).
+func (s *ReminderService) generatePersonalMessage(prompt, fallback string) string {
+	if s.aiProvider == nil || !s.aiProvider.IsAvailable() {
+		s.logger.Debug("AI not available, using fallback personal message")
+		return fallback
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	personalPrompt := reminderSystemPrompt + "\n\n" +
+		"OVERRIDE: This is a personal love message for ONE specific person. " +
+		"Do NOT start with @everyone. Start directly with their <@ID> mention or their name. " +
+		"Make it feel like a sweet personal note just for them."
+
+	messages := []ai.Message{
+		{Role: "system", Content: personalPrompt},
+		{Role: "user", Content: prompt},
+	}
+
+	response, err := s.aiProvider.Chat(ctx, messages)
+	if err != nil {
+		s.logger.Warn("AI personal message failed, using fallback", "error", err)
+		return fallback
 	}
 
 	return response

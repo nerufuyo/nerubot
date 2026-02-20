@@ -136,6 +136,25 @@ func New(cfg *config.Config) (*Bot, error) {
 				log.Error("Failed to send reminder", "error", err)
 			}
 		})
+		bot.reminderService.SetMembersFunc(func() []reminder.Member {
+			var members []reminder.Member
+			for _, guild := range bot.session.State.Guilds {
+				guildMembers, err := bot.session.GuildMembers(guild.ID, "", 1000)
+				if err != nil {
+					log.Warn("Failed to fetch guild members", "guild", guild.ID, "error", err)
+					continue
+				}
+				for _, m := range guildMembers {
+					if m.User != nil && !m.User.Bot {
+						members = append(members, reminder.Member{
+							ID:       m.User.ID,
+							Username: m.User.Username,
+						})
+					}
+				}
+			}
+			return members
+		})
 		if cfg.Reminder.ChannelID != "" {
 			log.Info("Reminder service initialized", "channel", cfg.Reminder.ChannelID)
 		} else {

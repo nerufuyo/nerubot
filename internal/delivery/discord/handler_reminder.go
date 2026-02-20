@@ -70,6 +70,32 @@ func (b *Bot) handleReminder(s *discordgo.Session, i *discordgo.InteractionCreat
 		})
 	}
 
+	// Daily reminders schedule
+	now := time.Now().In(time.FixedZone("WIB", 7*60*60))
+	weekday := now.Weekday()
+	isWorkday := weekday >= time.Monday && weekday <= time.Friday
+
+	var dailyLines []string
+	if isWorkday {
+		if b.reminderService.IsRamadanToday() {
+			dailyLines = append(dailyLines, "Standup: **09:00 WIB** (Ramadan schedule)")
+		} else {
+			dailyLines = append(dailyLines, "Standup: **09:30 WIB**")
+		}
+		dailyLines = append(dailyLines, "Lunch Break: **12:00 WIB**")
+		dailyLines = append(dailyLines, "Love Note: **11:00 & 15:00 WIB** (random surprise~)")
+	}
+	if weekday == time.Friday {
+		dailyLines = append(dailyLines, "Friday Prayer: **11:30 WIB**")
+	}
+	if len(dailyLines) > 0 {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "Daily Reminders~",
+			Value:  strings.Join(dailyLines, "\n"),
+			Inline: false,
+		})
+	}
+
 	if len(embed.Fields) == 0 {
 		b.followUp(s, i, "No upcoming reminders at the moment.")
 		return
