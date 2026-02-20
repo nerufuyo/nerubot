@@ -97,6 +97,12 @@ func buildHelpEmbed(cfg *config.Config, lang string) *discordgo.MessageEmbed {
 				Inline: false,
 			},
 			{
+				Name: h["ollama_title"],
+				Value: "`/ollama-models` - " + h["ollama_models"] + "\n" +
+					"`/ollama-bench <model> [prompt]` - " + h["ollama_bench"],
+				Inline: false,
+			},
+			{
 				Name:   h["other"],
 				Value:  "`/help [lang]` - " + h["help_desc"],
 				Inline: false,
@@ -126,6 +132,7 @@ var helpText = map[string]map[string]string{
 		"meme_setup": "Schedule memes (admin only)",
 		"mentalhealth_title": "Mental Health", "mentalhealth": "Get a mental health tip",
 		"mentalhealth_setup": "Schedule mental health reminders with tag (admin only)", "mentalhealth_stop": "Stop mental health reminders (admin only)",
+		"ollama_title": "Ollama Commands", "ollama_models": "List available Ollama models", "ollama_bench": "Benchmark an Ollama model",
 		"other": "Other Commands", "help_desc": "Show this help message",
 	},
 	"ID": {
@@ -144,6 +151,7 @@ var helpText = map[string]map[string]string{
 		"meme_setup": "Jadwalkan meme (admin)",
 		"mentalhealth_title": "Kesehatan Mental", "mentalhealth": "Dapatkan tips kesehatan mental",
 		"mentalhealth_setup": "Jadwalkan pengingat kesehatan mental dengan tag (admin)", "mentalhealth_stop": "Hentikan pengingat kesehatan mental (admin)",
+		"ollama_title": "Perintah Ollama", "ollama_models": "Daftar model Ollama yang tersedia", "ollama_bench": "Benchmark model Ollama",
 		"other": "Perintah Lainnya", "help_desc": "Tampilkan pesan bantuan ini",
 	},
 	"JP": {
@@ -162,6 +170,7 @@ var helpText = map[string]map[string]string{
 		"meme_setup": "ミームをスケジュール（管理者）",
 		"mentalhealth_title": "メンタルヘルス", "mentalhealth": "メンタルヘルスのヒントを取得",
 		"mentalhealth_setup": "メンタルヘルスリマインダーをスケジュール（管理者）", "mentalhealth_stop": "メンタルヘルスリマインダーを停止（管理者）",
+		"ollama_title": "Ollamaコマンド", "ollama_models": "利用可能なOllamaモデル一覧", "ollama_bench": "Ollamaモデルのベンチマーク",
 		"other": "その他のコマンド", "help_desc": "このヘルプメッセージを表示",
 	},
 	"KR": {
@@ -180,6 +189,7 @@ var helpText = map[string]map[string]string{
 		"meme_setup": "밈 예약 (관리자)",
 		"mentalhealth_title": "정신 건강", "mentalhealth": "정신 건강 팁 가져오기",
 		"mentalhealth_setup": "정신 건강 리마인더 예약 (관리자)", "mentalhealth_stop": "정신 건강 리마인더 중지 (관리자)",
+		"ollama_title": "Ollama 명령어", "ollama_models": "사용 가능한 Ollama 모델 목록", "ollama_bench": "Ollama 모델 벤치마크",
 		"other": "기타 명령어", "help_desc": "이 도움말 메시지 표시",
 	},
 	"ZH": {
@@ -198,6 +208,7 @@ var helpText = map[string]map[string]string{
 		"meme_setup": "安排表情包（管理员）",
 		"mentalhealth_title": "心理健康", "mentalhealth": "获取心理健康小贴士",
 		"mentalhealth_setup": "安排心理健康提醒（管理员）", "mentalhealth_stop": "停止心理健康提醒（管理员）",
+		"ollama_title": "Ollama 命令", "ollama_models": "列出可用的 Ollama 模型", "ollama_bench": "对 Ollama 模型进行基准测试",
 		"other": "其他命令", "help_desc": "显示此帮助信息",
 	},
 }

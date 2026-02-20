@@ -43,6 +43,7 @@ type Bot struct {
 	mongoDB           *mongodb.Client
 	redisClient       *redispkg.Client
 	backendClient     *backend.Client
+	ollamaClient      *ai.OllamaClient
 }
 
 // New creates a new Discord bot instance
@@ -168,6 +169,16 @@ func New(cfg *config.Config) (*Bot, error) {
 			log.Info("Reminder service initialized", "channel", cfg.Reminder.ChannelID)
 		} else {
 			log.Info("Reminder service initialized (no channel set — use /reminder-set)")
+		}
+	}
+
+	// Initialize Ollama client if configured
+	if cfg.AI.OllamaURL != "" {
+		bot.ollamaClient = ai.NewOllamaClient(cfg.AI.OllamaURL)
+		if bot.ollamaClient.IsAvailable() {
+			log.Info("Ollama client initialized", "url", cfg.AI.OllamaURL)
+		} else {
+			log.Warn("Ollama server not reachable", "url", cfg.AI.OllamaURL)
 		}
 	}
 
@@ -397,6 +408,10 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleMentalHealthSetup(s, i)
 	case "mentalhealth-stop":
 		b.handleMentalHealthStop(s, i)
+	case "ollama-models":
+		b.handleOllamaModels(s, i)
+	case "ollama-bench":
+		b.handleOllamaBench(s, i)
 	default:
 		b.respondError(s, i, "Unknown command")
 	}
@@ -740,6 +755,30 @@ func (b *Bot) registerCommands() error {
 			Name:                     "mentalhealth-stop",
 			Description:              "Stop scheduled mental health reminders",
 			DefaultMemberPermissions: &adminPermission,
+		},
+
+		// --- Ollama commands ---
+		{
+			Name:        "ollama-models",
+			Description: "List available models on the Ollama server",
+		},
+		{
+			Name:        "ollama-bench",
+			Description: "Benchmark an Ollama model (tokens/sec, TTFT, etc.)",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "model",
+					Description: "Model name to benchmark (e.g. gemma3:1b, llama3.2:latest)",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "prompt",
+					Description: "Custom prompt (default: explain LLMs in 3 sentences)",
+					Required:    false,
+				},
+			},
 		},
 	}
 
