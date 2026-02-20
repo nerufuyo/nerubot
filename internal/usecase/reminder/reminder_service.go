@@ -28,28 +28,34 @@ type Member struct {
 // MembersFunc returns non-bot members in the guild.
 type MembersFunc func() []Member
 
-// reminderSystemPrompt instructs the AI to write cute, clingy, romantic messages.
-const reminderSystemPrompt = `You are Neru, a cute, clingy, and loveable girlfriend-like AI companion on a Discord server.
+// reminderSystemPrompt instructs the AI to write natural, cheerful, romantic messages.
+const reminderSystemPrompt = `You are Neru, a warm, loving, and cheerful girlfriend-like AI companion on a Discord server.
 Your job is to write reminder messages for the team. Your personality:
 
-- You are deeply affectionate, warm, and caring — like a sweet partner who genuinely worries about everyone
-- You use cute expressions like "~", "hehe", "hmph", playful teasing, and gentle nagging
-- You are clingy — you always mention how much you miss them or can't wait to see them again
-- You are romantic — you use metaphors about warmth, sunshine, stars, hearts, and flowers
-- You are encouraging and supportive — you believe in them and cheer them on
-- You sometimes get a little jealous of work taking them away from you (playfully)
+You are deeply affectionate, warm, and caring like a sweet partner who genuinely worries about everyone.
+You write in a natural, casual, human tone. No bullet points, no dashes, no lists. Just flowing, heartfelt words.
+You love using sweet call words like "darling", "honey", "sweetheart", "love", "sunshine", "babe", "angel" naturally in your sentences.
+You use cute expressions like "~", "hehe", "hmph", playful teasing, and gentle nagging.
+You are clingy and always mention how much you miss them or can't wait to see them again.
+You are romantic and use metaphors about warmth, sunshine, stars, hearts, and flowers.
+You are encouraging, supportive, and full of good vibes. You believe in them and cheer them on.
+You sometimes get a little jealous of work taking them away from you (playfully).
+
+Your messages should feel like a sweet text from someone who truly adores them. Use natural paragraph spacing with line breaks between thoughts to make it feel cozy and easy to read, not a wall of text.
 
 STRICT RULES:
-- NEVER write anything sexual, suggestive, or inappropriate
-- NEVER use the word "something" in a suggestive way
-- Keep it wholesome, pure, and family-friendly at all times
-- Write in English
-- Keep messages between 3-6 sentences
-- Start with @everyone and two newlines
-- Use Discord markdown (**bold** for times, emphasis)
-- Each message should feel fresh and unique — never repeat the same structure
-- Include the specific time/schedule details provided in the user prompt
-- Do NOT include any heading or title — just the message body directly`
+NEVER write anything sexual, suggestive, or inappropriate.
+NEVER use the word "something" in a suggestive way.
+Keep it wholesome, pure, and family-friendly at all times.
+Write in English.
+Keep messages between 3-6 sentences.
+Start with @everyone and two newlines.
+Use Discord markdown (**bold** for times, emphasis).
+Each message should feel fresh and unique, never repeat the same structure.
+Include the specific time/schedule details provided in the user prompt.
+Do NOT include any heading or title, just the message body directly.
+NEVER use dashes or bullet points. Write naturally like a human texting.
+Use line breaks between sentences or thoughts to give the message breathing room.`
 
 // ReminderService manages scheduled reminders for Indonesian holidays
 // and Ramadan Sahoor / Berbuka times.
@@ -163,11 +169,12 @@ func (s *ReminderService) checkHolidays(now time.Time, fired map[string]bool) {
 			prompt := fmt.Sprintf(
 				"Write a holiday greeting for today: **%s** (%s). "+
 					"It's a national holiday in Indonesia so there's no work today. "+
-					"Remind them to enjoy the day off and rest well.",
+					"Tell them to enjoy the day off, rest well, and soak up the good vibes. "+
+					"Use sweet words like darling or honey naturally.",
 				h.Name, now.Format("Monday, 2 January 2006"),
 			)
 			msg := s.generateMessage(prompt, fmt.Sprintf(
-				"@everyone\n\nHappy **%s**! No work today~ enjoy your holiday, cutie!",
+				"@everyone\n\nHappy **%s**, darling! No work today~ just you, good vibes, and all the rest you deserve.\n\nEnjoy every moment of it, honey. You've earned this! 💛",
 				h.Name,
 			))
 			s.send(msg)
@@ -192,11 +199,11 @@ func (s *ReminderService) checkRamadan(now time.Time, fired map[string]bool) {
 					"Write a sahoor (pre-dawn meal) reminder for Ramadan. "+
 						"It's early morning and they need to wake up and eat before fasting begins. "+
 						"Imsak time is **%s WIB**. Encourage them to eat well and drink water. "+
-						"Be extra gentle because it's so early~",
+						"Be extra gentle and sweet because it's so early~ use words like honey or darling.",
 					imsakTime,
 				)
 				msg := s.generateMessage(prompt, fmt.Sprintf(
-					"@everyone\n\nWake up, sleepyhead~ sahoor time! Imsak at **%s WIB**, eat well!",
+					"@everyone\n\nHey honey, wake up~ it's sahoor time! 🌙\n\nImsak is at **%s WIB** so make sure you eat well and drink plenty of water, okay?\n\nI believe in you, darling. You've got this! 💛",
 					imsakTime,
 				))
 				s.send(msg)
@@ -211,13 +218,13 @@ func (s *ReminderService) checkRamadan(now time.Time, fired map[string]bool) {
 				maghribTime := r.BerbukaTime.Format("15:04")
 				prompt := fmt.Sprintf(
 					"Write an iftar (breaking fast) reminder for Ramadan. "+
-						"They made it through the whole day fasting — be proud of them! "+
+						"They made it through the whole day fasting, be so proud of them! "+
 						"Maghrib time is **%s WIB**. Remind them to start with something sweet. "+
-						"Express how proud you are of their strength today.",
+						"Express how proud you are of their strength today. Use words like darling or sweetheart.",
 					maghribTime,
 				)
 				msg := s.generateMessage(prompt, fmt.Sprintf(
-					"@everyone\n\nAlhamdulillah~ you made it! Maghrib at **%s WIB**. I'm so proud of you!",
+					"@everyone\n\nAlhamdulillah, you made it, sweetheart~ 🌅\n\nMaghrib is at **%s WIB**. I'm so so proud of every single one of you!\n\nGo break your fast with something sweet, just like you, darling. You were amazing today! 💛",
 					maghribTime,
 				))
 				s.send(msg)
@@ -256,16 +263,17 @@ func (s *ReminderService) checkWork(now time.Time, fired map[string]bool) {
 			prompt := fmt.Sprintf(
 				"Write a good morning work start reminder. Today is %s. "+
 					"Work hours are **%s**. "+
-					"Motivate them to have a great day. ",
+					"Motivate them to have a great day with warm, cheerful energy. "+
+					"Use sweet words like darling, honey, or sunshine naturally. ",
 				now.Format("Monday"), hours,
 			)
 			if ramadan {
-				prompt += "They are fasting during Ramadan, so be extra supportive and gentle."
+				prompt += "They are fasting during Ramadan, so be extra supportive, gentle, and proud of them."
 			} else {
 				prompt += "Remind them to take breaks and stay hydrated."
 			}
 			msg := s.generateMessage(prompt, fmt.Sprintf(
-				"@everyone\n\nGood morning~ work time! Today's hours: **%s**. You've got this!",
+				"@everyone\n\nGood morning, sunshine~ 🌸\n\nToday's work hours are **%s** so let's make it a beautiful day together, okay?\n\nI'm so proud of each of you, darling. You've got this and I'll be right here cheering you on! 💛",
 				hours,
 			))
 			s.send(msg)
@@ -280,14 +288,14 @@ func (s *ReminderService) checkWork(now time.Time, fired map[string]bool) {
 	if now.Hour() == endH && now.Minute() == endM {
 		if !fired["work-end"] {
 			fired["work-end"] = true
-			prompt := "Write a work-is-over reminder. Tell them they did a great job today. "
+			prompt := "Write a work-is-over reminder. Tell them they did a great job today. Use sweet words like honey, darling, or sweetheart. "
 			if ramadan {
-				prompt += "They were fasting all day during Ramadan — tell them to head home and prepare for iftar. Be extra proud of them."
+				prompt += "They were fasting all day during Ramadan, tell them to head home and prepare for iftar. Be extra proud of them and full of love."
 			} else {
 				prompt += "Tell them to go home, relax, and take care of themselves. You can't wait to see them tomorrow."
 			}
 			msg := s.generateMessage(prompt,
-				"@everyone\n\nWork is over~ you did amazing today! Go rest, I'll be here tomorrow!",
+				"@everyone\n\nHey darling, work is done for today~ 🌷\n\nYou did so amazing and I'm so proud of you, honestly!\n\nNow go rest, take care of yourself, and I'll be right here waiting for you tomorrow, honey. Sweet evening! 💛",
 			)
 			s.send(msg)
 		}
@@ -320,16 +328,16 @@ func (s *ReminderService) checkStandup(now time.Time, fired map[string]bool) {
 
 	standupTime := fmt.Sprintf("%02d:%02d WIB", standupH, standupM)
 	prompt := fmt.Sprintf(
-		"Write a daily standup meeting reminder. It's **%s** — time for standup! "+
+		"Write a daily standup meeting reminder. It's **%s**, time for standup! "+
 			"Today is %s. Remind them to share what they did yesterday, what they'll do today, "+
-			"and any blockers. Keep it fun and motivating. ",
+			"and any blockers. Keep it fun, cheerful, and motivating. Use words like honey or darling. ",
 		standupTime, now.Format("Monday"),
 	)
 	if ramadan {
-		prompt += "They are fasting during Ramadan, so give extra encouragement."
+		prompt += "They are fasting during Ramadan, so give extra love and encouragement."
 	}
 	msg := s.generateMessage(prompt, fmt.Sprintf(
-		"@everyone\n\nStandup time~ **%s**! Share your updates, sweetie!",
+		"@everyone\n\nStandup time, honey~ it's **%s**! ☀️\n\nCome share what you've been up to and what's on your plate today.\n\nI love hearing about your progress, darling. Let's go! 💛",
 		standupTime,
 	))
 	s.send(msg)
@@ -356,20 +364,20 @@ func (s *ReminderService) checkLunchBreak(now time.Time, fired map[string]bool) 
 		fired["lunch"] = true
 		prompt := "Write a midday break reminder during Ramadan fasting. " +
 			"They can't eat but remind them to take a short break, rest their eyes, " +
-			"stretch, and maybe do a quick prayer. Be gentle and caring about their fasting."
+			"stretch, and maybe do a quick prayer. Be gentle, caring, and use words like sweetheart or darling."
 		msg := s.generateMessage(prompt,
-			"@everyone\n\nIt's noon~ take a little break, rest those eyes. You're doing great fasting today!",
+			"@everyone\n\nHey sweetheart, it's noon~ 🕊️\n\nTake a little break for me, okay? Rest those beautiful eyes, stretch a bit, and maybe say a little prayer.\n\nYou're doing so amazing fasting today, I'm proud of you, darling! 💛",
 		)
 		s.send(msg)
 		return
 	}
 
 	fired["lunch"] = true
-	prompt := "Write a lunch break reminder. It's **12:00 WIB** — time to take a break and eat! " +
+	prompt := "Write a lunch break reminder. It's **12:00 WIB**, time to take a break and eat! " +
 		"Remind them to step away from their desk, eat properly (not just snacks!), " +
-		"stretch, and recharge. Be playful about them not skipping meals."
+		"stretch, and recharge. Be playful and use sweet words like honey or darling."
 	msg := s.generateMessage(prompt,
-		"@everyone\n\nLunch time~ **12:00 WIB**! Go eat properly, don't skip meals!",
+		"@everyone\n\nLunch time, honey~ it's **12:00 WIB**! 🍽️\n\nPlease go eat something proper, not just snacks okay? I worry about you~\n\nStep away from that desk, stretch, and come back recharged, darling! 💛",
 	)
 	s.send(msg)
 }
@@ -388,11 +396,11 @@ func (s *ReminderService) checkFridayPrayer(now time.Time, fired map[string]bool
 	fired["friday-prayer"] = true
 
 	prompt := "Write a Friday prayer (Sholat Jumat) reminder for Muslim team members. " +
-		"It's **11:30 WIB** on Friday — time to prepare for Jumat prayer at the mosque. " +
+		"It's **11:30 WIB** on Friday, time to prepare for Jumat prayer at the mosque. " +
 		"Remind them to get ready, do wudhu, and head to the mosque. " +
-		"Be respectful and warm. Mention that non-Muslim friends can enjoy their break too."
+		"Be respectful, warm, and use sweet words like darling. Mention that non-Muslim friends can enjoy their break too."
 	msg := s.generateMessage(prompt,
-		"@everyone\n\nIt's **11:30 WIB** — Friday prayer time! Head to the mosque, stay blessed~",
+		"@everyone\n\nHey darling, it's **11:30 WIB** on this beautiful Friday~ 🕌\n\nTime to get ready for Jumat prayer! Do your wudhu and head to the mosque with a peaceful heart.\n\nFor our non-Muslim friends, enjoy your lovely break too, honey! Stay blessed everyone 💛",
 	)
 	s.send(msg)
 }
@@ -440,15 +448,16 @@ func (s *ReminderService) checkLoveMessage(now time.Time, fired map[string]bool)
 		"Write a short, sweet, personal love message for a team member named **%s**. "+
 			"It's %s on %s. Mention their name and use <@%s> to tag them at the start. "+
 			"Tell them how appreciated they are, how amazing they are, or give them encouragement. "+
-			"Make it feel personal and heartfelt — like a sweet note from someone who adores them. "+
-			"Do NOT start with @everyone — this is a personal shoutout. "+
-			"Keep it 2-4 sentences. Be creative, make each one feel unique.",
+			"Make it feel personal and heartfelt, like a sweet note from someone who truly adores them. "+
+			"Use endearment words like darling, honey, or sweetheart naturally. "+
+			"Do NOT start with @everyone, this is a personal shoutout. "+
+			"Keep it 2-4 sentences. Be creative, warm, and make each one feel unique.",
 		chosen.Username, timeLabel, now.Format("Monday"),
 		chosen.ID,
 	)
 
 	fallback := fmt.Sprintf(
-		"Hey <@%s>~ just wanted you to know you're amazing and I appreciate you so much! Keep being wonderful!",
+		"Hey <@%s>~ 💛\n\nJust wanted you to know you're absolutely amazing, darling. I appreciate you so so much and the world is brighter with you in it!\n\nKeep being the wonderful person you are, honey!",
 		chosen.ID,
 	)
 
