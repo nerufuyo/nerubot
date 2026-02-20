@@ -548,6 +548,22 @@ func (s *ReminderService) send(message string) {
 	s.sendFn(chID, message)
 }
 
+// SendIntroduction sends a cute intro message to the reminder channel to confirm it works.
+func (s *ReminderService) SendIntroduction() {
+	prompt := "Write a short, cute and clingy introduction message for a Discord channel. " +
+		"You are Nerubot, a sweet and loving reminder assistant. " +
+		"Introduce yourself, tell everyone you'll be sending reminders here (work schedule, standup, lunch break, Friday prayer, holidays, Ramadan schedule, and random love messages). " +
+		"Make it warm, welcoming, and playful. Keep it under 300 characters. End with a cute emoji or kaomoji."
+
+	fallback := "Hii everyone~ I'm **Nerubot**, your personal reminder buddy! 💕\n\n" +
+		"I'll be here to remind you about work, standup, lunch breaks, Friday prayers, holidays, and Ramadan schedules~\n" +
+		"Oh, and expect some random love notes too! You deserve them (｡♥‿♥｡)\n\n" +
+		"Take care of yourselves, okay? I'll take care of the rest! ✨"
+
+	msg := s.generatePersonalMessage(prompt, fallback)
+	s.send(msg)
+}
+
 // --- Static data ---
 
 func indonesianHolidays(year int) []entity.Holiday {

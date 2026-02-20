@@ -130,5 +130,8 @@ func (b *Bot) handleReminderSet(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 
 	b.reminderService.SetChannelID(channel.ID)
-	b.respond(s, i, fmt.Sprintf("Reminders will now be sent to <#%s>.", channel.ID))
+	b.respond(s, i, fmt.Sprintf("Reminders will now be sent to <#%s>~ Let me say hi! 💕", channel.ID))
+
+	// Send introduction message to the channel to confirm it works
+	go b.reminderService.SendIntroduction()
 }
