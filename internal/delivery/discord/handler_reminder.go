@@ -136,7 +136,15 @@ func (b *Bot) handleReminderSet(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 
 	b.reminderService.SetChannelID(channel.ID)
-	b.respond(s, i, fmt.Sprintf("Reminders will now be sent to <#%s>~ Let me say hi! 💕", channel.ID))
+
+	// Persist to MongoDB so it survives redeployments
+	guildName := i.GuildID
+	if guild, err := s.Guild(i.GuildID); err == nil {
+		guildName = guild.Name
+	}
+	go b.persistReminderChannel(i.GuildID, guildName, channel.ID)
+
+	b.respond(s, i, fmt.Sprintf("Reminders will now be sent to <#%s>~ Let me say hi! 💕\n(This setting is saved and will persist across redeployments!)", channel.ID))
 
 	// Send introduction message to the channel to confirm it works
 	go b.reminderService.SendIntroduction()

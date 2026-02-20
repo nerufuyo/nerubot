@@ -61,6 +61,14 @@ func (b *Bot) handleHelp(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				Inline: false,
 			},
 			{
+				Name: "Fun Commands",
+				Value: "`/dadjoke` - Get a random (clean) dad joke\n" +
+					"`/dadjoke-setup <channel> <interval>` - Schedule dad jokes (admin only)\n" +
+					"`/meme` - Get a random meme from the internet\n" +
+					"`/meme-setup <channel> <interval>` - Schedule memes (admin only)",
+				Inline: false,
+			},
+			{
 				Name:   "Other Commands",
 				Value:  "`/help` - Show this help message",
 				Inline: false,

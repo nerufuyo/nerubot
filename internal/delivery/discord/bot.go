@@ -17,6 +17,7 @@ import (
 	"github.com/nerufuyo/nerubot/internal/usecase/analytics"
 	"github.com/nerufuyo/nerubot/internal/usecase/chatbot"
 	"github.com/nerufuyo/nerubot/internal/usecase/confession"
+	"github.com/nerufuyo/nerubot/internal/usecase/fun"
 	"github.com/nerufuyo/nerubot/internal/usecase/music"
 	"github.com/nerufuyo/nerubot/internal/usecase/news"
 	"github.com/nerufuyo/nerubot/internal/usecase/reminder"
@@ -37,6 +38,7 @@ type Bot struct {
 	whaleService      *whale.WhaleService
 	analyticsService  *analytics.AnalyticsService
 	reminderService   *reminder.ReminderService
+	funService        *fun.FunService
 	lavalinkClient    *lavalink.Client
 	mongoDB           *mongodb.Client
 	redisClient       *redispkg.Client
@@ -169,6 +171,28 @@ func New(cfg *config.Config) (*Bot, error) {
 		}
 	}
 
+	// Initialize fun service (dad jokes + memes)
+	bot.funService = fun.NewFunService()
+	bot.funService.SetSendFunc(func(channelID string, embed *fun.FunEmbed) {
+		discordEmbed := &discordgo.MessageEmbed{
+			Title:       embed.Title,
+			Description: embed.Description,
+			Color:       embed.Color,
+			URL:         embed.URL,
+			Timestamp:   time.Now().Format(time.RFC3339),
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: embed.Footer,
+			},
+		}
+		if embed.ImageURL != "" {
+			discordEmbed.Image = &discordgo.MessageEmbedImage{URL: embed.ImageURL}
+		}
+		if _, err := bot.session.ChannelMessageSendEmbed(channelID, discordEmbed); err != nil {
+			log.Error("Failed to send scheduled fun embed", "channel", channelID, "error", err)
+		}
+	})
+	log.Info("Fun service initialized (dad jokes + memes)")
+
 	// Register event handlers
 	bot.registerHandlers()
 
@@ -203,9 +227,17 @@ func (b *Bot) Start(ctx context.Context) error {
 
 	b.logger.Info("Bot is ready and running")
 
+	// Load saved guild configs from DB (restores reminder channels, etc.)
+	b.loadSavedGuildConfigs()
+
 	// Start background services
 	if b.reminderService != nil {
 		b.reminderService.Start()
+	}
+
+	// Start fun service scheduler (dad jokes + memes)
+	if b.funService != nil {
+		b.funService.Start()
 	}
 
 	return nil
@@ -225,6 +257,11 @@ func (b *Bot) Stop() error {
 	// Stop reminder service
 	if b.reminderService != nil {
 		b.reminderService.Stop()
+	}
+
+	// Stop fun service scheduler
+	if b.funService != nil {
+		b.funService.Stop()
 	}
 
 	// Close Discord connection
@@ -333,6 +370,14 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleReminder(s, i)
 	case "reminder-set":
 		b.handleReminderSet(s, i)
+	case "dadjoke":
+		b.handleDadJoke(s, i)
+	case "dadjoke-setup":
+		b.handleDadJokeSetup(s, i)
+	case "meme":
+		b.handleMeme(s, i)
+	case "meme-setup":
+		b.handleMemeSetup(s, i)
 	default:
 		b.respondError(s, i, "Unknown command")
 	}
@@ -467,6 +512,53 @@ func (b *Bot) registerCommands() error {
 					Type:        discordgo.ApplicationCommandOptionChannel,
 					Name:        "channel",
 					Description: "Channel to send reminders to",
+					Required:    true,
+				},
+			},
+		},
+		// --- Fun commands ---
+		{
+			Name:        "dadjoke",
+			Description: "Get a random (clean) dad joke",
+		},
+		{
+			Name:                     "dadjoke-setup",
+			Description:              "Schedule automatic dad jokes in a channel",
+			DefaultMemberPermissions: &adminPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionChannel,
+					Name:        "channel",
+					Description: "Channel to post dad jokes in",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "interval",
+					Description: "Interval in minutes (e.g. 60 for hourly, 0 to disable)",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "meme",
+			Description: "Get a random meme from the internet",
+		},
+		{
+			Name:                     "meme-setup",
+			Description:              "Schedule automatic memes in a channel",
+			DefaultMemberPermissions: &adminPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionChannel,
+					Name:        "channel",
+					Description: "Channel to post memes in",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "interval",
+					Description: "Interval in minutes (e.g. 60 for hourly, 0 to disable)",
 					Required:    true,
 				},
 			},

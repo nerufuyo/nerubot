@@ -96,6 +96,9 @@ func (c *Client) EnsureIndexes(ctx context.Context) error {
 		"bot_config": {
 			{Keys: bson.D{{Key: "key", Value: 1}}, Options: options.Index().SetUnique(true)},
 		},
+		"guild_configs": {
+			{Keys: bson.D{{Key: "guild_id", Value: 1}}, Options: options.Index().SetUnique(true)},
+		},
 	}
 
 	for coll, models := range indexes {
