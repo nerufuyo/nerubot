@@ -455,6 +455,19 @@ func (b *Bot) registerCommands() error {
 					Description: "User to roast (optional)",
 					Required:    false,
 				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "lang",
+					Description: "Response language (default: EN)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "English", Value: "EN"},
+						{Name: "Bahasa Indonesia", Value: "ID"},
+						{Name: "日本語 (Japanese)", Value: "JP"},
+						{Name: "한국어 (Korean)", Value: "KR"},
+						{Name: "中文 (Chinese)", Value: "ZH"},
+					},
+				},
 			},
 		},
 		{
@@ -467,6 +480,19 @@ func (b *Bot) registerCommands() error {
 					Description: "Your message to the AI",
 					Required:    true,
 				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "lang",
+					Description: "Response language (default: EN)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "English", Value: "EN"},
+						{Name: "Bahasa Indonesia", Value: "ID"},
+						{Name: "日本語 (Japanese)", Value: "JP"},
+						{Name: "한국어 (Korean)", Value: "KR"},
+						{Name: "中文 (Chinese)", Value: "ZH"},
+					},
+				},
 			},
 		},
 		{
@@ -476,6 +502,21 @@ func (b *Bot) registerCommands() error {
 		{
 			Name:        "news",
 			Description: "Get latest news from multiple sources",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "lang",
+					Description: "News language/region (default: EN)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "English", Value: "EN"},
+						{Name: "Bahasa Indonesia", Value: "ID"},
+						{Name: "日本語 (Japanese)", Value: "JP"},
+						{Name: "한국어 (Korean)", Value: "KR"},
+						{Name: "中文 (Chinese)", Value: "ZH"},
+					},
+				},
+			},
 		},
 		{
 			Name:        "whale",
@@ -500,6 +541,21 @@ func (b *Bot) registerCommands() error {
 		{
 			Name:        "help",
 			Description: "Show help information",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "lang",
+					Description: "Help language (default: EN)",
+					Required:    false,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "English", Value: "EN"},
+						{Name: "Bahasa Indonesia", Value: "ID"},
+						{Name: "日本語 (Japanese)", Value: "JP"},
+						{Name: "한국어 (Korean)", Value: "KR"},
+						{Name: "中文 (Chinese)", Value: "ZH"},
+					},
+				},
+			},
 		},
 		{
 			Name:        "reminder",

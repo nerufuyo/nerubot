@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/nerufuyo/nerubot/internal/config"
 )
 
 // handleChat handles the chatbot command with rate limiting
@@ -30,7 +31,22 @@ func (b *Bot) handleChat(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	message := options[0].StringValue()
+	// Extract message and optional lang
+	var message string
+	lang := config.DefaultLang
+	for _, opt := range options {
+		switch opt.Name {
+		case "message":
+			message = opt.StringValue()
+		case "lang":
+			lang = opt.StringValue()
+		}
+	}
+
+	if message == "" {
+		b.respondError(s, i, "Please provide a message")
+		return
+	}
 
 	// Check rate limit (5 messages per 3 minutes per user)
 	allowed, remaining, resetSeconds := b.chatbotService.CheckRateLimit(i.Member.User.ID)
@@ -56,14 +72,18 @@ func (b *Bot) handleChat(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	response, err := b.chatbotService.Chat(ctx, i.Member.User.ID, message)
+	response, err := b.chatbotService.Chat(ctx, i.Member.User.ID, message, lang)
 	if err != nil {
 		b.followUpError(s, i, fmt.Sprintf("AI error: %s", err.Error()))
 		return
 	}
 
 	// Build footer with rate limit info and providers
-	footerText := fmt.Sprintf("Powered by RAG | %d messages remaining", remaining)
+	langLabel := config.LanguageNames[lang]
+	if langLabel == "" {
+		langLabel = "English"
+	}
+	footerText := fmt.Sprintf("Powered by RAG | %d remaining | Lang: %s", remaining, langLabel)
 	providers := b.chatbotService.GetAvailableProviders()
 	if len(providers) > 0 {
 		footerText += fmt.Sprintf(" | Provider: %s", providers[0])

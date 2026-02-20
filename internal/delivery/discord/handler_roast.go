@@ -16,11 +16,17 @@ func (b *Bot) handleRoast(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		return
 	}
 
-	// Determine target user
+	// Determine target user and language
 	targetUser := i.Member.User
+	lang := config.DefaultLang
 	options := i.ApplicationCommandData().Options
-	if len(options) > 0 && options[0].Type == discordgo.ApplicationCommandOptionUser {
-		targetUser = options[0].UserValue(s)
+	for _, opt := range options {
+		switch opt.Name {
+		case "user":
+			targetUser = opt.UserValue(s)
+		case "lang":
+			lang = opt.StringValue()
+		}
 	}
 
 	if targetUser.Bot {
@@ -29,10 +35,15 @@ func (b *Bot) handleRoast(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	}
 
 	ctx := context.Background()
-	roast, err := b.roastService.GenerateRoast(ctx, targetUser.ID, i.GuildID, targetUser.Username)
+	roast, err := b.roastService.GenerateRoast(ctx, targetUser.ID, i.GuildID, targetUser.Username, lang)
 	if err != nil {
 		b.respondError(s, i, err.Error())
 		return
+	}
+
+	langLabel := config.LanguageNames[lang]
+	if langLabel == "" {
+		langLabel = "English"
 	}
 
 	embed := &discordgo.MessageEmbed{
@@ -40,7 +51,7 @@ func (b *Bot) handleRoast(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		Description: roast,
 		Color:       config.ColorError,
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: fmt.Sprintf("Requested by %s", i.Member.User.Username),
+			Text: fmt.Sprintf("Requested by %s | Lang: %s", i.Member.User.Username, langLabel),
 		},
 	}
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/nerufuyo/nerubot/internal/config"
 )
 
 // handleNews handles fetching latest news
@@ -21,16 +22,25 @@ func (b *Bot) handleNews(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	// Extract language option
+	lang := config.DefaultLang
+	options := i.ApplicationCommandData().Options
+	for _, opt := range options {
+		if opt.Name == "lang" {
+			lang = opt.StringValue()
+		}
+	}
+
 	// Defer response since fetching might take time
 	if err := b.deferResponse(s, i); err != nil {
 		return
 	}
 
-	// Fetch news
+	// Fetch news by language
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	articles, err := b.newsService.FetchLatest(ctx, 5)
+	articles, err := b.newsService.FetchLatestByLang(ctx, 5, lang)
 	if err != nil {
 		b.followUpError(s, i, fmt.Sprintf("Failed to fetch news: %s", err.Error()))
 		return
@@ -42,8 +52,13 @@ func (b *Bot) handleNews(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	// Create embed
+	langLabel := config.LanguageNames[lang]
+	if langLabel == "" {
+		langLabel = "English"
+	}
+
 	embed := &discordgo.MessageEmbed{
-		Title:     "Latest News",
+		Title:     fmt.Sprintf("Latest News (%s)", langLabel),
 		Color:     0x0099ff,
 		Timestamp: time.Now().Format(time.RFC3339),
 		Fields:    make([]*discordgo.MessageEmbedField, 0, len(articles)),

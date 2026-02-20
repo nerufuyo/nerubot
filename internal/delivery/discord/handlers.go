@@ -9,78 +9,175 @@ import (
 
 // handleHelp handles the help command.
 func (b *Bot) handleHelp(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	embed := &discordgo.MessageEmbed{
-		Title:       b.config.Bot.Name + " Help",
-		Description: b.config.Bot.Description,
+	// Extract language option
+	lang := config.DefaultLang
+	options := i.ApplicationCommandData().Options
+	for _, opt := range options {
+		if opt.Name == "lang" {
+			lang = opt.StringValue()
+		}
+	}
+
+	embed := buildHelpEmbed(b.config, lang)
+	b.respondEmbed(s, i, embed)
+}
+
+// buildHelpEmbed creates a help embed in the specified language
+func buildHelpEmbed(cfg *config.Config, lang string) *discordgo.MessageEmbed {
+	h := helpText[lang]
+	if h == nil {
+		h = helpText[config.DefaultLang]
+	}
+
+	return &discordgo.MessageEmbed{
+		Title:       cfg.Bot.Name + " " + h["title"],
+		Description: cfg.Bot.Description,
 		Color:       config.ColorPrimary,
 		Fields: []*discordgo.MessageEmbedField{
 			{
-				Name: "Music Commands",
-				Value: "`/play <query>` - Play a song or add to queue\n" +
-					"`/skip` - Skip current song\n" +
-					"`/stop` - Stop playback and clear queue\n" +
-					"`/queue` - Show music queue",
+				Name: h["music"],
+				Value: "`/play <query>` - " + h["play"] + "\n" +
+					"`/skip` - " + h["skip"] + "\n" +
+					"`/stop` - " + h["stop"] + "\n" +
+					"`/queue` - " + h["queue"],
 				Inline: false,
 			},
 			{
-				Name:   "Confession Commands",
-				Value:  "`/confess <content>` - Submit an anonymous confession",
+				Name:   h["confession"],
+				Value:  "`/confess <content>` - " + h["confess"],
 				Inline: false,
 			},
 			{
-				Name:   "Roast Commands",
-				Value:  "`/roast [user]` - Get roasted based on Discord activity",
+				Name:   h["roast"],
+				Value:  "`/roast [user] [lang]` - " + h["roast_desc"],
 				Inline: false,
 			},
 			{
-				Name: "AI Chatbot Commands",
-				Value: "`/chat <message>` - Chat with AI\n" +
-					"`/chat-reset` - Reset your chat history",
+				Name: h["ai"],
+				Value: "`/chat <message> [lang]` - " + h["chat"] + "\n" +
+					"`/chat-reset` - " + h["chat_reset"],
 				Inline: false,
 			},
 			{
-				Name:   "News Commands",
-				Value:  "`/news` - Get latest news from multiple sources",
+				Name:   h["news_title"],
+				Value:  "`/news [lang]` - " + h["news_desc"],
 				Inline: false,
 			},
 			{
-				Name:   "Whale Alert Commands",
-				Value:  "`/whale` - Get recent whale cryptocurrency transactions",
+				Name:   h["whale_title"],
+				Value:  "`/whale` - " + h["whale_desc"],
 				Inline: false,
 			},
 			{
-				Name: "Analytics Commands",
-				Value: "`/stats` - View server statistics\n" +
-					"`/profile [user]` - View user profile",
+				Name: h["analytics"],
+				Value: "`/stats` - " + h["stats"] + "\n" +
+					"`/profile [user]` - " + h["profile"],
 				Inline: false,
 			},
 			{
-				Name: "Reminder Commands",
-				Value: "`/reminder` - View upcoming holidays and Ramadan schedule\n" +
-					"`/reminder-set <channel>` - Set/change reminder channel (admin only)\n" +
-					"`/reminder-stop` - Stop automatic reminders (admin only)",
+				Name: h["reminder"],
+				Value: "`/reminder` - " + h["reminder_view"] + "\n" +
+					"`/reminder-set <channel>` - " + h["reminder_set"] + "\n" +
+					"`/reminder-stop` - " + h["reminder_stop"],
 				Inline: false,
 			},
 			{
-				Name: "Fun Commands",
-				Value: "`/dadjoke` - Get a random (clean) dad joke\n" +
-					"`/dadjoke-setup <channel> <interval>` - Schedule dad jokes (admin only)\n" +
-					"`/meme` - Get a random meme from the internet\n" +
-					"`/meme-setup <channel> <interval>` - Schedule memes (admin only)",
+				Name: h["fun"],
+				Value: "`/dadjoke` - " + h["dadjoke"] + "\n" +
+					"`/dadjoke-setup <channel> <interval>` - " + h["dadjoke_setup"] + "\n" +
+					"`/meme` - " + h["meme"] + "\n" +
+					"`/meme-setup <channel> <interval>` - " + h["meme_setup"],
 				Inline: false,
 			},
 			{
-				Name:   "Other Commands",
-				Value:  "`/help` - Show this help message",
+				Name:   h["other"],
+				Value:  "`/help [lang]` - " + h["help_desc"],
 				Inline: false,
 			},
 		},
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: fmt.Sprintf("%s v%s | %s", b.config.Bot.Name, b.config.Bot.Version, b.config.Bot.Author),
+			Text: fmt.Sprintf("%s v%s | %s", cfg.Bot.Name, cfg.Bot.Version, cfg.Bot.Author),
 		},
 	}
+}
 
-	b.respondEmbed(s, i, embed)
+// helpText contains translated help strings per language
+var helpText = map[string]map[string]string{
+	"EN": {
+		"title": "Help", "music": "Music Commands", "play": "Play a song or add to queue",
+		"skip": "Skip current song", "stop": "Stop playback and clear queue", "queue": "Show music queue",
+		"confession": "Confession Commands", "confess": "Submit an anonymous confession",
+		"roast": "Roast Commands", "roast_desc": "Get roasted based on Discord activity",
+		"ai": "AI Chatbot Commands", "chat": "Chat with AI", "chat_reset": "Reset your chat history",
+		"news_title": "News Commands", "news_desc": "Get latest news from multiple sources",
+		"whale_title": "Whale Alert Commands", "whale_desc": "Get recent whale cryptocurrency transactions",
+		"analytics": "Analytics Commands", "stats": "View server statistics", "profile": "View user profile",
+		"reminder": "Reminder Commands", "reminder_view": "View upcoming holidays and Ramadan schedule",
+		"reminder_set": "Set/change reminder channel (admin only)", "reminder_stop": "Stop automatic reminders (admin only)",
+		"fun": "Fun Commands", "dadjoke": "Get a random (clean) dad joke",
+		"dadjoke_setup": "Schedule dad jokes (admin only)", "meme": "Get a random meme from the internet",
+		"meme_setup": "Schedule memes (admin only)", "other": "Other Commands", "help_desc": "Show this help message",
+	},
+	"ID": {
+		"title": "Bantuan", "music": "Perintah Musik", "play": "Putar lagu atau tambah ke antrian",
+		"skip": "Lewati lagu saat ini", "stop": "Hentikan dan hapus antrian", "queue": "Tampilkan antrian musik",
+		"confession": "Perintah Konfesi", "confess": "Kirim konfesi anonim",
+		"roast": "Perintah Roast", "roast_desc": "Diroast berdasarkan aktivitas Discord",
+		"ai": "Perintah AI Chatbot", "chat": "Ngobrol dengan AI", "chat_reset": "Reset riwayat chat",
+		"news_title": "Perintah Berita", "news_desc": "Dapatkan berita terbaru dari berbagai sumber",
+		"whale_title": "Perintah Whale Alert", "whale_desc": "Lihat transaksi whale crypto terbaru",
+		"analytics": "Perintah Analitik", "stats": "Lihat statistik server", "profile": "Lihat profil pengguna",
+		"reminder": "Perintah Pengingat", "reminder_view": "Lihat hari libur & jadwal Ramadan",
+		"reminder_set": "Atur channel pengingat (admin)", "reminder_stop": "Hentikan pengingat otomatis (admin)",
+		"fun": "Perintah Fun", "dadjoke": "Dapatkan dad joke acak",
+		"dadjoke_setup": "Jadwalkan dad joke (admin)", "meme": "Dapatkan meme acak dari internet",
+		"meme_setup": "Jadwalkan meme (admin)", "other": "Perintah Lainnya", "help_desc": "Tampilkan pesan bantuan ini",
+	},
+	"JP": {
+		"title": "ヘルプ", "music": "音楽コマンド", "play": "曲を再生またはキューに追加",
+		"skip": "現在の曲をスキップ", "stop": "再生を停止しキューをクリア", "queue": "音楽キューを表示",
+		"confession": "告白コマンド", "confess": "匿名の告白を送信",
+		"roast": "ローストコマンド", "roast_desc": "Discordの活動に基づいてロースト",
+		"ai": "AIチャットボットコマンド", "chat": "AIとチャット", "chat_reset": "チャット履歴をリセット",
+		"news_title": "ニュースコマンド", "news_desc": "複数ソースから最新ニュースを取得",
+		"whale_title": "ホエールアラートコマンド", "whale_desc": "最新のクジラ暗号通貨取引を取得",
+		"analytics": "分析コマンド", "stats": "サーバー統計を表示", "profile": "ユーザープロフィールを表示",
+		"reminder": "リマインダーコマンド", "reminder_view": "祝日とラマダンスケジュールを表示",
+		"reminder_set": "リマインダーチャンネルを設定（管理者）", "reminder_stop": "自動リマインダーを停止（管理者）",
+		"fun": "お楽しみコマンド", "dadjoke": "ランダムなダジャレを取得",
+		"dadjoke_setup": "ダジャレをスケジュール（管理者）", "meme": "ランダムなミームを取得",
+		"meme_setup": "ミームをスケジュール（管理者）", "other": "その他のコマンド", "help_desc": "このヘルプメッセージを表示",
+	},
+	"KR": {
+		"title": "도움말", "music": "음악 명령어", "play": "노래 재생 또는 대기열에 추가",
+		"skip": "현재 노래 건너뛰기", "stop": "재생 중지 및 대기열 삭제", "queue": "음악 대기열 표시",
+		"confession": "고백 명령어", "confess": "익명 고백 제출",
+		"roast": "로스트 명령어", "roast_desc": "Discord 활동 기반으로 로스트",
+		"ai": "AI 챗봇 명령어", "chat": "AI와 채팅", "chat_reset": "채팅 기록 초기화",
+		"news_title": "뉴스 명령어", "news_desc": "여러 소스에서 최신 뉴스 가져오기",
+		"whale_title": "고래 알림 명령어", "whale_desc": "최근 고래 암호화폐 거래 조회",
+		"analytics": "분석 명령어", "stats": "서버 통계 보기", "profile": "사용자 프로필 보기",
+		"reminder": "리마인더 명령어", "reminder_view": "다가오는 공휴일 및 라마단 일정 보기",
+		"reminder_set": "리마인더 채널 설정 (관리자)", "reminder_stop": "자동 리마인더 중지 (관리자)",
+		"fun": "재미 명령어", "dadjoke": "랜덤 아재 개그 가져오기",
+		"dadjoke_setup": "아재 개그 예약 (관리자)", "meme": "인터넷에서 랜덤 밈 가져오기",
+		"meme_setup": "밈 예약 (관리자)", "other": "기타 명령어", "help_desc": "이 도움말 메시지 표시",
+	},
+	"ZH": {
+		"title": "帮助", "music": "音乐命令", "play": "播放歌曲或添加到队列",
+		"skip": "跳过当前歌曲", "stop": "停止播放并清空队列", "queue": "显示音乐队列",
+		"confession": "告白命令", "confess": "提交匿名告白",
+		"roast": "吐槽命令", "roast_desc": "根据Discord活动进行吐槽",
+		"ai": "AI聊天机器人命令", "chat": "与AI聊天", "chat_reset": "重置聊天记录",
+		"news_title": "新闻命令", "news_desc": "从多个来源获取最新新闻",
+		"whale_title": "鲸鱼提醒命令", "whale_desc": "获取最近的鲸鱼加密货币交易",
+		"analytics": "分析命令", "stats": "查看服务器统计", "profile": "查看用户资料",
+		"reminder": "提醒命令", "reminder_view": "查看即将到来的假日和斋月时间表",
+		"reminder_set": "设置提醒频道（管理员）", "reminder_stop": "停止自动提醒（管理员）",
+		"fun": "趣味命令", "dadjoke": "获取随机冷笑话",
+		"dadjoke_setup": "安排冷笑话（管理员）", "meme": "从互联网获取随机表情包",
+		"meme_setup": "安排表情包（管理员）", "other": "其他命令", "help_desc": "显示此帮助信息",
+	},
 }
 
 // --- Response helpers ---

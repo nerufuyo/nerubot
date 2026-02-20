@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/pkg/ai"
 	"github.com/nerufuyo/nerubot/internal/pkg/backend"
 	redispkg "github.com/nerufuyo/nerubot/internal/pkg/redis"
@@ -200,7 +201,7 @@ func (s *ChatbotService) CheckRateLimit(userID string) (bool, int, int) {
 }
 
 // Chat sends a message and returns the AI response
-func (s *ChatbotService) Chat(ctx context.Context, userID, message string) (string, error) {
+func (s *ChatbotService) Chat(ctx context.Context, userID, message, lang string) (string, error) {
 	if len(s.providers) == 0 {
 		return "", fmt.Errorf("no AI providers configured")
 	}
@@ -211,8 +212,11 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message string) (stri
 	// Build messages with RAG-enhanced system prompt
 	messages := make([]ai.Message, 0, len(session.Messages)+2)
 	
-	// Always include the system prompt with latest RAG context
+	// Always include the system prompt with latest RAG context + language instruction
 	systemPrompt := s.buildSystemPrompt()
+	if lang != "" && lang != config.DefaultLang {
+		systemPrompt += "\n\n" + config.LanguagePromptInstruction(lang)
+	}
 	messages = append(messages, ai.Message{
 		Role:    "system",
 		Content: systemPrompt,
