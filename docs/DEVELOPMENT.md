@@ -8,7 +8,6 @@ How to set up, build, and extend NeruBot locally.
 
 - **Go 1.21+** — [install](https://go.dev/dl/)
 - **Git**
-- **yt-dlp** + **FFmpeg** — only needed if testing music features
 - **Discord bot token** — from the [Developer Portal](https://discord.com/developers/applications)
 
 ---
@@ -88,7 +87,7 @@ repository (data persistence)
 | `internal/entity/` | Domain types (no dependencies on other packages) |
 | `internal/usecase/` | One package per feature with business logic |
 | `internal/repository/` | JSON file storage |
-| `internal/pkg/` | Shared utilities: AI client, FFmpeg, logger, yt-dlp |
+| `internal/pkg/` | Shared utilities: AI client, logger |
 | `data/` | Runtime JSON files (gitignored) |
 | `deploy/` | Production configs (systemd, nginx, cron) |
 
@@ -99,7 +98,7 @@ repository (data persistence)
 | `cmd/nerubot/main.go` | Loads config, creates bot, handles shutdown signals |
 | `internal/delivery/discord/bot.go` | Bot lifecycle: session, services init, command routing, slash command registration |
 | `internal/delivery/discord/handlers.go` | Help command and shared response helpers |
-| `internal/delivery/discord/handler_*.go` | One file per feature (music, chatbot, confession, roast, news, whale, analytics, reminder) |
+| `internal/delivery/discord/handler_*.go` | One file per feature (chatbot, confession, roast, news, whale, analytics, reminder) |
 
 ---
 
@@ -184,19 +183,13 @@ All configuration is via environment variables (loaded from `.env`).
 |----------|----------|---------|-------------|
 | `DISCORD_TOKEN` | Yes | — | Bot token from Discord Developer Portal |
 | `DEEPSEEK_API_KEY` | No | — | DeepSeek AI API key for `/chat` |
-| `ENABLE_MUSIC` | No | `false` | Enable music playback |
 | `ENABLE_CONFESSION` | No | `true` | Enable anonymous confessions |
 | `ENABLE_ROAST` | No | `true` | Enable roast command |
 | `ENABLE_REMINDER` | No | `true` | Enable holiday/Ramadan reminders |
-| `LAVALINK_ENABLED` | No | `false` | Use Lavalink for music (alternative to yt-dlp) |
-| `LAVALINK_HOST` | No | `localhost` | Lavalink server host |
-| `LAVALINK_PORT` | No | `2333` | Lavalink server port |
-| `LAVALINK_PASSWORD` | No | `youshallnotpass` | Lavalink password |
 | `WHALE_ALERT_API_KEY` | No | — | Whale Alert API key |
 | `REMINDER_CHANNEL_ID` | No | — | Channel ID for automatic reminders |
 | `LOG_LEVEL` | No | `INFO` | Log level: DEBUG, INFO, WARN, ERROR |
 | `ENVIRONMENT` | No | `development` | Runtime environment |
-| `MAX_QUEUE_SIZE` | No | `100` | Maximum music queue size |
 
 ---
 

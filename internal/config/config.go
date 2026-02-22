@@ -13,12 +13,10 @@ import (
 type Config struct {
 	Bot        BotConfig
 	Limits     Limits
-	Audio      AudioConfig
 	Features   FeatureFlags
 	Discord    DiscordConfig
 	AI         AIConfig
 	Crypto     CryptoConfig
-	Lavalink   LavalinkConfig
 	Reminder   ReminderConfig
 	Mongo      MongoConfig
 	Redis      RedisConfig
@@ -39,49 +37,20 @@ type BotConfig struct {
 
 // Limits holds rate limits and timeouts
 type Limits struct {
-	MaxQueueSize         int
-	MaxSearchResults     int
-	MaxSongDuration      time.Duration
-	SearchTimeout        time.Duration
-	ConversionTimeout    time.Duration
-	IdleDisconnectTime   time.Duration
-	VoiceConnectTimeout  time.Duration
-	CommandsPerMinute    int
-	SearchesPerMinute    int
-	ConfessionCooldown   time.Duration
-	RoastCooldown        time.Duration
-}
-
-// AudioConfig holds FFmpeg and audio settings
-type AudioConfig struct {
-	FFmpegPath      string
-	YtdlpPath       string
-	FFmpegOptions   FFmpegOptions
-	OpusPaths       []string
-	Bitrate         int
-	SampleRate      int
-	Channels        int
-	DefaultVolume   float64
-}
-
-// FFmpegOptions holds FFmpeg command options
-type FFmpegOptions struct {
-	BeforeOptions string
-	Options       string
+	CommandsPerMinute  int
+	ConfessionCooldown time.Duration
+	RoastCooldown      time.Duration
 }
 
 // FeatureFlags controls which features are enabled
 type FeatureFlags struct {
-	Music         bool
-	News          bool
-	HelpSystem    bool
-	Chatbot       bool
-	Confession    bool
-	Roast         bool
-	WhaleAlerts   bool
-	AutoDisconnect bool
-	Mode247       bool
-	Reminder      bool
+	News       bool
+	HelpSystem bool
+	Chatbot    bool
+	Confession bool
+	Roast      bool
+	WhaleAlerts bool
+	Reminder   bool
 }
 
 // DiscordConfig holds Discord-specific configuration
@@ -106,14 +75,6 @@ type CryptoConfig struct {
 	TwitterAccessSecret string
 }
 
-// LavalinkConfig holds Lavalink server configuration
-type LavalinkConfig struct {
-	Host     string
-	Port     int
-	Password string
-	Enabled  bool
-}
-
 // ReminderConfig holds reminder feature configuration.
 type ReminderConfig struct {
 	ChannelID string // Discord channel ID for posting reminders
@@ -128,22 +89,6 @@ type MongoConfig struct {
 // RedisConfig holds Redis connection configuration.
 type RedisConfig struct {
 	URL string
-}
-
-// MusicSources holds configuration for music source providers
-type MusicSources struct {
-	YouTube    MusicSource
-	Spotify    MusicSource
-	SoundCloud MusicSource
-	Direct     MusicSource
-}
-
-// MusicSource holds configuration for a single music source
-type MusicSource struct {
-	Enabled  bool
-	Emoji    string
-	Name     string
-	Priority int
 }
 
 // Load loads configuration from environment variables
@@ -170,51 +115,19 @@ func Load() (*Config, error) {
 			Website:     "https://github.com/nerufuyo/nerubot",
 		},
 		Limits: Limits{
-			MaxQueueSize:         getEnvAsInt("MAX_QUEUE_SIZE", 100),
-			MaxSearchResults:     5,
-			MaxSongDuration:      time.Hour,
-			SearchTimeout:        15 * time.Second,
-			ConversionTimeout:    20 * time.Second,
-			IdleDisconnectTime:   time.Duration(getEnvAsInt("IDLE_DISCONNECT_TIME", 300)) * time.Second,
-			VoiceConnectTimeout:  30 * time.Second,
-			CommandsPerMinute:    10,
-			SearchesPerMinute:    5,
-			ConfessionCooldown:   10 * time.Minute,
-			RoastCooldown:        5 * time.Minute,
-		},
-		Audio: AudioConfig{
-			FFmpegPath: os.Getenv("FFMPEG_PATH"),
-			YtdlpPath:  os.Getenv("YTDLP_PATH"),
-			FFmpegOptions: FFmpegOptions{
-				BeforeOptions: "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-				Options:       "-vn -filter:a volume=0.5",
-			},
-			OpusPaths: []string{
-				"/opt/homebrew/lib/libopus.dylib",
-				"/usr/local/lib/libopus.dylib",
-				"/opt/homebrew/lib/libopus.0.dylib",
-				"/usr/local/lib/libopus.0.dylib",
-				"/usr/lib/x86_64-linux-gnu/libopus.so.0",
-				"/usr/lib/libopus.so.0",
-				"libopus.so.0",
-				"libopus.dylib",
-				"opus",
-			},
-			Bitrate:       128,
-			SampleRate:    48000,
-			Channels:      2,
-			DefaultVolume: 0.5,
+			CommandsPerMinute:  10,
+			ConfessionCooldown: 10 * time.Minute,
+			RoastCooldown:      5 * time.Minute,
 		},
 		Features: FeatureFlags{
-			Music:          getEnvAsBool("ENABLE_MUSIC", false),
-			News:           true,
-			HelpSystem:     true,
-			Chatbot:        hasAnyAIKey(),
-			Confession:     getEnvAsBool("ENABLE_CONFESSION", true),
-			Roast:          getEnvAsBool("ENABLE_ROAST", true),
-			WhaleAlerts:    os.Getenv("WHALE_ALERT_API_KEY") != "",
-			AutoDisconnect: true,
-			Mode247:        getEnvAsBool("ENABLE_24_7", false),			Reminder:       getEnvAsBool("ENABLE_REMINDER", true),		},
+			News:        true,
+			HelpSystem:  true,
+			Chatbot:     hasAnyAIKey(),
+			Confession:  getEnvAsBool("ENABLE_CONFESSION", true),
+			Roast:       getEnvAsBool("ENABLE_ROAST", true),
+			WhaleAlerts: os.Getenv("WHALE_ALERT_API_KEY") != "",
+			Reminder:    getEnvAsBool("ENABLE_REMINDER", true),
+		},
 		Discord: DiscordConfig{
 			Colors: map[string]int{
 				"primary":    0x0099FF,
@@ -223,11 +136,7 @@ func Load() (*Config, error) {
 				"error":      0xFF0000,
 				"warning":    0xFFA500,
 				"info":       0x0099FF,
-				"music":      0x9932CC,
-				"spotify":    0x1DB954,
-				"youtube":    0xFF0000,
-				"soundcloud": 0xFF7700,
-			},
+				},
 			SyncCommandsOnReady:  true,
 			SyncCommandsGlobally: true,
 		},
@@ -241,12 +150,6 @@ func Load() (*Config, error) {
 			TwitterAPISecret:    os.Getenv("TWITTER_API_SECRET"),
 			TwitterAccessToken:  os.Getenv("TWITTER_ACCESS_TOKEN"),
 			TwitterAccessSecret: os.Getenv("TWITTER_ACCESS_SECRET"),
-		},
-		Lavalink: LavalinkConfig{
-			Host:     getEnvOrDefault("LAVALINK_HOST", "localhost"),
-			Port:     getEnvAsInt("LAVALINK_PORT", 2333),
-			Password: getEnvOrDefault("LAVALINK_PASSWORD", "youshallnotpass"),
-			Enabled:  getEnvAsBool("LAVALINK_ENABLED", false),
 		},
 		Reminder: ReminderConfig{
 			ChannelID: os.Getenv("REMINDER_CHANNEL_ID"),
@@ -305,9 +208,6 @@ func hasAnyAIKey() bool {
 func (c *Config) Validate() error {
 	if c.Bot.Token == "" {
 		return fmt.Errorf("Discord bot token is required")
-	}
-	if c.Limits.MaxQueueSize <= 0 {
-		return fmt.Errorf("max queue size must be positive")
 	}
 	return nil
 }

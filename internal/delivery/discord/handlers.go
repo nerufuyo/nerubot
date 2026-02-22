@@ -35,14 +35,6 @@ func buildHelpEmbed(cfg *config.Config, lang string) *discordgo.MessageEmbed {
 		Color:       config.ColorPrimary,
 		Fields: []*discordgo.MessageEmbedField{
 			{
-				Name: h["music"],
-				Value: "`/play <query>` - " + h["play"] + "\n" +
-					"`/skip` - " + h["skip"] + "\n" +
-					"`/stop` - " + h["stop"] + "\n" +
-					"`/queue` - " + h["queue"],
-				Inline: false,
-			},
-			{
 				Name:   h["confession"],
 				Value:  "`/confess <content>` - " + h["confess"],
 				Inline: false,
@@ -117,8 +109,7 @@ func buildHelpEmbed(cfg *config.Config, lang string) *discordgo.MessageEmbed {
 // helpText contains translated help strings per language
 var helpText = map[string]map[string]string{
 	"EN": {
-		"title": "Help", "music": "Music Commands", "play": "Play a song or add to queue",
-		"skip": "Skip current song", "stop": "Stop playback and clear queue", "queue": "Show music queue",
+		"title": "Help",
 		"confession": "Confession Commands", "confess": "Submit an anonymous confession",
 		"roast": "Roast Commands", "roast_desc": "Get roasted based on Discord activity",
 		"ai": "AI Chatbot Commands", "chat": "Chat with AI", "chat_reset": "Reset your chat history",
@@ -136,8 +127,7 @@ var helpText = map[string]map[string]string{
 		"other": "Other Commands", "help_desc": "Show this help message",
 	},
 	"ID": {
-		"title": "Bantuan", "music": "Perintah Musik", "play": "Putar lagu atau tambah ke antrian",
-		"skip": "Lewati lagu saat ini", "stop": "Hentikan dan hapus antrian", "queue": "Tampilkan antrian musik",
+		"title": "Bantuan",
 		"confession": "Perintah Konfesi", "confess": "Kirim konfesi anonim",
 		"roast": "Perintah Roast", "roast_desc": "Diroast berdasarkan aktivitas Discord",
 		"ai": "Perintah AI Chatbot", "chat": "Ngobrol dengan AI", "chat_reset": "Reset riwayat chat",
@@ -155,8 +145,7 @@ var helpText = map[string]map[string]string{
 		"other": "Perintah Lainnya", "help_desc": "Tampilkan pesan bantuan ini",
 	},
 	"JP": {
-		"title": "ヘルプ", "music": "音楽コマンド", "play": "曲を再生またはキューに追加",
-		"skip": "現在の曲をスキップ", "stop": "再生を停止しキューをクリア", "queue": "音楽キューを表示",
+		"title": "ヘルプ",
 		"confession": "告白コマンド", "confess": "匿名の告白を送信",
 		"roast": "ローストコマンド", "roast_desc": "Discordの活動に基づいてロースト",
 		"ai": "AIチャットボットコマンド", "chat": "AIとチャット", "chat_reset": "チャット履歴をリセット",
@@ -174,8 +163,7 @@ var helpText = map[string]map[string]string{
 		"other": "その他のコマンド", "help_desc": "このヘルプメッセージを表示",
 	},
 	"KR": {
-		"title": "도움말", "music": "음악 명령어", "play": "노래 재생 또는 대기열에 추가",
-		"skip": "현재 노래 건너뛰기", "stop": "재생 중지 및 대기열 삭제", "queue": "음악 대기열 표시",
+		"title": "도움말",
 		"confession": "고백 명령어", "confess": "익명 고백 제출",
 		"roast": "로스트 명령어", "roast_desc": "Discord 활동 기반으로 로스트",
 		"ai": "AI 챗봇 명령어", "chat": "AI와 채팅", "chat_reset": "채팅 기록 초기화",
@@ -193,8 +181,7 @@ var helpText = map[string]map[string]string{
 		"other": "기타 명령어", "help_desc": "이 도움말 메시지 표시",
 	},
 	"ZH": {
-		"title": "帮助", "music": "音乐命令", "play": "播放歌曲或添加到队列",
-		"skip": "跳过当前歌曲", "stop": "停止播放并清空队列", "queue": "显示音乐队列",
+		"title": "帮助",
 		"confession": "告白命令", "confess": "提交匿名告白",
 		"roast": "吐槽命令", "roast_desc": "根据Discord活动进行吐槽",
 		"ai": "AI聊天机器人命令", "chat": "与AI聊天", "chat_reset": "重置聊天记录",

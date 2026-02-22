@@ -1,6 +1,6 @@
 # NeruBot
 
-A Discord bot built with Go. Music, AI chat, confessions, roasts, news, whale alerts, analytics, and Indonesian holiday/Ramadan reminders.
+A Discord bot built with Go. AI chat, confessions, roasts, news, whale alerts, analytics, and Indonesian holiday/Ramadan reminders.
 
 **v4.0.0** | Go 1.21+ | MIT License
 
@@ -10,7 +10,6 @@ A Discord bot built with Go. Music, AI chat, confessions, roasts, news, whale al
 
 | Feature | Description |
 |---------|-------------|
-| **Music** | YouTube streaming via yt-dlp, queue, skip, stop |
 | **AI Chat** | Chat with DeepSeek AI, per-user history |
 | **Confessions** | Anonymous confessions |
 | **Roast** | Roast users based on Discord activity |
@@ -27,7 +26,6 @@ A Discord bot built with Go. Music, AI chat, confessions, roasts, news, whale al
 
 - Go 1.21+
 - A Discord bot token ([Discord Developer Portal](https://discord.com/developers/applications))
-- yt-dlp + FFmpeg (only if music is enabled)
 
 ### Setup
 
@@ -63,10 +61,6 @@ All commands use Discord slash commands (`/`).
 
 | Command | Description |
 |---------|-------------|
-| `/play <query>` | Play a song or add to queue |
-| `/skip` | Skip current song |
-| `/stop` | Stop playback, clear queue |
-| `/queue` | Show music queue |
 | `/chat <message>` | Chat with AI |
 | `/chat-reset` | Clear your chat history |
 | `/confess <content>` | Submit anonymous confession |
@@ -92,16 +86,9 @@ DISCORD_TOKEN=your_bot_token
 DEEPSEEK_API_KEY=your_key
 
 # Feature toggles (true/false)
-ENABLE_MUSIC=false
 ENABLE_CONFESSION=true
 ENABLE_ROAST=true
 ENABLE_REMINDER=true
-
-# Music - requires yt-dlp and FFmpeg
-LAVALINK_ENABLED=false
-LAVALINK_HOST=localhost
-LAVALINK_PORT=2333
-LAVALINK_PASSWORD=youshallnotpass
 
 # Whale alerts (optional)
 WHALE_ALERT_API_KEY=
@@ -112,7 +99,6 @@ REMINDER_CHANNEL_ID=your_channel_id
 # Runtime
 LOG_LEVEL=INFO
 ENVIRONMENT=development
-MAX_QUEUE_SIZE=100
 ```
 
 ### Feature Flags
@@ -144,13 +130,12 @@ nerubot/
 │   ├── config/                   # Configuration, constants, messages
 │   ├── delivery/discord/         # Discord handlers (bot, slash commands)
 │   ├── entity/                   # Domain models
-│   ├── pkg/                      # Shared packages (AI, FFmpeg, logger, yt-dlp)
+│   ├── pkg/                      # Shared packages (AI, logger)
 │   ├── repository/               # Data persistence (JSON files)
 │   └── usecase/                  # Business logic per feature
 │       ├── analytics/
 │       ├── chatbot/
 │       ├── confession/
-│       ├── music/
 │       ├── news/
 │       ├── reminder/
 │       ├── roast/

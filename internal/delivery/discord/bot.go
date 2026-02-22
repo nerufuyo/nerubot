@@ -9,7 +9,6 @@ import (
 	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/pkg/ai"
 	"github.com/nerufuyo/nerubot/internal/pkg/backend"
-	"github.com/nerufuyo/nerubot/internal/pkg/lavalink"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 	"github.com/nerufuyo/nerubot/internal/pkg/mongodb"
 	redispkg "github.com/nerufuyo/nerubot/internal/pkg/redis"
@@ -18,7 +17,6 @@ import (
 	"github.com/nerufuyo/nerubot/internal/usecase/chatbot"
 	"github.com/nerufuyo/nerubot/internal/usecase/confession"
 	"github.com/nerufuyo/nerubot/internal/usecase/fun"
-	"github.com/nerufuyo/nerubot/internal/usecase/music"
 	"github.com/nerufuyo/nerubot/internal/usecase/news"
 	"github.com/nerufuyo/nerubot/internal/usecase/reminder"
 	"github.com/nerufuyo/nerubot/internal/usecase/roast"
@@ -30,7 +28,6 @@ type Bot struct {
 	session           *discordgo.Session
 	config            *config.Config
 	logger            *logger.Logger
-	musicService      *music.MusicService
 	confessionService *confession.ConfessionService
 	roastService      *roast.RoastService
 	chatbotService    *chatbot.ChatbotService
@@ -39,7 +36,6 @@ type Bot struct {
 	analyticsService  *analytics.AnalyticsService
 	reminderService   *reminder.ReminderService
 	funService        *fun.FunService
-	lavalinkClient    *lavalink.Client
 	mongoDB           *mongodb.Client
 	redisClient       *redispkg.Client
 	backendClient     *backend.Client
@@ -86,30 +82,6 @@ func New(cfg *config.Config) (*Bot, error) {
 	// Set intents
 	session.Identify.Intents = discordgo.IntentsAll
 
-	// Initialize services
-	var musicService *music.MusicService
-	if cfg.Features.Music {
-		ms, err := music.NewMusicService()
-		if err != nil {
-			log.Warn("Music service disabled", "error", err)
-		} else {
-			musicService = ms
-			log.Info("Music service initialized")
-		}
-	}
-
-	// Initialize Lavalink client if enabled
-	var lavalinkClient *lavalink.Client
-	if cfg.Lavalink.Enabled {
-		lavalinkClient = lavalink.NewClient(
-			cfg.Lavalink.Host,
-			cfg.Lavalink.Port,
-			cfg.Lavalink.Password,
-			"", // UserID will be set after bot connects
-		)
-		log.Info("Lavalink client initialized", "host", cfg.Lavalink.Host, "port", cfg.Lavalink.Port)
-	}
-
 	// Initialize AI provider (shared between chatbot and reminder)
 	var aiProvider ai.AIProvider
 	if cfg.AI.DeepSeekKey != "" {
@@ -125,14 +97,12 @@ func New(cfg *config.Config) (*Bot, error) {
 		session:           session,
 		config:            cfg,
 		logger:            log,
-		musicService:      musicService,
 		confessionService: confession.NewConfessionService(backendClient),
 		roastService:      roast.NewRoastService(backendClient),
 		chatbotService:    chatbot.NewChatbotService(cfg.AI.DeepSeekKey, redisClient, backendClient),
 		newsService:       news.NewNewsService(),
 		whaleService:      whale.NewWhaleService(cfg.Crypto.WhaleAlertAPIKey),
 		analyticsService:  analytics.NewAnalyticsService(mongoDB),
-		lavalinkClient:    lavalinkClient,
 		mongoDB:           mongoDB,
 		redisClient:       redisClient,
 		backendClient:     backendClient,
@@ -362,14 +332,6 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 
 	// Route to appropriate handler
 	switch cmdName {
-	case "play":
-		b.handlePlay(s, i)
-	case "skip":
-		b.handleSkip(s, i)
-	case "stop":
-		b.handleStop(s, i)
-	case "queue":
-		b.handleQueue(s, i)
 	case "confess":
 		b.handleConfess(s, i)
 	case "roast":
@@ -441,30 +403,6 @@ func (b *Bot) registerCommands() error {
 	adminPermission := int64(discordgo.PermissionAdministrator)
 
 	commands := []*discordgo.ApplicationCommand{
-		{
-			Name:        "play",
-			Description: "Play a song or add to queue",
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "query",
-					Description: "Song name or URL",
-					Required:    true,
-				},
-			},
-		},
-		{
-			Name:        "skip",
-			Description: "Skip the current song",
-		},
-		{
-			Name:        "stop",
-			Description: "Stop playback and clear queue",
-		},
-		{
-			Name:        "queue",
-			Description: "Show the music queue",
-		},
 		{
 			Name:        "confess",
 			Description: "Submit an anonymous confession",

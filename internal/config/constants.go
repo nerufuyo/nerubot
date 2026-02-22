@@ -2,17 +2,10 @@ package config
 
 // Emoji constants used as semantic status indicators in Discord messages
 const (
-	// Music controls
-	EmojiPlay = ">>" // play indicator
-	EmojiPause = "||" // pause indicator
-	EmojiStop = "[]" // stop indicator
-	EmojiSkip = ">>|" // skip indicator
-
 	// Status
 	EmojiSuccess = "[OK]"
 	EmojiError = "[ERR]"
 	EmojiWarning = "[WARN]"
-	EmojiMusic = "[Music]"
 )
 
 // Color constants for Discord embeds (hex values)
@@ -23,10 +16,6 @@ const (
 	ColorError      = 0xFF0000
 	ColorWarning    = 0xFFA500
 	ColorInfo       = 0x0099FF
-	ColorMusic      = 0x9932CC
-	ColorSpotify    = 0x1DB954
-	ColorYouTube    = 0xFF0000
-	ColorSoundCloud = 0xFF7700
 )
 
 // Command permission levels

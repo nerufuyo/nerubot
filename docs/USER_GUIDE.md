@@ -10,23 +10,6 @@ Once NeruBot is added to your server, all commands are available as **slash comm
 
 ---
 
-## Music
-
-Play music from YouTube directly in a voice channel.
-
-| Command | What it does |
-|---------|-------------|
-| `/play <query>` | Join your voice channel and play a song. Accepts a YouTube URL or search query. If something is already playing, the song is added to the queue. |
-| `/skip` | Skip to the next song in the queue. |
-| `/stop` | Stop playback, clear the queue, and leave the voice channel. |
-| `/queue` | Show all songs currently in the queue. |
-
-**Requirements:** You must be in a voice channel to use music commands. The bot needs permission to connect and speak in the voice channel.
-
-**Note:** Music requires `ENABLE_MUSIC=true` in the bot configuration and yt-dlp + FFmpeg installed on the server.
-
----
-
 ## AI Chat
 
 Have a conversation with an AI assistant powered by DeepSeek.
@@ -148,8 +131,6 @@ To get a channel ID: enable Developer Mode in Discord settings, right-click a ch
 NeruBot needs these Discord permissions:
 - **Send Messages** — respond to commands
 - **Embed Links** — display rich embeds
-- **Connect** — join voice channels (music)
-- **Speak** — play audio in voice channels (music)
 - **Mention Everyone** — `@everyone` in reminders
 
 When inviting the bot, ensure these permissions are granted via the OAuth2 URL in the Discord Developer Portal.
@@ -161,7 +142,6 @@ When inviting the bot, ensure these permissions are granted via the OAuth2 URL i
 | Problem | Solution |
 |---------|---------|
 | Commands don't appear | Wait a few minutes after bot starts — Discord caches slash commands. Try restarting Discord. |
-| Music doesn't play | Check that `ENABLE_MUSIC=true`, yt-dlp and FFmpeg are installed, and the bot has voice permissions. |
 | Reminders not sending | Verify `ENABLE_REMINDER=true` and `REMINDER_CHANNEL_ID` is set to a valid channel where the bot can send messages. |
 | AI chat not responding | Check that `DEEPSEEK_API_KEY` is set and valid. |
 | Whale alerts empty | Ensure `WHALE_ALERT_API_KEY` is configured. |

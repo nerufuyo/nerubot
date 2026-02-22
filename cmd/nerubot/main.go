@@ -45,7 +45,6 @@ func main() {
 
 	// Log enabled features
 	log.Info("Features enabled",
-		"music", cfg.Features.Music,
 		"chatbot", cfg.Features.Chatbot,
 		"confession", cfg.Features.Confession,
 		"roast", cfg.Features.Roast,

@@ -17,13 +17,6 @@ func DefaultMessages() *Messages {
 			"bot_connecting":  "Connecting to Discord...",
 			"bot_disconnected": "Disconnected from Discord",
 
-			"now_playing":     "Now playing: **%s** by **%s**",
-			"added_to_queue":  "Added to queue: **%s**",
-			"queue_position":  "Position in queue: #%d",
-			"queue_empty":     "Queue is empty",
-			"joined_voice":    "Joined voice channel: %s",
-			"left_voice":      "Left voice channel",
-
 			"confession_submitted": "Confession submitted. ID: #%d",
 			"confession_posted":    "New confession posted.",
 			"reply_posted":         "Reply posted.",
@@ -39,14 +32,6 @@ func DefaultMessages() *Messages {
 			"not_found":            "Not found",
 
 			"no_results":           "No results found for: %s",
-			"search_timeout":       "Search timed out. Please try again.",
-			"conversion_timeout":   "Audio conversion timed out",
-			"not_in_voice":         "You must be in a voice channel!",
-			"different_voice":      "You must be in the same voice channel as the bot",
-			"queue_full":           "Queue is full! Maximum: %d songs",
-			"song_too_long":        "Song is too long! Maximum: %s",
-			"playback_error":       "Error during playback: %s",
-			"no_permission_voice":  "I don't have permission to join that voice channel",
 
 			"confession_not_found": "Confession #%d not found",
 			"cooldown_active":      "Please wait before submitting again (%s remaining)",
@@ -74,17 +59,6 @@ func DefaultMessages() *Messages {
 			"command_usage":        "**Usage:** %s",
 			"command_description":  "%s",
 			"no_permission":        "Requires: %s",
-
-			"play":                 "Play a song or add it to the queue",
-			"queue":                "Show the current music queue",
-			"skip":                 "Skip the current song",
-			"stop":                 "Stop playback and clear the queue",
-			"pause":                "Pause the current song",
-			"resume":               "Resume playback",
-			"nowplaying":           "Show currently playing song",
-			"loop":                 "Set loop mode (off/single/queue)",
-			"shuffle":              "Shuffle the queue",
-			"247":                  "Toggle 24/7 mode",
 
 			"confess":              "Submit an anonymous confession",
 			"reply":                "Reply to a confession anonymously",
