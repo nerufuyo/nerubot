@@ -110,7 +110,7 @@ func Load() (*Config, error) {
 			Token:       token,
 			Prefix:      getEnvOrDefault("COMMAND_PREFIX", "!"),
 			Status:      "Ready to rock your server!",
-			Description: "Your friendly Discord companion!",
+			Description: "Meet NERU \u2014 your all-in-one Discord buddy! From news to confessions and messages, NERU's got your back.",
 			Author:      "nerufuyo",
 			Website:     "https://github.com/nerufuyo/nerubot",
 		},

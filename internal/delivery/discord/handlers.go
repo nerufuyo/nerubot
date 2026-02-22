@@ -18,12 +18,18 @@ func (b *Bot) handleHelp(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 	}
 
-	embed := buildHelpEmbed(b.config, lang)
+	// Use description from backend dashboard if available
+	description := b.config.Bot.Description
+	if bs := b.backendClient.GetSettings(); bs != nil && bs.BotDescription != "" {
+		description = bs.BotDescription
+	}
+
+	embed := buildHelpEmbed(b.config, description, lang)
 	b.respondEmbed(s, i, embed)
 }
 
 // buildHelpEmbed creates a help embed in the specified language
-func buildHelpEmbed(cfg *config.Config, lang string) *discordgo.MessageEmbed {
+func buildHelpEmbed(cfg *config.Config, description string, lang string) *discordgo.MessageEmbed {
 	h := helpText[lang]
 	if h == nil {
 		h = helpText[config.DefaultLang]
@@ -31,7 +37,7 @@ func buildHelpEmbed(cfg *config.Config, lang string) *discordgo.MessageEmbed {
 
 	return &discordgo.MessageEmbed{
 		Title:       cfg.Bot.Name + " " + h["title"],
-		Description: cfg.Bot.Description,
+		Description: description,
 		Color:       config.ColorPrimary,
 		Fields: []*discordgo.MessageEmbedField{
 			{

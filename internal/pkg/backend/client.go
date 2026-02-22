@@ -13,6 +13,9 @@ import (
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 )
 
+// SettingsChangeFunc is called whenever bot settings are refreshed from the backend.
+type SettingsChangeFunc func(settings *BotSettings)
+
 // Client communicates with the nerufuyo-workspace-backend API
 // to retrieve RAG knowledge, projects, articles, experiences, and bot settings.
 type Client struct {
@@ -26,9 +29,13 @@ type Client struct {
 	ragLastRefresh time.Time
 
 	// Cached bot settings
-	settings     *BotSettings
-	settingsMu   sync.RWMutex
-	settingsLast time.Time
+	settings       *BotSettings
+	settingsMu     sync.RWMutex
+	settingsLast   time.Time
+	knownVersion   int // last known settingsVersion from backend
+
+	// Callback when settings change
+	onSettingsChange SettingsChangeFunc
 }
 
 // BotSettings represents the configurable bot settings from the dashboard.
@@ -36,6 +43,7 @@ type BotSettings struct {
 	ID              string           `json:"id"`
 	BotName         string           `json:"botName"`
 	BotStatus       string           `json:"botStatus"`
+	BotDescription  string           `json:"botDescription"`  // About Me / profile bio
 	SystemPrompt    string           `json:"systemPrompt"`
 	RateLimitCount  int              `json:"rateLimitCount"`  // max messages per window
 	RateLimitWindow int              `json:"rateLimitWindow"` // window in seconds
@@ -43,12 +51,12 @@ type BotSettings struct {
 	Temperature     float64          `json:"temperature"`
 	Features        BotFeatures      `json:"features"`
 	WelcomeMessage  string           `json:"welcomeMessage"`
+	SettingsVersion int              `json:"settingsVersion"`
 
 	// Per-feature advanced settings
 	ChatSettings       ChatFeatureSettings       `json:"chatSettings"`
 	RoastSettings      RoastFeatureSettings      `json:"roastSettings"`
 	ConfessionSettings ConfessionFeatureSettings `json:"confessionSettings"`
-	MusicSettings      MusicFeatureSettings      `json:"musicSettings"`
 	NewsSettings       NewsFeatureSettings       `json:"newsSettings"`
 	WhaleSettings      WhaleFeatureSettings      `json:"whaleSettings"`
 	ReminderSettings   ReminderFeatureSettings   `json:"reminderSettings"`
@@ -61,7 +69,6 @@ type BotFeatures struct {
 	ChatEnabled       bool `json:"chatEnabled"`
 	RoastEnabled      bool `json:"roastEnabled"`
 	ConfessionEnabled bool `json:"confessionEnabled"`
-	MusicEnabled      bool `json:"musicEnabled"`
 	NewsEnabled       bool `json:"newsEnabled"`
 	WhaleEnabled      bool `json:"whaleEnabled"`
 	ReminderEnabled   bool `json:"reminderEnabled"`
@@ -89,15 +96,6 @@ type ConfessionFeatureSettings struct {
 	RequireApproval bool `json:"requireApproval"`
 	AllowImages     bool `json:"allowImages"`
 	AllowReplies    bool `json:"allowReplies"`
-}
-
-// MusicFeatureSettings holds advanced settings for music.
-type MusicFeatureSettings struct {
-	MaxQueueSize          int     `json:"maxQueueSize"`
-	MaxSongDurationMins   int     `json:"maxSongDurationMins"`
-	IdleDisconnectSeconds int     `json:"idleDisconnectSeconds"`
-	DefaultVolume         float64 `json:"defaultVolume"`
-	AllowPlaylists        bool    `json:"allowPlaylists"`
 }
 
 // NewsFeatureSettings holds advanced settings for news.
@@ -185,10 +183,16 @@ func New(baseURL string) *Client {
 	go c.refreshRAGContext()
 	go c.refreshSettings()
 
-	// Background refresh every 5 minutes
+	// Background: fast-poll version every 30s, full RAG refresh every 5 min
 	go c.backgroundRefresh()
 
 	return c
+}
+
+// OnSettingsChange registers a callback that fires whenever bot settings are
+// refreshed from the backend. The bot uses this to sync Discord status, etc.
+func (c *Client) OnSettingsChange(fn SettingsChangeFunc) {
+	c.onSettingsChange = fn
 }
 
 // GetRAGContext returns the cached RAG context string for AI system prompts.
@@ -209,6 +213,7 @@ func (c *Client) GetSettings() *BotSettings {
 	return &BotSettings{
 		BotName:         "NeruBot",
 		BotStatus:       "Ready to rock your server!",
+		BotDescription:  "Meet NERU — your all-in-one Discord buddy! From news to confessions and messages, NERU's got your back.",
 		RateLimitCount:  5,
 		RateLimitWindow: 180, // 3 minutes
 		MaxTokens:       1024,
@@ -217,7 +222,7 @@ func (c *Client) GetSettings() *BotSettings {
 			ChatEnabled:       true,
 			RoastEnabled:      true,
 			ConfessionEnabled: true,
-			MusicEnabled:      false,
+
 			NewsEnabled:       true,
 			WhaleEnabled:      true,
 			ReminderEnabled:   true,
@@ -240,13 +245,6 @@ func (c *Client) GetSettings() *BotSettings {
 			AllowImages:     true,
 			AllowReplies:    true,
 		},
-		MusicSettings: MusicFeatureSettings{
-			MaxQueueSize:          100,
-			MaxSongDurationMins:   60,
-			IdleDisconnectSeconds: 300,
-			DefaultVolume:         0.5,
-			AllowPlaylists:        true,
-		},
 		NewsSettings: NewsFeatureSettings{
 			MaxArticles:    10,
 			UpdateInterval: 10,
@@ -265,13 +263,41 @@ func (c *Client) GetSettings() *BotSettings {
 	}
 }
 
-// backgroundRefresh periodically refreshes RAG context and settings.
+// backgroundRefresh fast-polls the settings version every 30s and does a
+// full RAG context refresh every 5 minutes.
 func (c *Client) backgroundRefresh() {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
+	versionTicker := time.NewTicker(30 * time.Second)
+	ragTicker := time.NewTicker(5 * time.Minute)
+	defer versionTicker.Stop()
+	defer ragTicker.Stop()
 
-	for range ticker.C {
-		c.refreshRAGContext()
+	for {
+		select {
+		case <-versionTicker.C:
+			c.checkVersionAndRefresh()
+		case <-ragTicker.C:
+			c.refreshRAGContext()
+		}
+	}
+}
+
+// checkVersionAndRefresh polls the lightweight /bot/settings/version endpoint.
+// If the version changed, it does a full settings refresh.
+func (c *Client) checkVersionAndRefresh() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var resp struct {
+		Version int `json:"version"`
+	}
+	if err := c.get(ctx, "/api/v1/bot/settings/version", &resp); err != nil {
+		// Fall back silently; full refresh will happen on the next cycle
+		return
+	}
+
+	if resp.Version != c.knownVersion {
+		c.logger.Info("Settings version changed, refreshing",
+			"old", c.knownVersion, "new", resp.Version)
 		c.refreshSettings()
 	}
 }
@@ -405,9 +431,16 @@ func (c *Client) refreshSettings() {
 	c.settingsMu.Lock()
 	c.settings = settings
 	c.settingsLast = time.Now()
+	c.knownVersion = settings.SettingsVersion
 	c.settingsMu.Unlock()
 
-	c.logger.Info("Bot settings refreshed from backend")
+	c.logger.Info("Bot settings refreshed from backend",
+		"version", settings.SettingsVersion)
+
+	// Notify listener (e.g. bot syncs Discord status)
+	if c.onSettingsChange != nil {
+		c.onSettingsChange(settings)
+	}
 }
 
 // --- API fetch methods ---

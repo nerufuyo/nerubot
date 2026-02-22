@@ -212,10 +212,15 @@ func (b *Bot) Start(ctx context.Context) error {
 		return err
 	}
 
-	// Set bot status
-	if err := b.session.UpdateGameStatus(0, b.config.Bot.Status); err != nil {
-		b.logger.Warn("Failed to set status", "error", err)
-	}
+	// Apply bot status from backend dashboard settings (falls back to config default).
+	// Also register a callback so all profile changes sync whenever backend refreshes.
+	b.applyBotStatus()
+	b.backendClient.OnSettingsChange(func(s *backend.BotSettings) {
+		if s == nil {
+			return
+		}
+		b.syncBotProfile(s)
+	})
 
 	b.logger.Info("Bot is ready and running")
 
@@ -279,6 +284,40 @@ func (b *Bot) Stop() error {
 
 	b.logger.Info("Bot stopped successfully")
 	return nil
+}
+
+// applyBotStatus sets the Discord presence from backend settings (or config fallback).
+func (b *Bot) applyBotStatus() {
+	status := b.config.Bot.Status
+	if s := b.backendClient.GetSettings(); s != nil && s.BotStatus != "" {
+		status = s.BotStatus
+	}
+	if err := b.session.UpdateGameStatus(0, status); err != nil {
+		b.logger.Warn("Failed to set status", "error", err)
+	}
+}
+
+// syncBotProfile synchronises Discord status and username from dashboard settings.
+// Called whenever the backend client detects a settings change.
+func (b *Bot) syncBotProfile(s *backend.BotSettings) {
+	// Sync playing-status
+	if s.BotStatus != "" {
+		if err := b.session.UpdateGameStatus(0, s.BotStatus); err != nil {
+			b.logger.Warn("Failed to update status from backend", "error", err)
+		} else {
+			b.logger.Info("Bot status synced from dashboard", "status", s.BotStatus)
+		}
+	}
+
+	// Sync username if changed (Discord allows ~2 changes/hour for bots)
+	if s.BotName != "" && b.session.State.User != nil && s.BotName != b.session.State.User.Username {
+		_, err := b.session.UserUpdate(s.BotName, "", "")
+		if err != nil {
+			b.logger.Warn("Failed to update bot username", "name", s.BotName, "error", err)
+		} else {
+			b.logger.Info("Bot username synced from dashboard", "name", s.BotName)
+		}
+	}
 }
 
 // registerHandlers registers event handlers
