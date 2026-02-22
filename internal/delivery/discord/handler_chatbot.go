@@ -83,15 +83,11 @@ func (b *Bot) handleChat(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if langLabel == "" {
 		langLabel = "English"
 	}
-	footerText := fmt.Sprintf("Powered by RAG | %d remaining | Lang: %s", remaining, langLabel)
-	providers := b.chatbotService.GetAvailableProviders()
-	if len(providers) > 0 {
-		footerText += fmt.Sprintf(" | Provider: %s", providers[0])
-	}
+	footerText := fmt.Sprintf("Neru Assistant | %d remaining | Lang: %s", remaining, langLabel)
 
 	// Send response
 	embed := &discordgo.MessageEmbed{
-		Title:       "🤖 Neru AI",
+		Title:       "🤖 Neru Assistant",
 		Description: response,
 		Color:       0x00C9A7,
 		Footer: &discordgo.MessageEmbedFooter{
