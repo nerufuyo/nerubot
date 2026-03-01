@@ -63,7 +63,6 @@ type DiscordConfig struct {
 // AIConfig holds AI service configuration
 type AIConfig struct {
 	DeepSeekKey string
-	OllamaURL   string // Ollama server base URL (e.g. https://ai.infantai.tech)
 }
 
 // CryptoConfig holds cryptocurrency feature configuration
@@ -142,7 +141,6 @@ func Load() (*Config, error) {
 		},
 		AI: AIConfig{
 			DeepSeekKey: os.Getenv("DEEPSEEK_API_KEY"),
-			OllamaURL:   getEnvOrDefault("OLLAMA_URL", ""),
 		},
 		Crypto: CryptoConfig{
 			WhaleAlertAPIKey:    os.Getenv("WHALE_ALERT_API_KEY"),
@@ -201,7 +199,7 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 }
 
 func hasAnyAIKey() bool {
-	return os.Getenv("DEEPSEEK_API_KEY") != "" || os.Getenv("OLLAMA_URL") != ""
+	return os.Getenv("DEEPSEEK_API_KEY") != ""
 }
 
 // Validate validates the configuration
