@@ -45,8 +45,6 @@ ehthumbs.db
 Thumbs.db
 
 # Deployment
-deploy/
-!deploy/lavalink/
 *.sh
 !docker-entrypoint.sh
 

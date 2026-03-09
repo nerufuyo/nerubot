@@ -250,7 +250,9 @@ func (b *Bot) Start(ctx context.Context) error {
 	// Connect to Lavalink node if music is enabled
 	if b.lavalinkClient != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		lErr := b.lavalinkClient.AddNode(ctx, "main", b.config.Music.LavalinkAddress, b.config.Music.LavalinkPassword, false)
+		addr := b.config.Music.LavalinkAddress
+		secure := strings.HasSuffix(addr, ".railway.app") || strings.HasSuffix(addr, ".railway.app:443") || strings.Contains(addr, ".up.railway.app")
+		lErr := b.lavalinkClient.AddNode(ctx, "main", addr, b.config.Music.LavalinkPassword, secure)
 		cancel()
 		if lErr != nil {
 			b.logger.Error("Failed to connect to Lavalink", "error", lErr)
