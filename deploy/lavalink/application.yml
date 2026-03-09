@@ -35,6 +35,7 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
+      - ANDROID_MUSIC
       - MUSIC
       - WEB
     oauth:
