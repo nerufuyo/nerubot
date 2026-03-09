@@ -25,16 +25,15 @@ type Member struct {
 	Username string
 }
 
-// MembersFunc returns non-bot members in the guild.
-type MembersFunc func() []Member
+// MembersFunc returns non-bot members for the guild that owns the given channel.
+type MembersFunc func(channelID string) []Member
 
 // supportedLanguages for random language switching (when no lang is configured).
 var supportedLanguages = []string{"Indonesian", "Japanese", "Korean"}
 
-// reminderSystemPrompt instructs the AI to write short, warm, cute multilingual messages.
-const reminderSystemPrompt = `You are Neru, a warm and cute AI companion on Discord.
-Your personality: affectionate, cheerful, caring. You use sweet words naturally.
-You use cute expressions like "~", "hehe", kaomoji like (◕‿◕), (´｡• ᵕ •｡'), ♡, etc.
+// reminderSystemPrompt instructs the AI to write short, warm, casual multilingual messages.
+const reminderSystemPrompt = `You are a friendly Discord bot with a casual, chill, and slightly cute personality.
+Your job is to send short reminder messages in a warm, natural tone.
 
 STRICT RULES:
 - Keep messages SHORT: 2-3 sentences MAX. Be concise but warm.
@@ -45,7 +44,10 @@ STRICT RULES:
 - No bullet points, no lists, no headings. Just natural short text.
 - NEVER use dashes. Write casually like a cute text message.
 - Each message must feel fresh and unique.
-- Write in the LANGUAGE specified in the prompt (English, Indonesian, Japanese, Korean, or Chinese). Mix in a tiny bit of the cute expressions from that language naturally.`
+- Occasionally use light emojis (✨😊💛🌸🌙🍽️) but do not overuse them.
+- You may use small casual expressions like: hehe, yay, oki, aww.
+- Write in the LANGUAGE specified in the prompt (English, Indonesian, Japanese, Korean, or Chinese).
+- NEVER mention or tag specific users by name or <@ID> unless explicitly told to in the prompt.`
 
 // ReminderService manages scheduled reminders for Indonesian holidays
 // and Ramadan Sahoor / Berbuka times.
@@ -440,7 +442,12 @@ func (s *ReminderService) checkLoveMessage(now time.Time, fired map[string]bool)
 	}
 	fired[key] = true
 
-	members := s.membersFn()
+	chID := s.GetChannelID()
+	if chID == "" {
+		return
+	}
+
+	members := s.membersFn(chID)
 	if len(members) == 0 {
 		return
 	}

@@ -302,3 +302,54 @@ func (c *Client) get(ctx context.Context, path string, dest interface{}) error {
 
 	return nil
 }
+
+// post performs an HTTP POST request with a JSON body.
+func (c *Client) post(ctx context.Context, path string, body interface{}) error {
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("marshal body: %w", err)
+	}
+
+	url := c.baseURL + path
+	req, err := http.NewRequestWithContext(ctx, "POST", url, strings.NewReader(string(payload)))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("http post %s: %w", path, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("http post %s: status %d: %s", path, resp.StatusCode, string(respBody))
+	}
+	return nil
+}
+
+// GuildInfo represents a Discord guild for syncing with the backend.
+type GuildInfo struct {
+	GuildID     string `json:"guildId"`
+	GuildName   string `json:"guildName"`
+	MemberCount int    `json:"memberCount"`
+	IconURL     string `json:"iconUrl"`
+}
+
+// SyncGuilds pushes the bot's current guild list to the backend.
+func (c *Client) SyncGuilds(guilds []GuildInfo) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	payload := struct {
+		Guilds []GuildInfo `json:"guilds"`
+	}{Guilds: guilds}
+
+	if err := c.post(ctx, "/api/v1/bot/guilds/sync", payload); err != nil {
+		c.logger.Warn("Failed to sync guilds to backend", "error", err)
+		return
+	}
+	c.logger.Info("Guilds synced to backend", "count", len(guilds))
+}

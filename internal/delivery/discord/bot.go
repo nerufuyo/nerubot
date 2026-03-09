@@ -120,21 +120,25 @@ func New(cfg *config.Config) (*Bot, error) {
 				log.Error("Failed to send reminder", "error", err)
 			}
 		})
-		bot.reminderService.SetMembersFunc(func() []reminder.Member {
+		bot.reminderService.SetMembersFunc(func(channelID string) []reminder.Member {
 			var members []reminder.Member
-			for _, guild := range bot.session.State.Guilds {
-				guildMembers, err := bot.session.GuildMembers(guild.ID, "", 1000)
-				if err != nil {
-					log.Warn("Failed to fetch guild members", "guild", guild.ID, "error", err)
-					continue
-				}
-				for _, m := range guildMembers {
-					if m.User != nil && !m.User.Bot {
-						members = append(members, reminder.Member{
-							ID:       m.User.ID,
-							Username: m.User.Username,
-						})
-					}
+			// Resolve the guild that owns this channel so we only mention members from that server
+			ch, err := bot.session.Channel(channelID)
+			if err != nil || ch == nil {
+				log.Warn("Failed to resolve channel for members", "channel", channelID, "error", err)
+				return members
+			}
+			guildMembers, err := bot.session.GuildMembers(ch.GuildID, "", 1000)
+			if err != nil {
+				log.Warn("Failed to fetch guild members", "guild", ch.GuildID, "error", err)
+				return members
+			}
+			for _, m := range guildMembers {
+				if m.User != nil && !m.User.Bot {
+					members = append(members, reminder.Member{
+						ID:       m.User.ID,
+						Username: m.User.Username,
+					})
 				}
 			}
 			return members
@@ -238,6 +242,9 @@ func (b *Bot) Start(ctx context.Context) error {
 	})
 
 	b.logger.Info("Bot is ready and running")
+
+	// Sync guild list to backend
+	go b.syncGuildsToBackend()
 
 	// Load saved guild configs from DB (restores reminder channels, etc.)
 	b.loadSavedGuildConfigs()
@@ -376,6 +383,30 @@ func (b *Bot) onGuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	if err := b.registerCommandsForGuild(g.ID); err != nil {
 		b.logger.Warn("Failed to register commands for guild", "guild", g.ID, "error", err)
 	}
+	// Re-sync guild list when a new guild is joined
+	go b.syncGuildsToBackend()
+}
+
+// syncGuildsToBackend collects all connected guilds and pushes them to the backend.
+func (b *Bot) syncGuildsToBackend() {
+	if b.backendClient == nil {
+		return
+	}
+
+	guilds := make([]backend.GuildInfo, 0, len(b.session.State.Guilds))
+	for _, g := range b.session.State.Guilds {
+		iconURL := ""
+		if g.Icon != "" {
+			iconURL = fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.png", g.ID, g.Icon)
+		}
+		guilds = append(guilds, backend.GuildInfo{
+			GuildID:     g.ID,
+			GuildName:   g.Name,
+			MemberCount: g.MemberCount,
+			IconURL:     iconURL,
+		})
+	}
+	b.backendClient.SyncGuilds(guilds)
 }
 
 // onMessageCreate handles message creation events
