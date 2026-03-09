@@ -303,11 +303,11 @@ func (b *Bot) handlePlaylistPlay(s *discordgo.Session, i *discordgo.InteractionC
 		return
 	}
 
-	       embed := &discordgo.MessageEmbed{
-		       Title:       config.EmojiPlaylist + " Playlist Loaded",
-		       Description: fmt.Sprintf("**%s**\nLoaded **%d** songs into the queue", playlist.Name, count),
-		       Color:       0x00C9A7,
-	       }
+	embed := &discordgo.MessageEmbed{
+		Title:       config.EmojiPlaylist + " Playlist Loaded",
+		Description: fmt.Sprintf("**%s**\nLoaded **%d** songs into the queue", playlist.Name, count),
+		Color:       0x00C9A7,
+	}
 	b.followUpEmbed(s, i, embed)
 }
 
@@ -811,11 +811,11 @@ func (b *Bot) handleRadio(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		return
 	}
 
-	       embed := &discordgo.MessageEmbed{
-		       Title:       config.EmojiRadio + " Radio: " + genre,
-		       Description: fmt.Sprintf("Now playing: **[%s](%s)**\nby %s\n\nAutoplay is enabled — music will keep playing!", song.Title, song.URL, song.Author),
-		       Color:       0x00C9A7,
-	       }
+	embed := &discordgo.MessageEmbed{
+		Title:       config.EmojiRadio + " Radio: " + genre,
+		Description: fmt.Sprintf("Now playing: **[%s](%s)**\nby %s\n\nAutoplay is enabled — music will keep playing!", song.Title, song.URL, song.Author),
+		Color:       0x00C9A7,
+	}
 	b.followUpEmbed(s, i, embed)
 }
 

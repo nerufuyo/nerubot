@@ -1,5 +1,7 @@
 package discord
 
+import "strings"
+
 // Contains keywords to block for SARA and porn topics
 var blockedKeywords = []string{
 	// SARA (ethnic, religious, racial, intergroup)
