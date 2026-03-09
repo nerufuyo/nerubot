@@ -46,14 +46,14 @@ func (b *Bot) handleRoast(s *discordgo.Session, i *discordgo.InteractionCreate) 
 		langLabel = "English"
 	}
 
-	embed := &discordgo.MessageEmbed{
-		Title:       "Roast",
-		Description: roast,
-		Color:       config.ColorError,
-		Footer: &discordgo.MessageEmbedFooter{
-			Text: fmt.Sprintf("Requested by %s | Lang: %s", i.Member.User.Username, langLabel),
-		},
-	}
+	       embed := &discordgo.MessageEmbed{
+		       Title:       "Roast",
+		       Description: roast,
+		       Color:       config.ColorError,
+		       Footer: &discordgo.MessageEmbedFooter{
+			       Text: fmt.Sprintf("Lang: %s", langLabel),
+		       },
+	       }
 
 	b.respondEmbed(s, i, embed)
 }
