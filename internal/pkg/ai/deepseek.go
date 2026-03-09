@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -64,6 +66,44 @@ func (d *DeepSeekProvider) Chat(ctx context.Context, messages []Message) (string
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	const maxRetries = 3
+	var lastErr error
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(time.Duration(attempt) * time.Second):
+			}
+		}
+
+		result, err := d.doRequest(ctx, jsonData)
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+
+		// Only retry on transient network errors
+		if !isTransientError(err) {
+			return "", err
+		}
+	}
+
+	return "", lastErr
+}
+
+// isTransientError checks if the error is a transient network issue worth retrying.
+func isTransientError(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "connection reset by peer") ||
+		strings.Contains(s, "EOF") ||
+		strings.Contains(s, "connection refused") ||
+		strings.Contains(s, "TLS handshake timeout") ||
+		strings.Contains(s, "i/o timeout")
+}
+
+// doRequest performs a single HTTP request to DeepSeek.
+func (d *DeepSeekProvider) doRequest(ctx context.Context, jsonData []byte) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.deepseek.com/v1/chat/completions", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
@@ -78,8 +118,13 @@ func (d *DeepSeekProvider) Chat(ctx context.Context, messages []Message) (string
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
+		return "", fmt.Errorf("deepseek API returned status %d: %s", resp.StatusCode, string(body))
+	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("deepseek API returned status %d", resp.StatusCode)
+		return "", fmt.Errorf("deepseek API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var response struct {
@@ -90,7 +135,7 @@ func (d *DeepSeekProvider) Chat(ctx context.Context, messages []Message) (string
 		} `json:"choices"`
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	if err := json.Unmarshal(body, &response); err != nil {
 		return "", fmt.Errorf("failed to decode response: %w", err)
 	}
 
