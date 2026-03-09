@@ -17,16 +17,11 @@ import (
 type SettingsChangeFunc func(settings *BotSettings)
 
 // Client communicates with the nerufuyo-workspace-backend API
-// to retrieve RAG knowledge, projects, articles, experiences, and bot settings.
+// to retrieve bot settings.
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
 	logger     *logger.Logger
-
-	// Cached RAG context (refreshed periodically)
-	ragContext     string
-	ragMu          sync.RWMutex
-	ragLastRefresh time.Time
 
 	// Cached bot settings
 	settings       *BotSettings
@@ -79,7 +74,6 @@ type ChatFeatureSettings struct {
 	MaxHistoryMessages int    `json:"maxHistoryMessages"`
 	SessionTimeoutMins int    `json:"sessionTimeoutMins"`
 	ModelName          string `json:"modelName"`
-	EnableRAG          bool   `json:"enableRAG"`
 }
 
 // RoastFeatureSettings holds advanced settings for roast.
@@ -118,49 +112,6 @@ type ReminderFeatureSettings struct {
 	ChannelID string `json:"channelID"`
 }
 
-// Experience from backend.
-type Experience struct {
-	Company     string `json:"company"`
-	Role        string `json:"role"`
-	Description string `json:"description"`
-	Place       string `json:"place"`
-	StartDate   string `json:"startDate"`
-	EndDate     string `json:"endDate"`
-}
-
-// Project from backend.
-type Project struct {
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	RepoURL     string   `json:"repoUrl"`
-	LiveURL     string   `json:"liveUrl"`
-	Tags        []string `json:"tags"`
-	Stars       int      `json:"stars"`
-	IsTop       bool     `json:"isTop"`
-	Images      []string `json:"images"`
-}
-
-// Article from backend.
-type Article struct {
-	Title       string   `json:"title"`
-	Slug        string   `json:"slug"`
-	Content     string   `json:"content"`
-	Tags        []string `json:"tags"`
-	IsPublished bool     `json:"isPublished"`
-}
-
-// Knowledge from backend.
-type Knowledge struct {
-	Title     string `json:"title"`
-	Type      string `json:"type"`
-	Category  string `json:"category"`
-	Content   string `json:"content"`
-	Summary   string `json:"summary"`
-	SourceURL string `json:"sourceUrl"`
-	FileURL   string `json:"fileUrl"`
-	IsActive  bool   `json:"isActive"`
-}
-
 // New creates a new backend API client.
 func New(baseURL string) *Client {
 	log := logger.New("backend-client")
@@ -180,10 +131,9 @@ func New(baseURL string) *Client {
 	}
 
 	// Initial fetch
-	go c.refreshRAGContext()
 	go c.refreshSettings()
 
-	// Background: fast-poll version every 30s, full RAG refresh every 5 min
+	// Background: fast-poll version every 30s
 	go c.backgroundRefresh()
 
 	return c
@@ -193,13 +143,6 @@ func New(baseURL string) *Client {
 // refreshed from the backend. The bot uses this to sync Discord status, etc.
 func (c *Client) OnSettingsChange(fn SettingsChangeFunc) {
 	c.onSettingsChange = fn
-}
-
-// GetRAGContext returns the cached RAG context string for AI system prompts.
-func (c *Client) GetRAGContext() string {
-	c.ragMu.RLock()
-	defer c.ragMu.RUnlock()
-	return c.ragContext
 }
 
 // GetSettings returns the cached bot settings.
@@ -231,7 +174,6 @@ func (c *Client) GetSettings() *BotSettings {
 			MaxHistoryMessages: 10,
 			SessionTimeoutMins: 30,
 			ModelName:          "deepseek-chat",
-			EnableRAG:          true,
 		},
 		RoastSettings: RoastFeatureSettings{
 			CooldownMinutes: 5,
@@ -263,20 +205,15 @@ func (c *Client) GetSettings() *BotSettings {
 	}
 }
 
-// backgroundRefresh fast-polls the settings version every 30s and does a
-// full RAG context refresh every 5 minutes.
+// backgroundRefresh fast-polls the settings version every 30s.
 func (c *Client) backgroundRefresh() {
 	versionTicker := time.NewTicker(30 * time.Second)
-	ragTicker := time.NewTicker(5 * time.Minute)
 	defer versionTicker.Stop()
-	defer ragTicker.Stop()
 
 	for {
 		select {
 		case <-versionTicker.C:
 			c.checkVersionAndRefresh()
-		case <-ragTicker.C:
-			c.refreshRAGContext()
 		}
 	}
 }
@@ -299,121 +236,6 @@ func (c *Client) checkVersionAndRefresh() {
 		c.logger.Info("Settings version changed, refreshing",
 			"old", c.knownVersion, "new", resp.Version)
 		c.refreshSettings()
-	}
-}
-
-// refreshRAGContext fetches all knowledge data from the backend and builds a context string.
-func (c *Client) refreshRAGContext() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var sections []string
-
-	// Fetch knowledge base entries
-	if knowledge, err := c.fetchKnowledge(ctx); err == nil && len(knowledge) > 0 {
-		var lines []string
-		lines = append(lines, "=== KNOWLEDGE BASE (from RAG database) ===")
-		for _, k := range knowledge {
-			if !k.IsActive {
-				continue
-			}
-			line := fmt.Sprintf("--- %s | %s | %s ---", k.Type, k.Category, k.Title)
-			if k.Content != "" {
-				line += "\n" + k.Content
-			}
-			if k.Summary != "" {
-				line += "\nSummary: " + k.Summary
-			}
-			if k.SourceURL != "" {
-				line += "\nSource: " + k.SourceURL
-			}
-			lines = append(lines, line)
-		}
-		sections = append(sections, strings.Join(lines, "\n"))
-	}
-
-	// Fetch experiences
-	if experiences, err := c.fetchExperiences(ctx); err == nil && len(experiences) > 0 {
-		var lines []string
-		lines = append(lines, "=== WORK EXPERIENCE (from database) ===")
-		for _, exp := range experiences {
-			endDate := exp.EndDate
-			if endDate == "" {
-				endDate = "Present"
-			}
-			line := fmt.Sprintf("- %s at %s (%s) | %s – %s", exp.Role, exp.Company, exp.Place, exp.StartDate, endDate)
-			if exp.Description != "" {
-				line += "\n  Description: " + exp.Description
-			}
-			lines = append(lines, line)
-		}
-		sections = append(sections, strings.Join(lines, "\n"))
-	}
-
-	// Fetch projects
-	if projects, err := c.fetchProjects(ctx); err == nil && len(projects) > 0 {
-		var lines []string
-		lines = append(lines, "=== PROJECTS (from database) ===")
-		for _, proj := range projects {
-			line := fmt.Sprintf("- %s: %s", proj.Title, proj.Description)
-			if len(proj.Tags) > 0 {
-				line += " | Tech: " + strings.Join(proj.Tags, ", ")
-			}
-			if proj.RepoURL != "" {
-				line += " | GitHub: " + proj.RepoURL
-			}
-			if proj.LiveURL != "" {
-				line += " | Live: " + proj.LiveURL
-			}
-			if proj.Stars > 0 {
-				line += fmt.Sprintf(" | ⭐ %d stars", proj.Stars)
-			}
-			if proj.IsTop {
-				line += " | [TOP PROJECT]"
-			}
-			lines = append(lines, line)
-		}
-		sections = append(sections, strings.Join(lines, "\n"))
-	}
-
-	// Fetch articles
-	if articles, err := c.fetchArticles(ctx); err == nil && len(articles) > 0 {
-		var lines []string
-		lines = append(lines, "=== ARTICLES & BLOG POSTS (from database) ===")
-		for _, art := range articles {
-			if !art.IsPublished {
-				continue
-			}
-			line := fmt.Sprintf("- \"%s\"", art.Title)
-			if len(art.Tags) > 0 {
-				line += " | Topics: " + strings.Join(art.Tags, ", ")
-			}
-			if art.Content != "" {
-				excerpt := art.Content
-				if len(excerpt) > 500 {
-					excerpt = excerpt[:500] + "..."
-				}
-				line += "\n  Content: " + excerpt
-			}
-			if art.Slug != "" {
-				line += "\n  URL: https://nerufuyo-workspace.com/articles/" + art.Slug
-			}
-			lines = append(lines, line)
-		}
-		sections = append(sections, strings.Join(lines, "\n"))
-	}
-
-	ragContext := strings.Join(sections, "\n\n")
-
-	c.ragMu.Lock()
-	c.ragContext = ragContext
-	c.ragLastRefresh = time.Now()
-	c.ragMu.Unlock()
-
-	if ragContext != "" {
-		c.logger.Info("RAG context refreshed", "sections", len(sections), "length", len(ragContext))
-	} else {
-		c.logger.Warn("RAG context is empty — backend may be unreachable")
 	}
 }
 
@@ -444,46 +266,6 @@ func (c *Client) refreshSettings() {
 }
 
 // --- API fetch methods ---
-
-func (c *Client) fetchKnowledge(ctx context.Context) ([]Knowledge, error) {
-	var resp struct {
-		Data []Knowledge `json:"data"`
-	}
-	if err := c.get(ctx, "/api/v1/bot/knowledge", &resp); err != nil {
-		return nil, err
-	}
-	return resp.Data, nil
-}
-
-func (c *Client) fetchExperiences(ctx context.Context) ([]Experience, error) {
-	var resp struct {
-		Data []Experience `json:"data"`
-	}
-	if err := c.get(ctx, "/api/v1/experiences", &resp); err != nil {
-		return nil, err
-	}
-	return resp.Data, nil
-}
-
-func (c *Client) fetchProjects(ctx context.Context) ([]Project, error) {
-	var resp struct {
-		Data []Project `json:"data"`
-	}
-	if err := c.get(ctx, "/api/v1/projects", &resp); err != nil {
-		return nil, err
-	}
-	return resp.Data, nil
-}
-
-func (c *Client) fetchArticles(ctx context.Context) ([]Article, error) {
-	var resp struct {
-		Data []Article `json:"data"`
-	}
-	if err := c.get(ctx, "/api/v1/articles", &resp); err != nil {
-		return nil, err
-	}
-	return resp.Data, nil
-}
 
 func (c *Client) fetchBotSettings(ctx context.Context) (*BotSettings, error) {
 	var resp struct {

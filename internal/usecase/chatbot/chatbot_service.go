@@ -148,21 +148,6 @@ func (s *ChatbotService) buildSystemPrompt() string {
 		}
 	}
 
-	// Inject RAG knowledge context from backend (if enabled)
-	if s.backendClient != nil {
-		settings := s.backendClient.GetSettings()
-		enableRAG := true // default
-		if settings.ChatSettings.MaxHistoryMessages > 0 {
-			enableRAG = settings.ChatSettings.EnableRAG
-		}
-		if enableRAG {
-			ragContext := s.backendClient.GetRAGContext()
-			if ragContext != "" {
-				base = base + "\n\nKNOWLEDGE BASE (ONLY use this data when the user asks about Neru, NeruBot, or Nerufuyo. NEVER reference this data in unrelated conversations):\n" + ragContext
-			}
-		}
-	}
-
 	// Add current timestamp
 	base = fmt.Sprintf("CURRENT DATE: %s\n\n%s", time.Now().UTC().Format("January 2, 2006"), base)
 

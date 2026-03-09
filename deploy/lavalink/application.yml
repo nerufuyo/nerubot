@@ -40,6 +40,7 @@ plugins:
       - WEB
     oauth:
       enabled: true
+      refreshToken: ${YOUTUBE_OAUTH_REFRESH_TOKEN:}
   lavasrc:
     providers:
       - "ytsearch:\"%ISRC%\""
