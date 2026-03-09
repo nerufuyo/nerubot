@@ -15,13 +15,13 @@ const (
 type Song struct {
 	Title       string `json:"title" bson:"title"`
 	URI         string `json:"uri" bson:"uri"`
-	URL         string `json:"url" bson:"url"`               // User-facing URL (e.g., YouTube link)
-	Duration    int64  `json:"duration" bson:"duration"`      // Milliseconds
+	URL         string `json:"url" bson:"url"`           // User-facing URL (e.g., YouTube link)
+	Duration    int64  `json:"duration" bson:"duration"` // Milliseconds
 	Author      string `json:"author" bson:"author"`
 	Thumbnail   string `json:"thumbnail" bson:"thumbnail"`
-	Source      string `json:"source" bson:"source"`          // youtube, spotify, soundcloud
+	Source      string `json:"source" bson:"source"` // youtube, spotify, soundcloud
 	RequesterID string `json:"requesterId" bson:"requesterId"`
-	Identifier  string `json:"identifier" bson:"identifier"`  // Platform-specific ID
+	Identifier  string `json:"identifier" bson:"identifier"` // Platform-specific ID
 }
 
 // FormatDuration returns a human-readable duration string (e.g., "3:45")
@@ -58,18 +58,18 @@ func intToStr(n int64) string {
 
 // GuildPlayer represents the active music state for a guild
 type GuildPlayer struct {
-	GuildID    string   `json:"guildId"`
-	ChannelID  string   `json:"channelId"`  // Voice channel ID
-	TextChID   string   `json:"textChId"`   // Text channel for notifications
-	Queue      []*Song  `json:"queue"`
-	Current    int      `json:"current"`    // Current song index in queue
-	Volume     int      `json:"volume"`     // 0-200
-	LoopMode   LoopMode `json:"loopMode"`
-	IsPlaying  bool     `json:"isPlaying"`
-	IsPaused   bool     `json:"isPaused"`
-	History    []*Song  `json:"history"`    // Previously played songs
-	Autoplay   bool     `json:"autoplay"`   // Auto-queue similar songs when queue ends
-	SkipVotes  map[string]bool `json:"-"`   // User IDs that voted to skip (not persisted)
+	GuildID   string          `json:"guildId"`
+	ChannelID string          `json:"channelId"` // Voice channel ID
+	TextChID  string          `json:"textChId"`  // Text channel for notifications
+	Queue     []*Song         `json:"queue"`
+	Current   int             `json:"current"` // Current song index in queue
+	Volume    int             `json:"volume"`  // 0-200
+	LoopMode  LoopMode        `json:"loopMode"`
+	IsPlaying bool            `json:"isPlaying"`
+	IsPaused  bool            `json:"isPaused"`
+	History   []*Song         `json:"history"`  // Previously played songs
+	Autoplay  bool            `json:"autoplay"` // Auto-queue similar songs when queue ends
+	SkipVotes map[string]bool `json:"-"`        // User IDs that voted to skip (not persisted)
 }
 
 // NowPlaying returns the currently playing song, or nil if none

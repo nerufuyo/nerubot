@@ -30,8 +30,8 @@ type MusicService struct {
 	redis    *redispkg.Client
 	logger   *logger.Logger
 
-	players  map[string]*entity.GuildPlayer // guildID -> player state
-	mu       sync.RWMutex
+	players map[string]*entity.GuildPlayer // guildID -> player state
+	mu      sync.RWMutex
 
 	sendEmbed SendEmbedFunc
 }

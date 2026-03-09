@@ -32,33 +32,33 @@ const (
 
 // Color constants for Discord embeds (hex values)
 const (
-	ColorPrimary    = 0x0099FF
-	ColorSecondary  = 0x6C757D
-	ColorSuccess    = 0x00FF00
-	ColorError      = 0xFF0000
-	ColorWarning    = 0xFFA500
-	ColorInfo       = 0x0099FF
+	ColorPrimary   = 0x0099FF
+	ColorSecondary = 0x6C757D
+	ColorSuccess   = 0x00FF00
+	ColorError     = 0xFF0000
+	ColorWarning   = 0xFFA500
+	ColorInfo      = 0x0099FF
 )
 
 // Command permission levels
 const (
-	PermissionEveryone = 0
-	PermissionDJ       = 1
+	PermissionEveryone  = 0
+	PermissionDJ        = 1
 	PermissionModerator = 2
-	PermissionAdmin    = 3
-	PermissionOwner    = 4
+	PermissionAdmin     = 3
+	PermissionOwner     = 4
 )
 
 // Discord limits and constraints
 const (
-	MaxEmbedFields       = 25
-	MaxEmbedDescription  = 4096
-	MaxEmbedTitle        = 256
-	MaxEmbedFieldName    = 256
-	MaxEmbedFieldValue   = 1024
-	MaxMessageLength     = 2000
-	MaxEmbedFooter       = 2048
-	MaxEmbedAuthor       = 256
+	MaxEmbedFields      = 25
+	MaxEmbedDescription = 4096
+	MaxEmbedTitle       = 256
+	MaxEmbedFieldName   = 256
+	MaxEmbedFieldValue  = 1024
+	MaxMessageLength    = 2000
+	MaxEmbedFooter      = 2048
+	MaxEmbedAuthor      = 256
 )
 
 // Application constants

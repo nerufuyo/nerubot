@@ -528,7 +528,6 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 	}
 }
 
-
 // registerCommands registers slash commands with Discord
 func (b *Bot) registerCommands() error {
 	adminPermission := int64(discordgo.PermissionAdministrator)
@@ -1115,8 +1114,8 @@ func (b *Bot) registerCommands() error {
 			Description: "Show lyrics for the currently playing song",
 		},
 		{
-			Name:        "247",
-			Description: "Toggle 24/7 mode (stay in voice channel)",
+			Name:                     "247",
+			Description:              "Toggle 24/7 mode (stay in voice channel)",
 			DefaultMemberPermissions: &adminPermission,
 		},
 		{

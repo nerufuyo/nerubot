@@ -45,21 +45,21 @@ type Limits struct {
 
 // FeatureFlags controls which features are enabled
 type FeatureFlags struct {
-	News       bool
-	HelpSystem bool
-	Chatbot    bool
-	Confession bool
-	Roast      bool
+	News        bool
+	HelpSystem  bool
+	Chatbot     bool
+	Confession  bool
+	Roast       bool
 	WhaleAlerts bool
-	Reminder   bool
-	Music      bool
+	Reminder    bool
+	Music       bool
 }
 
 // DiscordConfig holds Discord-specific configuration
 type DiscordConfig struct {
-	Colors                map[string]int
-	SyncCommandsOnReady   bool
-	SyncCommandsGlobally  bool
+	Colors               map[string]int
+	SyncCommandsOnReady  bool
+	SyncCommandsGlobally bool
 }
 
 // AIConfig holds AI service configuration
@@ -69,10 +69,10 @@ type AIConfig struct {
 
 // CryptoConfig holds cryptocurrency feature configuration
 type CryptoConfig struct {
-	WhaleAlertAPIKey   string
-	TwitterAPIKey      string
-	TwitterAPISecret   string
-	TwitterAccessToken string
+	WhaleAlertAPIKey    string
+	TwitterAPIKey       string
+	TwitterAPISecret    string
+	TwitterAccessToken  string
 	TwitterAccessSecret string
 }
 
@@ -140,13 +140,13 @@ func Load() (*Config, error) {
 		},
 		Discord: DiscordConfig{
 			Colors: map[string]int{
-				"primary":    0x0099FF,
-				"secondary":  0x6C757D,
-				"success":    0x00FF00,
-				"error":      0xFF0000,
-				"warning":    0xFFA500,
-				"info":       0x0099FF,
-				},
+				"primary":   0x0099FF,
+				"secondary": 0x6C757D,
+				"success":   0x00FF00,
+				"error":     0xFF0000,
+				"warning":   0xFFA500,
+				"info":      0x0099FF,
+			},
 			SyncCommandsOnReady:  true,
 			SyncCommandsGlobally: true,
 		},
