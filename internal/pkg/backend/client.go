@@ -24,10 +24,10 @@ type Client struct {
 	logger     *logger.Logger
 
 	// Cached bot settings
-	settings       *BotSettings
-	settingsMu     sync.RWMutex
-	settingsLast   time.Time
-	knownVersion   int // last known settingsVersion from backend
+	settings     *BotSettings
+	settingsMu   sync.RWMutex
+	settingsLast time.Time
+	knownVersion int // last known settingsVersion from backend
 
 	// Callback when settings change
 	onSettingsChange SettingsChangeFunc
@@ -35,18 +35,18 @@ type Client struct {
 
 // BotSettings represents the configurable bot settings from the dashboard.
 type BotSettings struct {
-	ID              string           `json:"id"`
-	BotName         string           `json:"botName"`
-	BotStatus       string           `json:"botStatus"`
-	BotDescription  string           `json:"botDescription"`  // About Me / profile bio
-	SystemPrompt    string           `json:"systemPrompt"`
-	RateLimitCount  int              `json:"rateLimitCount"`  // max messages per window
-	RateLimitWindow int              `json:"rateLimitWindow"` // window in seconds
-	MaxTokens       int              `json:"maxTokens"`
-	Temperature     float64          `json:"temperature"`
-	Features        BotFeatures      `json:"features"`
-	WelcomeMessage  string           `json:"welcomeMessage"`
-	SettingsVersion int              `json:"settingsVersion"`
+	ID              string      `json:"id"`
+	BotName         string      `json:"botName"`
+	BotStatus       string      `json:"botStatus"`
+	BotDescription  string      `json:"botDescription"` // About Me / profile bio
+	SystemPrompt    string      `json:"systemPrompt"`
+	RateLimitCount  int         `json:"rateLimitCount"`  // max messages per window
+	RateLimitWindow int         `json:"rateLimitWindow"` // window in seconds
+	MaxTokens       int         `json:"maxTokens"`
+	Temperature     float64     `json:"temperature"`
+	Features        BotFeatures `json:"features"`
+	WelcomeMessage  string      `json:"welcomeMessage"`
+	SettingsVersion int         `json:"settingsVersion"`
 
 	// Per-feature advanced settings
 	ChatSettings       ChatFeatureSettings       `json:"chatSettings"`
@@ -56,7 +56,7 @@ type BotSettings struct {
 	WhaleSettings      WhaleFeatureSettings      `json:"whaleSettings"`
 	ReminderSettings   ReminderFeatureSettings   `json:"reminderSettings"`
 
-	UpdatedAt       string           `json:"updatedAt"`
+	UpdatedAt string `json:"updatedAt"`
 }
 
 // BotFeatures toggles for bot features managed from dashboard.
@@ -166,9 +166,9 @@ func (c *Client) GetSettings() *BotSettings {
 			RoastEnabled:      true,
 			ConfessionEnabled: true,
 
-			NewsEnabled:       true,
-			WhaleEnabled:      true,
-			ReminderEnabled:   true,
+			NewsEnabled:     true,
+			WhaleEnabled:    true,
+			ReminderEnabled: true,
 		},
 		ChatSettings: ChatFeatureSettings{
 			MaxHistoryMessages: 10,
