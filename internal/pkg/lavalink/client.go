@@ -134,11 +134,23 @@ func (c *Client) HandleVoiceServerUpdate(s *discordgo.Session, event *discordgo.
 	c.voiceReadyMu.Unlock()
 }
 
+// PrepareVoiceReady registers a voice-ready channel for the guild.
+// Must be called BEFORE joining the voice channel to avoid missing the VoiceServerUpdate event.
+func (c *Client) PrepareVoiceReady(guildID string) {
+	c.voiceReadyMu.Lock()
+	defer c.voiceReadyMu.Unlock()
+	c.voiceReady[guildID] = make(chan struct{})
+}
+
 // WaitVoiceReady blocks until the voice server update is received for the guild, or ctx expires.
+// If PrepareVoiceReady was called beforehand, it reuses that channel; otherwise creates a new one.
 func (c *Client) WaitVoiceReady(ctx context.Context, guildID string) error {
 	c.voiceReadyMu.Lock()
-	ch := make(chan struct{})
-	c.voiceReady[guildID] = ch
+	ch, ok := c.voiceReady[guildID]
+	if !ok {
+		ch = make(chan struct{})
+		c.voiceReady[guildID] = ch
+	}
 	c.voiceReadyMu.Unlock()
 
 	defer func() {

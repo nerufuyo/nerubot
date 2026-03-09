@@ -966,9 +966,11 @@ func (s *MusicService) SetAutoJoinChannel(ctx context.Context, guildID, channelI
 // --- Internal playback helpers ---
 
 func (s *MusicService) startPlayback(ctx context.Context, guildID string, gp *entity.GuildPlayer, track lavalink.Track) error {
-	// Register voice-ready listener before joining so we don't miss the event
 	voiceCtx, voiceCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer voiceCancel()
+
+	// Register voice-ready listener BEFORE joining so we don't miss the VoiceServerUpdate event
+	s.lavalink.PrepareVoiceReady(guildID)
 
 	// Join voice channel via Discord gateway (not Lavalink)
 	if err := s.joinVoice(guildID, gp.ChannelID); err != nil {
