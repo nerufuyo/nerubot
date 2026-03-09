@@ -24,6 +24,10 @@ type Client struct {
 	logger *logger.Logger
 	mu     sync.RWMutex
 
+	// Voice ready channels per guild
+	voiceReady   map[string]chan struct{}
+	voiceReadyMu sync.Mutex
+
 	// Callbacks
 	onTrackStart     func(player disgolink.Player, event lavalink.TrackStartEvent)
 	onTrackEnd       func(player disgolink.Player, event lavalink.TrackEndEvent)
@@ -36,7 +40,8 @@ func New(session *discordgo.Session, log *logger.Logger) *Client {
 	botUserID := snowflake.MustParse(session.State.User.ID)
 
 	c := &Client{
-		logger: log,
+		logger:     log,
+		voiceReady: make(map[string]chan struct{}),
 	}
 
 	c.Link = disgolink.New(botUserID,
@@ -116,6 +121,38 @@ func (c *Client) HandleVoiceServerUpdate(s *discordgo.Session, event *discordgo.
 	guildID := snowflake.MustParse(event.GuildID)
 
 	c.Link.OnVoiceServerUpdate(context.TODO(), guildID, event.Token, event.Endpoint)
+
+	// Signal that voice is ready for this guild
+	c.voiceReadyMu.Lock()
+	if ch, ok := c.voiceReady[event.GuildID]; ok {
+		select {
+		case <-ch:
+		default:
+			close(ch)
+		}
+	}
+	c.voiceReadyMu.Unlock()
+}
+
+// WaitVoiceReady blocks until the voice server update is received for the guild, or ctx expires.
+func (c *Client) WaitVoiceReady(ctx context.Context, guildID string) error {
+	c.voiceReadyMu.Lock()
+	ch := make(chan struct{})
+	c.voiceReady[guildID] = ch
+	c.voiceReadyMu.Unlock()
+
+	defer func() {
+		c.voiceReadyMu.Lock()
+		delete(c.voiceReady, guildID)
+		c.voiceReadyMu.Unlock()
+	}()
+
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("timed out waiting for voice connection")
+	}
 }
 
 // LoadTracks searches for tracks on Lavalink.
