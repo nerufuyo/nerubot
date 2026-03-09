@@ -40,7 +40,7 @@ func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	// Block SARA/porn queries
 	if containsBlockedKeyword(query) {
-		b.respondError(s, i, "Sorry, this request cannot be processed.")
+		b.respondError(s, i, "Nah fam, can't do that one 😅")
 		return
 	}
 
@@ -57,27 +57,27 @@ func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	       var embed *discordgo.MessageEmbed
-	       if queued {
-		       embed = &discordgo.MessageEmbed{
-			       Title:       config.EmojiQueue + " Added to Queue",
-			       Description: fmt.Sprintf("**[%s](%s)**\nby %s • %s", song.Title, song.URL, song.Author, song.FormatDuration()),
-			       Color:       0x00C9A7,
-			       Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: song.Thumbnail},
-			       Footer: &discordgo.MessageEmbedFooter{
-				       Text: fmt.Sprintf("Position: #%d", b.musicService.QueueLength(i.GuildID)),
-			       },
-		       }
-	       } else {
-		       embed = &discordgo.MessageEmbed{
-			       Title:       config.EmojiNowPlaying + " Now Playing",
-			       Description: fmt.Sprintf("**[%s](%s)**\nby %s • %s", song.Title, song.URL, song.Author, song.FormatDuration()),
-			       Color:       0x00C9A7,
-			       Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: song.Thumbnail},
-		       }
-	       }
+	var embed *discordgo.MessageEmbed
+	if queued {
+		embed = &discordgo.MessageEmbed{
+			Title:       config.EmojiQueue + " Added to Queue",
+			Description: fmt.Sprintf("**[%s](%s)**\nby %s • %s", song.Title, song.URL, song.Author, song.FormatDuration()),
+			Color:       0x00C9A7,
+			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: song.Thumbnail},
+			Footer: &discordgo.MessageEmbedFooter{
+				Text: fmt.Sprintf("Position: #%d", b.musicService.QueueLength(i.GuildID)),
+			},
+		}
+	} else {
+		embed = &discordgo.MessageEmbed{
+			Title:       config.EmojiNowPlaying + " Now Playing",
+			Description: fmt.Sprintf("**[%s](%s)**\nby %s • %s", song.Title, song.URL, song.Author, song.FormatDuration()),
+			Color:       0x00C9A7,
+			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: song.Thumbnail},
+		}
+	}
 
-	       b.followUpEmbedWithButtons(s, i, embed, nowPlayingButtons())
+	b.followUpEmbedWithButtons(s, i, embed, nowPlayingButtons())
 }
 
 // handlePause pauses the current track.
@@ -366,12 +366,12 @@ func (b *Bot) handleRemove(s *discordgo.Session, i *discordgo.InteractionCreate)
 		return
 	}
 
-	       // Block SARA/porn in song title
-	       if containsBlockedKeyword(song.Title) {
-		       b.respondError(s, i, "Sorry, this request cannot be processed.")
-		       return
-	       }
-	       b.respond(s, i, fmt.Sprintf("Removed **%s** from the queue", song.Title))
+	// Block SARA/porn in song title
+	if containsBlockedKeyword(song.Title) {
+		b.respondError(s, i, "Nah fam, can't do that one 😅")
+		return
+	}
+	b.respond(s, i, fmt.Sprintf("Removed **%s** from the queue", song.Title))
 }
 
 // handleClear clears the queue except the current song.
@@ -437,12 +437,12 @@ func (b *Bot) handleMove(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	       // Block SARA/porn in song title
-	       if containsBlockedKeyword(song.Title) {
-		       b.respondError(s, i, "Sorry, this request cannot be processed.")
-		       return
-	       }
-	       b.respond(s, i, fmt.Sprintf("Moved **%s** from position %d to %d", song.Title, from, to))
+	// Block SARA/porn in song title
+	if containsBlockedKeyword(song.Title) {
+		b.respondError(s, i, "Nah fam, can't do that one 😅")
+		return
+	}
+	b.respond(s, i, fmt.Sprintf("Moved **%s** from position %d to %d", song.Title, from, to))
 }
 
 // --- Helper: follow up with buttons ---
