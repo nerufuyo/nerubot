@@ -179,22 +179,6 @@ func New(cfg *config.Config) (*Bot, error) {
 	})
 	log.Info("Fun service initialized (dad jokes + memes)")
 
-	// Initialize music service if enabled
-	if cfg.Features.Music {
-		log.Info("Initializing music service...")
-		lavalinkClient := lavalinkpkg.New(session, log)
-		musicRepo := repository.NewMusicRepository()
-		musicSvc := music.NewMusicService(lavalinkClient, session, musicRepo, redisClient)
-		musicSvc.SetSendFunc(func(channelID string, embed *discordgo.MessageEmbed) {
-			if _, err := session.ChannelMessageSendEmbed(channelID, embed); err != nil {
-				log.Error("Failed to send music embed", "channel", channelID, "error", err)
-			}
-		})
-		bot.musicService = musicSvc
-		bot.lavalinkClient = lavalinkClient
-		log.Info("Music service initialized")
-	}
-
 	// Register event handlers
 	bot.registerHandlers()
 
@@ -215,6 +199,22 @@ func (b *Bot) Start(ctx context.Context) error {
 		"user", b.session.State.User.Username,
 		"id", b.session.State.User.ID,
 	)
+
+	// Initialize music service if enabled (must be after Open so session.State.User is set)
+	if b.config.Features.Music {
+		b.logger.Info("Initializing music service...")
+		lavalinkClient := lavalinkpkg.New(b.session, b.logger)
+		musicRepo := repository.NewMusicRepository()
+		musicSvc := music.NewMusicService(lavalinkClient, b.session, musicRepo, b.redisClient)
+		musicSvc.SetSendFunc(func(channelID string, embed *discordgo.MessageEmbed) {
+			if _, err := b.session.ChannelMessageSendEmbed(channelID, embed); err != nil {
+				b.logger.Error("Failed to send music embed", "channel", channelID, "error", err)
+			}
+		})
+		b.musicService = musicSvc
+		b.lavalinkClient = lavalinkClient
+		b.logger.Info("Music service initialized")
+	}
 
 	// Register slash commands
 	if err := b.registerCommands(); err != nil {
