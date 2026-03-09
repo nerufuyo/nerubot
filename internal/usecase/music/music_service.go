@@ -1005,8 +1005,10 @@ func (s *MusicService) stopPlayback(ctx context.Context, guildID string, gp *ent
 }
 
 func (s *MusicService) joinVoice(guildID, channelID string) error {
-	_, err := s.session.ChannelVoiceJoin(guildID, channelID, false, true) // not muted, deafened
-	return err
+	// Only send the gateway voice state update (opcode 4).
+	// Lavalink handles the actual voice connection — we must NOT open
+	// discordgo's voice websocket, which fails with DAVE/E2EE (close 4017).
+	return s.session.ChannelVoiceJoinManual(guildID, channelID, false, true)
 }
 
 func (s *MusicService) disconnectVoice(guildID string) {
