@@ -3,12 +3,14 @@ package discord
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/nerufuyo/nerubot/internal/config"
 	"github.com/nerufuyo/nerubot/internal/pkg/ai"
 	"github.com/nerufuyo/nerubot/internal/pkg/backend"
+	lavalinkpkg "github.com/nerufuyo/nerubot/internal/pkg/lavalink"
 	"github.com/nerufuyo/nerubot/internal/pkg/logger"
 	"github.com/nerufuyo/nerubot/internal/pkg/mongodb"
 	redispkg "github.com/nerufuyo/nerubot/internal/pkg/redis"
@@ -17,6 +19,7 @@ import (
 	"github.com/nerufuyo/nerubot/internal/usecase/chatbot"
 	"github.com/nerufuyo/nerubot/internal/usecase/confession"
 	"github.com/nerufuyo/nerubot/internal/usecase/fun"
+	"github.com/nerufuyo/nerubot/internal/usecase/music"
 	"github.com/nerufuyo/nerubot/internal/usecase/news"
 	"github.com/nerufuyo/nerubot/internal/usecase/reminder"
 	"github.com/nerufuyo/nerubot/internal/usecase/roast"
@@ -36,6 +39,8 @@ type Bot struct {
 	analyticsService  *analytics.AnalyticsService
 	reminderService   *reminder.ReminderService
 	funService        *fun.FunService
+	musicService      *music.MusicService
+	lavalinkClient    *lavalinkpkg.Client
 	mongoDB           *mongodb.Client
 	redisClient       *redispkg.Client
 	backendClient     *backend.Client
@@ -174,6 +179,22 @@ func New(cfg *config.Config) (*Bot, error) {
 	})
 	log.Info("Fun service initialized (dad jokes + memes)")
 
+	// Initialize music service if enabled
+	if cfg.Features.Music {
+		log.Info("Initializing music service...")
+		lavalinkClient := lavalinkpkg.New(session, log)
+		musicRepo := repository.NewMusicRepository()
+		musicSvc := music.NewMusicService(lavalinkClient, session, musicRepo, redisClient)
+		musicSvc.SetSendFunc(func(channelID string, embed *discordgo.MessageEmbed) {
+			if _, err := session.ChannelMessageSendEmbed(channelID, embed); err != nil {
+				log.Error("Failed to send music embed", "channel", channelID, "error", err)
+			}
+		})
+		bot.musicService = musicSvc
+		bot.lavalinkClient = lavalinkClient
+		log.Info("Music service initialized")
+	}
+
 	// Register event handlers
 	bot.registerHandlers()
 
@@ -226,6 +247,18 @@ func (b *Bot) Start(ctx context.Context) error {
 		b.funService.Start()
 	}
 
+	// Connect to Lavalink node if music is enabled
+	if b.lavalinkClient != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		lErr := b.lavalinkClient.AddNode(ctx, "main", b.config.Music.LavalinkAddress, b.config.Music.LavalinkPassword, false)
+		cancel()
+		if lErr != nil {
+			b.logger.Error("Failed to connect to Lavalink", "error", lErr)
+		} else {
+			b.logger.Info("Lavalink node connected")
+		}
+	}
+
 	return nil
 }
 
@@ -248,6 +281,11 @@ func (b *Bot) Stop() error {
 	// Stop fun service scheduler
 	if b.funService != nil {
 		b.funService.Stop()
+	}
+
+	// Stop music (destroy all players)
+	if b.lavalinkClient != nil {
+		b.lavalinkClient.Link.Close()
 	}
 
 	// Close Discord connection
@@ -314,6 +352,13 @@ func (b *Bot) registerHandlers() {
 	b.session.AddHandler(b.onReady)
 	b.session.AddHandler(b.onMessageCreate)
 	b.session.AddHandler(b.onInteractionCreate)
+
+	// Forward voice events to Lavalink if music is enabled
+	if b.lavalinkClient != nil {
+		b.session.AddHandler(b.lavalinkClient.HandleVoiceStateUpdate)
+		b.session.AddHandler(b.lavalinkClient.HandleVoiceServerUpdate)
+		b.session.AddHandler(b.onVoiceStateUpdateAutoJoin)
+	}
 }
 
 // onReady handles the ready event
@@ -344,6 +389,15 @@ func (b *Bot) onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) 
 
 // onInteractionCreate handles slash command interactions
 func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// Handle button/component interactions
+	if i.Type == discordgo.InteractionMessageComponent {
+		customID := i.MessageComponentData().CustomID
+		if strings.HasPrefix(customID, "music_") {
+			b.handleMusicButton(s, i)
+		}
+		return
+	}
+
 	if i.Type != discordgo.InteractionApplicationCommand {
 		return
 	}
@@ -398,6 +452,59 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleMentalHealthSetup(s, i)
 	case "mentalhealth-stop":
 		b.handleMentalHealthStop(s, i)
+	// --- Music commands ---
+	case "play":
+		b.handlePlay(s, i)
+	case "pause":
+		b.handlePause(s, i)
+	case "resume":
+		b.handleResume(s, i)
+	case "stop":
+		b.handleStop(s, i)
+	case "skip":
+		b.handleSkip(s, i)
+	case "nowplaying":
+		b.handleNowPlaying(s, i)
+	case "queue":
+		b.handleQueue(s, i)
+	case "volume":
+		b.handleVolume(s, i)
+	case "remove":
+		b.handleRemove(s, i)
+	case "clear":
+		b.handleClear(s, i)
+	case "shuffle":
+		b.handleShuffle(s, i)
+	case "move":
+		b.handleMove(s, i)
+	// --- Phase 2: Loop, Filters, Previous, Seek, Playlist ---
+	case "loop":
+		b.handleLoop(s, i)
+	case "filter":
+		b.handleFilter(s, i)
+	case "previous":
+		b.handlePrevious(s, i)
+	case "seek":
+		b.handleSeek(s, i)
+	case "playlist":
+		b.handlePlaylist(s, i)
+	// --- Phase 3: DJ, VoteSkip, Lyrics, 24/7, Autoplay ---
+	case "dj":
+		b.handleDJ(s, i)
+	case "voteskip":
+		b.handleVoteSkip(s, i)
+	case "lyrics":
+		b.handleLyrics(s, i)
+	case "247":
+		b.handle247(s, i)
+	case "autoplay":
+		b.handleAutoplay(s, i)
+	case "recommend":
+		b.handleRecommend(s, i)
+	case "radio":
+		b.handleRadio(s, i)
+	case "autojoin":
+		b.handleAutoJoin(s, i)
 	default:
 		b.respondError(s, i, "Unknown command")
 	}
@@ -717,6 +824,335 @@ func (b *Bot) registerCommands() error {
 			Name:                     "mentalhealth-stop",
 			Description:              "Stop scheduled mental health reminders",
 			DefaultMemberPermissions: &adminPermission,
+		},
+		// --- Music commands ---
+		{
+			Name:        "play",
+			Description: "Play a song or add it to the queue",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "query",
+					Description: "Song name or URL (YouTube, Spotify, SoundCloud)",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "pause",
+			Description: "Pause the current song",
+		},
+		{
+			Name:        "resume",
+			Description: "Resume the paused song",
+		},
+		{
+			Name:        "stop",
+			Description: "Stop playback and clear the queue",
+		},
+		{
+			Name:        "skip",
+			Description: "Skip to the next song in the queue",
+		},
+		{
+			Name:        "nowplaying",
+			Description: "Show the currently playing song",
+		},
+		{
+			Name:        "queue",
+			Description: "Show the current song queue",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "page",
+					Description: "Page number",
+					Required:    false,
+				},
+			},
+		},
+		{
+			Name:        "volume",
+			Description: "Set the player volume (0-150)",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "level",
+					Description: "Volume level (0-150)",
+					Required:    true,
+					MinValue:    func() *float64 { v := 0.0; return &v }(),
+					MaxValue:    150,
+				},
+			},
+		},
+		{
+			Name:        "remove",
+			Description: "Remove a song from the queue by position",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "position",
+					Description: "Position in queue (1-based)",
+					Required:    true,
+					MinValue:    func() *float64 { v := 1.0; return &v }(),
+				},
+			},
+		},
+		{
+			Name:        "clear",
+			Description: "Clear the entire queue",
+		},
+		{
+			Name:        "shuffle",
+			Description: "Shuffle the current queue",
+		},
+		{
+			Name:        "move",
+			Description: "Move a song to a different position in the queue",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "from",
+					Description: "Current position (1-based)",
+					Required:    true,
+					MinValue:    func() *float64 { v := 1.0; return &v }(),
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "to",
+					Description: "New position (1-based)",
+					Required:    true,
+					MinValue:    func() *float64 { v := 1.0; return &v }(),
+				},
+			},
+		},
+		// --- Phase 2 commands ---
+		{
+			Name:        "loop",
+			Description: "Set loop mode for playback",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "mode",
+					Description: "Loop mode",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "Off", Value: "off"},
+						{Name: "Song", Value: "song"},
+						{Name: "Queue", Value: "queue"},
+					},
+				},
+			},
+		},
+		{
+			Name:        "filter",
+			Description: "Apply an audio filter effect",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "name",
+					Description: "Filter name (bassboost, nightcore, vaporwave, karaoke, 8d, tremolo, clear)",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "Bass Boost", Value: "bassboost"},
+						{Name: "Nightcore", Value: "nightcore"},
+						{Name: "Vaporwave", Value: "vaporwave"},
+						{Name: "Karaoke", Value: "karaoke"},
+						{Name: "8D Audio", Value: "8d"},
+						{Name: "Tremolo", Value: "tremolo"},
+						{Name: "Clear / Off", Value: "clear"},
+					},
+				},
+			},
+		},
+		{
+			Name:        "previous",
+			Description: "Play the previous track from history",
+		},
+		{
+			Name:        "seek",
+			Description: "Seek to a position in the current song",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "seconds",
+					Description: "Position in seconds",
+					Required:    true,
+					MinValue:    func() *float64 { v := 0.0; return &v }(),
+				},
+			},
+		},
+		{
+			Name:        "playlist",
+			Description: "Manage your saved playlists",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "create",
+					Description: "Create a playlist (saves current queue if playing)",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Playlist name",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "add",
+					Description: "Add the current song to a playlist",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Playlist name",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "play",
+					Description: "Load and play a saved playlist",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Playlist name",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "list",
+					Description: "View all your playlists",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "delete",
+					Description: "Delete a playlist",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Playlist name",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "show",
+					Description: "View songs in a playlist",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Playlist name",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "import",
+					Description: "Import a playlist from Spotify, YouTube, or SoundCloud URL",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "url",
+							Description: "Playlist URL",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Name for the imported playlist",
+							Required:    true,
+						},
+					},
+				},
+			},
+		},
+		// --- Phase 3 commands ---
+		{
+			Name:        "dj",
+			Description: "Manage DJ role for music control",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "set",
+					Description: "Set the DJ role",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionRole,
+							Name:        "role",
+							Description: "The DJ role",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "remove",
+					Description: "Remove the DJ role restriction",
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "check",
+					Description: "Check current DJ settings and your permissions",
+				},
+			},
+		},
+		{
+			Name:        "voteskip",
+			Description: "Vote to skip the current song (majority needed)",
+		},
+		{
+			Name:        "lyrics",
+			Description: "Show lyrics for the currently playing song",
+		},
+		{
+			Name:        "247",
+			Description: "Toggle 24/7 mode (stay in voice channel)",
+			DefaultMemberPermissions: &adminPermission,
+		},
+		{
+			Name:        "autoplay",
+			Description: "Toggle autoplay (auto-queue similar songs when queue ends)",
+		},
+		{
+			Name:        "recommend",
+			Description: "Get song recommendations based on what's playing",
+		},
+		{
+			Name:        "radio",
+			Description: "Start nonstop radio for a genre",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "genre",
+					Description: "Genre or mood (e.g., lofi, jazz, rock, chill)",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:                     "autojoin",
+			Description:              "Configure auto-join for a voice channel",
+			DefaultMemberPermissions: &adminPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionChannel,
+					Name:        "channel",
+					Description: "Voice channel to auto-join (omit to disable)",
+					ChannelTypes: []discordgo.ChannelType{
+						discordgo.ChannelTypeGuildVoice,
+					},
+				},
+			},
 		},
 	}
 

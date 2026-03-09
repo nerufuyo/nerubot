@@ -4,8 +4,30 @@ package config
 const (
 	// Status
 	EmojiSuccess = "[OK]"
-	EmojiError = "[ERR]"
+	EmojiError   = "[ERR]"
 	EmojiWarning = "[WARN]"
+
+	// Music
+	EmojiMusic      = "🎵"
+	EmojiPlay       = "▶️"
+	EmojiPause      = "⏸️"
+	EmojiStop       = "⏹️"
+	EmojiSkip       = "⏭️"
+	EmojiPrevious   = "⏮️"
+	EmojiShuffle    = "🔀"
+	EmojiLoop       = "🔁"
+	EmojiLoopOne    = "🔂"
+	EmojiVolume     = "🔊"
+	EmojiQueue      = "📜"
+	EmojiNowPlaying = "🎶"
+	EmojiFilter     = "🎛️"
+	EmojiPlaylist   = "📋"
+	EmojiLyrics     = "📝"
+	EmojiDJ         = "🎧"
+	EmojiRadio      = "📻"
+	Emoji247        = "🌙"
+	EmojiVoteSkip   = "🗳️"
+	EmojiSeek       = "⏩"
 )
 
 // Color constants for Discord embeds (hex values)

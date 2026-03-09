@@ -18,6 +18,7 @@ type Config struct {
 	AI         AIConfig
 	Crypto     CryptoConfig
 	Reminder   ReminderConfig
+	Music      MusicConfig
 	Mongo      MongoConfig
 	Redis      RedisConfig
 	BackendURL string // nerufuyo-workspace-backend API URL for RAG & settings
@@ -51,6 +52,7 @@ type FeatureFlags struct {
 	Roast      bool
 	WhaleAlerts bool
 	Reminder   bool
+	Music      bool
 }
 
 // DiscordConfig holds Discord-specific configuration
@@ -77,6 +79,14 @@ type CryptoConfig struct {
 // ReminderConfig holds reminder feature configuration.
 type ReminderConfig struct {
 	ChannelID string // Discord channel ID for posting reminders
+}
+
+// MusicConfig holds Lavalink music configuration.
+type MusicConfig struct {
+	LavalinkAddress  string
+	LavalinkPassword string
+	SpotifyClientID  string
+	SpotifySecret    string
 }
 
 // MongoConfig holds MongoDB connection configuration.
@@ -126,6 +136,7 @@ func Load() (*Config, error) {
 			Roast:       getEnvAsBool("ENABLE_ROAST", true),
 			WhaleAlerts: os.Getenv("WHALE_ALERT_API_KEY") != "",
 			Reminder:    getEnvAsBool("ENABLE_REMINDER", true),
+			Music:       getEnvAsBool("ENABLE_MUSIC", false),
 		},
 		Discord: DiscordConfig{
 			Colors: map[string]int{
@@ -151,6 +162,12 @@ func Load() (*Config, error) {
 		},
 		Reminder: ReminderConfig{
 			ChannelID: os.Getenv("REMINDER_CHANNEL_ID"),
+		},
+		Music: MusicConfig{
+			LavalinkAddress:  getEnvOrDefault("LAVALINK_ADDRESS", "localhost:2333"),
+			LavalinkPassword: getEnvOrDefault("LAVALINK_PASSWORD", "youshallnotpass"),
+			SpotifyClientID:  os.Getenv("SPOTIFY_CLIENT_ID"),
+			SpotifySecret:    os.Getenv("SPOTIFY_CLIENT_SECRET"),
 		},
 		Mongo: MongoConfig{
 			URL:      os.Getenv("MONGO_URL"),
