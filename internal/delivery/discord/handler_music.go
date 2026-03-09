@@ -1,8 +1,3 @@
-       // Block SARA/porn queries
-       if containsBlockedKeyword(query) {
-	       b.respondError(s, i, "Sorry, this request cannot be processed.")
-	       return
-       }
 package discord
 
 import (
@@ -40,6 +35,12 @@ func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	query := options[0].StringValue()
 	if query == "" {
 		b.respondError(s, i, "Please provide a song name or URL")
+		return
+	}
+
+	// Block SARA/porn queries
+	if containsBlockedKeyword(query) {
+		b.respondError(s, i, "Sorry, this request cannot be processed.")
 		return
 	}
 
