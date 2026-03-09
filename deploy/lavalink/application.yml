@@ -35,9 +35,10 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
-      - TVHTML5_SIMPLY_EMBEDDED_PLAYER
-      - WEB_EMBEDDED_PLAYER
-      - MEDIA_CONNECT
+      - MUSIC
+      - WEB
+    oauth:
+      enabled: true
   lavasrc:
     providers:
       - "ytsearch:\"%ISRC%\""
