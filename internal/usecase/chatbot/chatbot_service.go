@@ -27,13 +27,13 @@ type RateLimitEntry struct {
 
 // ChatbotService handles AI chatbot functionality
 type ChatbotService struct {
-	providers      []ai.AIProvider
-	sessions       map[string]*ChatSession
-	sessionMutex   sync.RWMutex
-	timeout        time.Duration
-	systemPrompt   string
-	redis          *redispkg.Client
-	backendClient  *backend.Client
+	providers     []ai.AIProvider
+	sessions      map[string]*ChatSession
+	sessionMutex  sync.RWMutex
+	timeout       time.Duration
+	systemPrompt  string
+	redis         *redispkg.Client
+	backendClient *backend.Client
 
 	// Rate limiting
 	rateLimits     map[string]*RateLimitEntry
@@ -236,7 +236,7 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message, lang string)
 
 	// Build messages with RAG-enhanced system prompt
 	messages := make([]ai.Message, 0, len(session.Messages)+2)
-	
+
 	// Always include the system prompt with latest RAG context + language instruction
 	systemPrompt := s.buildSystemPrompt()
 	if lang != "" && lang != config.DefaultLang {
@@ -246,7 +246,7 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message, lang string)
 		Role:    "system",
 		Content: systemPrompt,
 	})
-	
+
 	// Add conversation history (limit from dashboard settings)
 	history := session.Messages
 	maxHistory := 10 // default
@@ -260,7 +260,7 @@ func (s *ChatbotService) Chat(ctx context.Context, userID, message, lang string)
 		history = history[len(history)-maxHistory:]
 	}
 	messages = append(messages, history...)
-	
+
 	// Add new user message
 	messages = append(messages, ai.Message{
 		Role:    "user",
