@@ -213,6 +213,11 @@ func (b *Bot) Start(ctx context.Context) error {
 		})
 		b.musicService = musicSvc
 		b.lavalinkClient = lavalinkClient
+
+		// Register Lavalink voice handlers now that client exists
+		b.session.AddHandler(b.lavalinkClient.HandleVoiceStateUpdate)
+		b.session.AddHandler(b.lavalinkClient.HandleVoiceServerUpdate)
+		b.session.AddHandler(b.onVoiceStateUpdateAutoJoin)
 		b.logger.Info("Music service initialized")
 	}
 
@@ -354,13 +359,7 @@ func (b *Bot) registerHandlers() {
 	b.session.AddHandler(b.onReady)
 	b.session.AddHandler(b.onMessageCreate)
 	b.session.AddHandler(b.onInteractionCreate)
-
-	// Forward voice events to Lavalink if music is enabled
-	if b.lavalinkClient != nil {
-		b.session.AddHandler(b.lavalinkClient.HandleVoiceStateUpdate)
-		b.session.AddHandler(b.lavalinkClient.HandleVoiceServerUpdate)
-		b.session.AddHandler(b.onVoiceStateUpdateAutoJoin)
-	}
+	b.session.AddHandler(b.onGuildCreate)
 }
 
 // onReady handles the ready event
@@ -369,6 +368,14 @@ func (b *Bot) onReady(s *discordgo.Session, event *discordgo.Ready) {
 		"guilds", len(event.Guilds),
 		"user", event.User.Username,
 	)
+}
+
+// onGuildCreate fires when the bot joins a new guild (or on reconnect for existing guilds).
+// It registers slash commands so they're instantly available.
+func (b *Bot) onGuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
+	if err := b.registerCommandsForGuild(g.ID); err != nil {
+		b.logger.Warn("Failed to register commands for guild", "guild", g.ID, "error", err)
+	}
 }
 
 // onMessageCreate handles message creation events
@@ -532,9 +539,36 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 
 // registerCommands registers slash commands with Discord
 func (b *Bot) registerCommands() error {
+	commands := b.buildCommands()
+
+	b.logger.Info("Registering slash commands", "count", len(commands))
+
+	// Register commands per-guild for instant availability (global commands take up to 1h).
+	for _, guild := range b.session.State.Guilds {
+		_, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guild.ID, commands)
+		if err != nil {
+			b.logger.Warn("Failed to register guild commands", "guild", guild.ID, "error", err)
+		} else {
+			b.logger.Info("Guild commands registered", "guild", guild.ID)
+		}
+	}
+
+	b.logger.Info("Slash commands registered successfully")
+	return nil
+}
+
+// registerCommandsForGuild registers slash commands for a single guild.
+func (b *Bot) registerCommandsForGuild(guildID string) error {
+	commands := b.buildCommands()
+	_, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guildID, commands)
+	return err
+}
+
+// buildCommands returns the full list of slash commands to register.
+func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 	adminPermission := int64(discordgo.PermissionAdministrator)
 
-	commands := []*discordgo.ApplicationCommand{
+	return []*discordgo.ApplicationCommand{
 		{
 			Name:        "confess",
 			Description: "Submit an anonymous confession",
@@ -756,7 +790,6 @@ func (b *Bot) registerCommands() error {
 				},
 			},
 		},
-
 		// --- Mental health ---
 		{
 			Name:        "mentalhealth",
@@ -1156,20 +1189,4 @@ func (b *Bot) registerCommands() error {
 			},
 		},
 	}
-
-	// Bulk-overwrite global commands: atomically sets exactly these commands and removes any others.
-	b.logger.Info("Registering slash commands", "count", len(commands))
-
-	// Register commands per-guild for instant availability (global commands take up to 1h).
-	for _, guild := range b.session.State.Guilds {
-		_, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guild.ID, commands)
-		if err != nil {
-			b.logger.Warn("Failed to register guild commands", "guild", guild.ID, "error", err)
-		} else {
-			b.logger.Info("Guild commands registered", "guild", guild.ID)
-		}
-	}
-
-	b.logger.Info("Slash commands registered successfully")
-	return nil
 }
