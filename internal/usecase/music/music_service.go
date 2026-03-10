@@ -1149,6 +1149,30 @@ func (s *MusicService) onTrackEnd(player disgolink.Player, event lavalink.TrackE
 		return
 	}
 
+	// Track consecutive failures to prevent skip-storm spam
+	if event.Reason == lavalink.TrackEndReasonLoadFailed {
+		gp.ConsecFails++
+		if gp.ConsecFails >= 3 {
+			s.logger.Warn("Too many consecutive track failures, stopping playback",
+				"guild", guildID, "failures", gp.ConsecFails)
+
+			gp.IsPlaying = false
+			gp.IsPaused = false
+			gp.ConsecFails = 0
+			s.saveQueueToRedis(guildID, gp)
+
+			if s.sendEmbed != nil && gp.TextChID != "" {
+				s.sendEmbed(gp.TextChID, &discordgo.MessageEmbed{
+					Description: "⚠️ Multiple tracks failed to load in a row. This is usually caused by YouTube blocking requests.\n\nPlayback has been paused to avoid spam. Try `/play` again or use a direct link.",
+					Color:       0xFF6B6B,
+				})
+			}
+			return
+		}
+	} else {
+		gp.ConsecFails = 0
+	}
+
 	nextSong, _ := s.advanceQueue(gp)
 	if nextSong == nil {
 		// Try autoplay before stopping
@@ -1216,9 +1240,19 @@ func (s *MusicService) onTrackException(player disgolink.Player, event lavalink.
 	)
 
 	gp := s.getPlayer(guildID)
-	if gp != nil && gp.TextChID != "" && s.sendEmbed != nil {
+	if gp == nil {
+		return
+	}
+
+	// Only send individual error embeds if we haven't hit the skip-storm threshold yet
+	if gp.ConsecFails < 2 && gp.TextChID != "" && s.sendEmbed != nil {
+		// Show a concise error instead of the full Java stack trace
+		errMsg := event.Exception.Message
+		if strings.Contains(errMsg, "All clients failed") {
+			errMsg = "YouTube blocked this track (login/bot detection). Try a direct link or different source."
+		}
 		s.sendEmbed(gp.TextChID, &discordgo.MessageEmbed{
-			Description: fmt.Sprintf("Error playing **%s**: %s\nSkipping...", event.Track.Info.Title, event.Exception.Message),
+			Description: fmt.Sprintf("⚠️ Error playing **%s**: %s\nSkipping...", event.Track.Info.Title, errMsg),
 			Color:       0xFF6B6B,
 		})
 	}

@@ -36,11 +36,11 @@ plugins:
     allowDirectPlaylistIds: true
     clients:
       - MUSIC
-      - ANDROID_VR
+      - ANDROID_TESTSUITE
       - WEB
-      - TVHTML5_SIMPLY
+      - TVHTML5_SIMPLY_EMBEDDED
     oauth:
-      enabled: true
+      enabled: ${YOUTUBE_OAUTH_ENABLED:false}
       refreshToken: ${YOUTUBE_OAUTH_REFRESH_TOKEN:}
   lavasrc:
     providers:

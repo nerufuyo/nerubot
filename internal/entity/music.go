@@ -70,6 +70,8 @@ type GuildPlayer struct {
 	History   []*Song         `json:"history"`  // Previously played songs
 	Autoplay  bool            `json:"autoplay"` // Auto-queue similar songs when queue ends
 	SkipVotes map[string]bool `json:"-"`        // User IDs that voted to skip (not persisted)
+
+	ConsecFails int `json:"-"` // Consecutive track load failures (not persisted)
 }
 
 // NowPlaying returns the currently playing song, or nil if none
