@@ -15,10 +15,10 @@ var blockedKeywords = []string{
 
 // Regex patterns for detecting malicious or suspicious links
 var maliciousLinkPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)discord\.gift|discordapp\.gift`),                 // fake gift links
-	regexp.MustCompile(`(?i)(?:free|steam|nitro)[\w-]*\.(?:ru|xyz|tk|ml)`),  // phishing domains
-	regexp.MustCompile(`(?i)@everyone\s+https?://`),                         // spam @everyone with link
-	regexp.MustCompile(`(?i)https?://\S*(?:grabify|iplogger|2no\.co)\S*`),   // IP loggers
+	regexp.MustCompile(`(?i)discord\.gift|discordapp\.gift`),               // fake gift links
+	regexp.MustCompile(`(?i)(?:free|steam|nitro)[\w-]*\.(?:ru|xyz|tk|ml)`), // phishing domains
+	regexp.MustCompile(`(?i)@everyone\s+https?://`),                        // spam @everyone with link
+	regexp.MustCompile(`(?i)https?://\S*(?:grabify|iplogger|2no\.co)\S*`),  // IP loggers
 }
 
 // Checks if a message contains blocked keywords (case-insensitive)
@@ -70,4 +70,3 @@ func (st *spamTracker) recordMessage(guildID, userID string, timestamp int64, ma
 
 	return len(filtered) > maxMessages
 }
-
