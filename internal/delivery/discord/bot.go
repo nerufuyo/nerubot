@@ -50,10 +50,22 @@ type Bot struct {
 func New(cfg *config.Config) (*Bot, error) {
 	log := logger.New("discord")
 
-	// --- Connect to MongoDB ---
-	mongoDB, err := mongodb.New(cfg.Mongo.URL, cfg.Mongo.Database)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
+	// --- Connect to MongoDB (with retry) ---
+	var mongoDB *mongodb.Client
+	maxRetries := 5
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		var err error
+		mongoDB, err = mongodb.New(cfg.Mongo.URL, cfg.Mongo.Database)
+		if err == nil {
+			break
+		}
+		if attempt == maxRetries {
+			return nil, fmt.Errorf("failed to connect to MongoDB after %d attempts: %w", maxRetries, err)
+		}
+		wait := time.Duration(attempt*5) * time.Second
+		log.Warn("MongoDB connection failed, retrying...",
+			"attempt", attempt, "maxRetries", maxRetries, "retryIn", wait, "error", err)
+		time.Sleep(wait)
 	}
 
 	// Ensure indexes
@@ -152,7 +164,7 @@ func New(cfg *config.Config) (*Bot, error) {
 
 	// Initialize fun service (dad jokes + memes)
 	bot.funService = fun.NewFunService()
-	bot.funService.SetSendFunc(func(channelID string, embed *fun.FunEmbed) {
+	bot.funService.SetSendFunc(func(channelID string, embed *fun.FunEmbed) error {
 		discordEmbed := &discordgo.MessageEmbed{
 			Title:       embed.Title,
 			Description: embed.Description,
@@ -173,13 +185,14 @@ func New(cfg *config.Config) (*Bot, error) {
 				Embeds:  []*discordgo.MessageEmbed{discordEmbed},
 			}
 			if _, err := bot.session.ChannelMessageSendComplex(channelID, msg); err != nil {
-				log.Error("Failed to send scheduled fun message", "channel", channelID, "error", err)
+				return err
 			}
 		} else {
 			if _, err := bot.session.ChannelMessageSendEmbed(channelID, discordEmbed); err != nil {
-				log.Error("Failed to send scheduled fun embed", "channel", channelID, "error", err)
+				return err
 			}
 		}
+		return nil
 	})
 	log.Info("Fun service initialized (dad jokes + memes)")
 

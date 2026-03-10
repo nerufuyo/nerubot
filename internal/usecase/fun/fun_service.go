@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,7 +16,8 @@ import (
 )
 
 // SendFunc is a callback to send a message to a Discord channel.
-type SendFunc func(channelID string, embed *FunEmbed)
+// Returns an error if the channel is invalid or the message could not be sent.
+type SendFunc func(channelID string, embed *FunEmbed) error
 
 // FunEmbed holds data for an embed message.
 type FunEmbed struct {
@@ -112,7 +114,7 @@ func (s *FunService) checkScheduled() {
 			interval := time.Duration(cfg.DadJokeInterval) * time.Minute
 			if !ok || now.Sub(lastFired) >= interval {
 				s.lastJoke[cfg.GuildID] = now
-				go s.sendScheduledJoke(cfg.DadJokeChannelID)
+				go s.sendScheduledJoke(cfg.DadJokeChannelID, cfg.GuildID)
 			}
 		}
 
@@ -122,7 +124,7 @@ func (s *FunService) checkScheduled() {
 			interval := time.Duration(cfg.MemeInterval) * time.Minute
 			if !ok || now.Sub(lastFired) >= interval {
 				s.lastMeme[cfg.GuildID] = now
-				go s.sendScheduledMeme(cfg.MemeChannelID)
+				go s.sendScheduledMeme(cfg.MemeChannelID, cfg.GuildID)
 			}
 		}
 
@@ -132,13 +134,13 @@ func (s *FunService) checkScheduled() {
 			interval := time.Duration(cfg.MentalHealthInterval) * time.Minute
 			if !ok || now.Sub(lastFired) >= interval {
 				s.lastMentalHealth[cfg.GuildID] = now
-				go s.sendScheduledMentalHealth(cfg.MentalHealthChannelID, cfg.MentalHealthTag, cfg.MentalHealthLang)
+				go s.sendScheduledMentalHealth(cfg.MentalHealthChannelID, cfg.MentalHealthTag, cfg.MentalHealthLang, cfg.GuildID)
 			}
 		}
 	}
 }
 
-func (s *FunService) sendScheduledJoke(channelID string) {
+func (s *FunService) sendScheduledJoke(channelID, guildID string) {
 	joke, err := s.FetchDadJoke()
 	if err != nil {
 		s.logger.Warn("Scheduled dad joke fetch failed", "error", err)
@@ -152,11 +154,13 @@ func (s *FunService) sendScheduledJoke(channelID string) {
 		Color:       0xFFD700, // gold
 	}
 	if s.sendFn != nil {
-		s.sendFn(channelID, embed)
+		if err := s.sendFn(channelID, embed); err != nil {
+			s.handleSendError(guildID, "dadjoke", channelID, err)
+		}
 	}
 }
 
-func (s *FunService) sendScheduledMeme(channelID string) {
+func (s *FunService) sendScheduledMeme(channelID, guildID string) {
 	meme, err := s.FetchMeme()
 	if err != nil {
 		s.logger.Warn("Scheduled meme fetch failed", "error", err)
@@ -171,7 +175,9 @@ func (s *FunService) sendScheduledMeme(channelID string) {
 		URL:      meme.PostLink,
 	}
 	if s.sendFn != nil {
-		s.sendFn(channelID, embed)
+		if err := s.sendFn(channelID, embed); err != nil {
+			s.handleSendError(guildID, "meme", channelID, err)
+		}
 	}
 }
 
@@ -268,7 +274,7 @@ func (s *FunService) GetMentalHealthTip(lang string) (string, string) {
 	return emoji + " " + tip.Title, tip.Tip
 }
 
-func (s *FunService) sendScheduledMentalHealth(channelID, tag, lang string) {
+func (s *FunService) sendScheduledMentalHealth(channelID, tag, lang, guildID string) {
 	if lang == "" {
 		lang = "EN"
 	}
@@ -282,7 +288,43 @@ func (s *FunService) sendScheduledMentalHealth(channelID, tag, lang string) {
 		Content:     tag,      // mention string (@everyone, <@&roleID>, <@userID>) or empty
 	}
 	if s.sendFn != nil {
-		s.sendFn(channelID, embed)
+		if err := s.sendFn(channelID, embed); err != nil {
+			s.handleSendError(guildID, "mentalhealth", channelID, err)
+		}
+	}
+}
+
+// handleSendError checks if a send failure is due to a deleted/unknown channel
+// and auto-clears the channel config to prevent recurring errors.
+func (s *FunService) handleSendError(guildID, feature, channelID string, err error) {
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "Unknown Channel") && !strings.Contains(errMsg, "404") {
+		s.logger.Warn("Failed to send scheduled fun message", "feature", feature, "channel", channelID, "error", err)
+		return
+	}
+
+	s.logger.Warn("Channel no longer exists, auto-disabling scheduled feature",
+		"feature", feature, "guild", guildID, "channel", channelID)
+
+	cfg, getErr := s.repo.Get(guildID)
+	if getErr != nil || cfg == nil {
+		return
+	}
+
+	switch feature {
+	case "dadjoke":
+		cfg.DadJokeChannelID = ""
+		cfg.DadJokeInterval = 0
+	case "meme":
+		cfg.MemeChannelID = ""
+		cfg.MemeInterval = 0
+	case "mentalhealth":
+		cfg.MentalHealthChannelID = ""
+		cfg.MentalHealthInterval = 0
+	}
+
+	if saveErr := s.repo.Save(cfg); saveErr != nil {
+		s.logger.Error("Failed to auto-disable channel config", "guild", guildID, "error", saveErr)
 	}
 }
 

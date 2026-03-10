@@ -83,11 +83,11 @@ func (b *Bot) handleChat(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if langLabel == "" {
 		langLabel = "English"
 	}
-	footerText := fmt.Sprintf("Neru Assistant | %d remaining | Lang: %s", remaining, langLabel)
+	footerText := fmt.Sprintf("Neru | %d remaining | Lang: %s", remaining, langLabel)
 
 	// Send response
 	embed := &discordgo.MessageEmbed{
-		Title:       "🤖 Neru Assistant",
+		Title:       "🤖 Neru",
 		Description: response,
 		Color:       0x00C9A7,
 		Footer: &discordgo.MessageEmbedFooter{

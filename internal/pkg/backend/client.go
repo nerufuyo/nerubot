@@ -201,7 +201,7 @@ func (c *Client) GetSettings() *BotSettings {
 			Timezone:  "Asia/Jakarta",
 			ChannelID: "",
 		},
-		WelcomeMessage: "Hey there! I'm Neru, your friendly AI companion. Ask me anything about Nerufuyo!",
+		WelcomeMessage: "Hey there! 👋 I'm Neru — your go-to buddy for tech, ideas, and good conversations. What's on your mind?",
 	}
 }
 
