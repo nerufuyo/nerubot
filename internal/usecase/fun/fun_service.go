@@ -32,14 +32,14 @@ type FunEmbed struct {
 
 // FunService manages dad jokes, memes, and their scheduled delivery.
 type FunService struct {
-	mu          sync.RWMutex
-	repo        *repository.GuildConfigRepository
-	logger      *logger.Logger
-	httpClient  *http.Client
-	sendFn      SendFunc
-	stopCh      chan struct{}
-	wg          sync.WaitGroup
-	rng         *rand.Rand
+	mu         sync.RWMutex
+	repo       *repository.GuildConfigRepository
+	logger     *logger.Logger
+	httpClient *http.Client
+	sendFn     SendFunc
+	stopCh     chan struct{}
+	wg         sync.WaitGroup
+	rng        *rand.Rand
 
 	// Track last fire times per guild to avoid duplicates
 	lastJoke         map[string]time.Time
