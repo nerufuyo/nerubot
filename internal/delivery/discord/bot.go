@@ -31,6 +31,7 @@ type Bot struct {
 	session           *discordgo.Session
 	config            *config.Config
 	logger            *logger.Logger
+	startedAt         time.Time
 	confessionService *confession.ConfessionService
 	roastService      *roast.RoastService
 	chatbotService    *chatbot.ChatbotService
@@ -113,6 +114,7 @@ func New(cfg *config.Config) (*Bot, error) {
 		session:           session,
 		config:            cfg,
 		logger:            log,
+		startedAt:         time.Now(),
 		confessionService: confession.NewConfessionService(backendClient),
 		roastService:      roast.NewRoastService(backendClient),
 		chatbotService:    chatbot.NewChatbotService(cfg.AI.DeepSeekKey, redisClient, backendClient),
@@ -429,6 +431,32 @@ func (b *Bot) onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) 
 		return
 	}
 
+	// --- Security: Spam detection ---
+	if m.GuildID != "" {
+		isSpam := globalSpamTracker.recordMessage(m.GuildID, m.Author.ID, time.Now().Unix(), 5, 5)
+		if isSpam {
+			b.logger.Warn("Spam detected",
+				"user", m.Author.Username,
+				"guild", m.GuildID,
+				"channel", m.ChannelID,
+			)
+			// Optionally delete the spam message
+			_ = s.ChannelMessageDelete(m.ChannelID, m.ID)
+		}
+	}
+
+	// --- Security: Malicious link detection ---
+	if containsMaliciousLink(m.Content) {
+		b.logger.Warn("Malicious link detected",
+			"user", m.Author.Username,
+			"guild", m.GuildID,
+			"content", m.Content,
+		)
+		_ = s.ChannelMessageDelete(m.ChannelID, m.ID)
+		_, _ = s.ChannelMessageSend(m.ChannelID,
+			fmt.Sprintf("⚠️ **%s**, your message was removed because it contained a suspicious link.", m.Author.Username))
+	}
+
 	// Track activity for roast system
 	if m.GuildID != "" {
 		_ = b.roastService.TrackMessage(
@@ -447,6 +475,8 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		customID := i.MessageComponentData().CustomID
 		if strings.HasPrefix(customID, "music_") {
 			b.handleMusicButton(s, i)
+		} else if strings.HasPrefix(customID, "help_page_") {
+			b.handleHelpButton(s, i)
 		}
 		return
 	}
@@ -467,6 +497,20 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 
 	// Route to appropriate handler
 	switch cmdName {
+	// --- Core commands ---
+	case "ping":
+		b.handlePing(s, i)
+	case "botinfo":
+		b.handleBotInfo(s, i)
+	case "serverinfo":
+		b.handleServerInfo(s, i)
+	case "userinfo":
+		b.handleUserInfo(s, i)
+	case "avatar":
+		b.handleAvatar(s, i)
+	case "help":
+		b.handleHelp(s, i)
+	// --- Existing feature commands ---
 	case "confess":
 		b.handleConfess(s, i)
 	case "roast":
@@ -483,8 +527,6 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleStats(s, i)
 	case "profile":
 		b.handleProfile(s, i)
-	case "help":
-		b.handleHelp(s, i)
 	case "reminder":
 		b.handleReminder(s, i)
 	case "reminder-set":
@@ -505,6 +547,31 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleMentalHealthSetup(s, i)
 	case "mentalhealth-stop":
 		b.handleMentalHealthStop(s, i)
+	// --- Fun commands ---
+	case "coinflip":
+		b.handleCoinflip(s, i)
+	case "8ball":
+		b.handleEightBall(s, i)
+	// --- Utility commands ---
+	case "poll":
+		b.handlePoll(s, i)
+	case "calc":
+		b.handleCalc(s, i)
+	// --- Moderation commands ---
+	case "kick":
+		b.handleKick(s, i)
+	case "ban":
+		b.handleBan(s, i)
+	case "timeout":
+		b.handleTimeout(s, i)
+	case "purge":
+		b.handlePurge(s, i)
+	case "warn":
+		b.handleWarn(s, i)
+	case "warnings":
+		b.handleWarnings(s, i)
+	case "clearwarnings":
+		b.handleClearWarnings(s, i)
 	// --- Music commands ---
 	case "play":
 		b.handlePlay(s, i)
@@ -613,8 +680,273 @@ func (b *Bot) registerCommandsForGuild(guildID string) error {
 // buildCommands returns the full list of slash commands to register.
 func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 	adminPermission := int64(discordgo.PermissionAdministrator)
+	modPermission := int64(discordgo.PermissionKickMembers | discordgo.PermissionBanMembers | discordgo.PermissionManageMessages)
 
 	return []*discordgo.ApplicationCommand{
+		// --- Core commands ---
+		{
+			Name:        "ping",
+			Description: "Check bot latency and response time",
+		},
+		{
+			Name:        "botinfo",
+			Description: "Show bot information, uptime, and developer",
+		},
+		{
+			Name:        "serverinfo",
+			Description: "Show server details and statistics",
+		},
+		{
+			Name:        "userinfo",
+			Description: "Show information about a user",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to view (optional, defaults to you)",
+					Required:    false,
+				},
+			},
+		},
+		{
+			Name:        "avatar",
+			Description: "Display a user's avatar",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to view (optional, defaults to you)",
+					Required:    false,
+				},
+			},
+		},
+		// --- Fun commands ---
+		{
+			Name:        "coinflip",
+			Description: "Flip a coin — heads or tails?",
+		},
+		{
+			Name:        "8ball",
+			Description: "Ask the magic 8-ball a question",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "question",
+					Description: "Your question for the 8-ball",
+					Required:    true,
+				},
+			},
+		},
+		// --- Utility commands ---
+		{
+			Name:        "poll",
+			Description: "Create a simple poll with reactions",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "question",
+					Description: "The poll question",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "option1",
+					Description: "First option",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "option2",
+					Description: "Second option",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "option3",
+					Description: "Third option (optional)",
+					Required:    false,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "option4",
+					Description: "Fourth option (optional)",
+					Required:    false,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "option5",
+					Description: "Fifth option (optional)",
+					Required:    false,
+				},
+			},
+		},
+		{
+			Name:        "calc",
+			Description: "Simple math calculations",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionNumber,
+					Name:        "a",
+					Description: "First number",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "operation",
+					Description: "Math operation",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{Name: "Add (+)", Value: "add"},
+						{Name: "Subtract (-)", Value: "subtract"},
+						{Name: "Multiply (×)", Value: "multiply"},
+						{Name: "Divide (÷)", Value: "divide"},
+						{Name: "Power (^)", Value: "power"},
+						{Name: "Modulo (%)", Value: "modulo"},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionNumber,
+					Name:        "b",
+					Description: "Second number",
+					Required:    true,
+				},
+			},
+		},
+		// --- Moderation commands ---
+		{
+			Name:                     "kick",
+			Description:              "Kick a user from the server",
+			DefaultMemberPermissions: &modPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to kick",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "reason",
+					Description: "Reason for the kick",
+					Required:    false,
+				},
+			},
+		},
+		{
+			Name:                     "ban",
+			Description:              "Ban a user from the server",
+			DefaultMemberPermissions: &adminPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to ban",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "reason",
+					Description: "Reason for the ban",
+					Required:    false,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "delete_days",
+					Description: "Days of messages to delete (0-7)",
+					Required:    false,
+					MinValue:    floatPtr(0),
+					MaxValue:    7,
+				},
+			},
+		},
+		{
+			Name:                     "timeout",
+			Description:              "Temporarily mute a user",
+			DefaultMemberPermissions: &modPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to timeout",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "duration",
+					Description: "Duration in minutes (default: 5)",
+					Required:    false,
+					MinValue:    floatPtr(1),
+					MaxValue:    40320, // 28 days max
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "reason",
+					Description: "Reason for the timeout",
+					Required:    false,
+				},
+			},
+		},
+		{
+			Name:                     "purge",
+			Description:              "Delete multiple messages from a channel",
+			DefaultMemberPermissions: &modPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "amount",
+					Description: "Number of messages to delete (1-100)",
+					Required:    true,
+					MinValue:    floatPtr(1),
+					MaxValue:    100,
+				},
+			},
+		},
+		{
+			Name:                     "warn",
+			Description:              "Warn a user and keep a record",
+			DefaultMemberPermissions: &modPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to warn",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "reason",
+					Description: "Reason for the warning",
+					Required:    false,
+				},
+			},
+		},
+		{
+			Name:                     "warnings",
+			Description:              "View warnings for a user",
+			DefaultMemberPermissions: &modPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to view warnings for",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:                     "clearwarnings",
+			Description:              "Clear all warnings for a user",
+			DefaultMemberPermissions: &adminPermission,
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionUser,
+					Name:        "user",
+					Description: "User to clear warnings for",
+					Required:    true,
+				},
+			},
+		},
+		// --- Existing feature commands ---
 		{
 			Name:        "confess",
 			Description: "Submit an anonymous confession",
@@ -1239,4 +1571,9 @@ func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 			},
 		},
 	}
+}
+
+// floatPtr returns a pointer to a float64 value (used for MinValue in command options).
+func floatPtr(v float64) *float64 {
+	return &v
 }

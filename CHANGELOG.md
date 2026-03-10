@@ -5,6 +5,27 @@ All notable changes to NeruBot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-03-10
+
+### Added
+- **Core Commands** — `/ping`, `/botinfo`, `/serverinfo`, `/userinfo`, `/avatar` for essential bot & server information
+- **Moderation System** — `/kick`, `/ban`, `/timeout`, `/purge`, `/warn`, `/warnings`, `/clearwarnings` with proper permission checks
+- **Fun Commands** — `/coinflip`, `/8ball` (magic 8-ball) for casual server entertainment
+- **Utility Commands** — `/poll` (reaction-based polls up to 5 options), `/calc` (math calculator with 6 operations)
+- **Warning System** — Persistent warning records stored in MongoDB with per-guild, per-user tracking
+- **Security: Spam Detection** — Automatic spam detection (5+ messages in 5 seconds) with message deletion
+- **Security: Malicious Link Filter** — Detects and removes phishing Discord gift links, IP loggers, and suspicious domains
+- **Paginated Help Menu** — Interactive `/help` with Prev/Next navigation buttons across 6 categorized pages
+- **Moderation Repository** — `moderation_repository.go` for warning persistence, `moderation.go` entity
+
+### Changed
+- **Version bump**: 4.0.0 → 5.0.0
+- **Help command**: Completely rewritten with Discord button-based pagination (6 pages: Overview, Fun, Utility, Moderation, Scheduling, Music)
+- **Help translations**: All 5 languages (EN, ID, JP, KR, ZH) updated with new command entries
+- **Content filter**: Enhanced with regex-based malicious link patterns and spam tracking
+- **Command routing**: Reorganized with clear sections (core, features, fun, utility, moderation, music)
+- **README.md**: Updated with comprehensive command tables organized by category
+
 ## [4.0.0] - 2025-07-21
 
 ### Added

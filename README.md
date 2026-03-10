@@ -1,8 +1,8 @@
 # NeruBot
 
-A Discord bot built with Go. AI chat, confessions, roasts, news, whale alerts, analytics, and Indonesian holiday/Ramadan reminders.
+A feature-rich Discord bot built with Go. AI chat, moderation, utility tools, fun commands, confessions, roasts, news, whale alerts, analytics, music, and scheduled reminders.
 
-**v4.0.0** | Go 1.21+ | MIT License
+**v5.0.0** | Go 1.21+ | MIT License
 
 ---
 
@@ -10,13 +10,19 @@ A Discord bot built with Go. AI chat, confessions, roasts, news, whale alerts, a
 
 | Feature | Description |
 |---------|-------------|
+| **Core** | Ping, bot info, server info, user info, avatar |
 | **AI Chat** | Chat with DeepSeek AI, per-user history |
-| **Confessions** | Anonymous confessions |
-| **Roast** | Roast users based on Discord activity |
+| **Moderation** | Kick, ban, timeout, purge messages, warn system |
+| **Utility** | Calculator, polls with reactions |
+| **Fun** | Coinflip, 8ball, memes, dad jokes, confessions, roasts |
+| **Music** | Full music player with queue, filters, playlists, radio |
 | **News** | Latest headlines from RSS feeds |
 | **Whale Alerts** | Large cryptocurrency transactions |
 | **Analytics** | Server and user statistics |
-| **Reminders** | Indonesian national holidays and Ramadan sahoor/berbuka schedule |
+| **Mental Health** | Scheduled mental health tips and reminders |
+| **Reminders** | Indonesian national holidays and Ramadan schedule |
+| **Security** | Spam detection, malicious link filter, content filter |
+| **Multi-language** | EN, ID, JP, KR, ZH support |
 
 ---
 
@@ -57,20 +63,70 @@ docker compose up -d
 
 ## Commands
 
-All commands use Discord slash commands (`/`).
+All commands use Discord slash commands (`/`). Use `/help` for paginated interactive help with navigation buttons.
 
+### Core Commands
+| Command | Description |
+|---------|-------------|
+| `/ping` | Check bot latency |
+| `/botinfo` | Show bot info, uptime, developer |
+| `/serverinfo` | Show server details |
+| `/userinfo [user]` | Show user information |
+| `/avatar [user]` | Display a user's avatar |
+| `/help [lang]` | Interactive paginated help menu |
+
+### Fun Commands
+| Command | Description |
+|---------|-------------|
+| `/coinflip` | Flip a coin |
+| `/8ball <question>` | Ask the magic 8-ball |
+| `/dadjoke` | Get a random dad joke |
+| `/meme` | Get a random meme |
+| `/confess <content>` | Submit anonymous confession |
+| `/roast [user]` | Roast a user based on activity |
+
+### Utility Commands
 | Command | Description |
 |---------|-------------|
 | `/chat <message>` | Chat with AI |
 | `/chat-reset` | Clear your chat history |
-| `/confess <content>` | Submit anonymous confession |
-| `/roast [user]` | Roast a user (or yourself) |
-| `/news` | Latest news headlines |
+| `/calc <a> <op> <b>` | Simple math calculator |
+| `/poll <question> <options>` | Create a poll with reactions |
+| `/news [lang]` | Latest news headlines |
 | `/whale` | Recent whale crypto transactions |
 | `/stats` | Server statistics |
 | `/profile [user]` | User activity profile |
+
+### Moderation Commands (Admin/Mod)
+| Command | Description |
+|---------|-------------|
+| `/kick <user> [reason]` | Kick a user from the server |
+| `/ban <user> [reason]` | Ban a user from the server |
+| `/timeout <user> [duration] [reason]` | Temporarily mute a user |
+| `/purge <amount>` | Delete multiple messages (1-100) |
+| `/warn <user> [reason]` | Warn a user and record it |
+| `/warnings <user>` | View warnings for a user |
+| `/clearwarnings <user>` | Clear all warnings for a user |
+
+### Scheduling Commands
+| Command | Description |
+|---------|-------------|
 | `/reminder` | Upcoming holidays and Ramadan schedule |
-| `/help` | Show all commands |
+| `/reminder-set <channel>` | Set reminder channel (admin) |
+| `/mentalhealth [lang]` | Get a mental health tip |
+| `/mentalhealth-setup` | Schedule mental health reminders |
+| `/dadjoke-setup <channel> <interval>` | Schedule dad jokes |
+| `/meme-setup <channel> <interval>` | Schedule memes |
+
+### Music Commands
+| Command | Description |
+|---------|-------------|
+| `/play <query>` | Play a song from YouTube, Spotify, SoundCloud |
+| `/pause` `/resume` `/stop` | Playback controls |
+| `/skip` `/previous` `/seek` | Track navigation |
+| `/queue` `/shuffle` `/volume` | Queue management |
+| `/loop` `/filter` `/playlist` | Advanced features |
+| `/lyrics` `/recommend` `/radio` | Discovery & extras |
 
 ---
 
