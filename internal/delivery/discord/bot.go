@@ -514,6 +514,8 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleResume(s, i)
 	case "stop":
 		b.handleStop(s, i)
+	case "leave":
+		b.handleLeave(s, i)
 	case "skip":
 		b.handleSkip(s, i)
 	case "nowplaying":
@@ -927,6 +929,10 @@ func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 		{
 			Name:        "stop",
 			Description: "Stop playback and clear the queue",
+		},
+		{
+			Name:        "leave",
+			Description: "Disconnect the bot from voice channel",
 		},
 		{
 			Name:        "skip",

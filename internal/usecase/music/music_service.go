@@ -101,19 +101,33 @@ func (s *MusicService) removePlayer(guildID string) {
 
 // --- Core playback operations ---
 
+// PlayResult holds the result of a Play operation.
+type PlayResult struct {
+	Song       *entity.Song   // First song (for single track)
+	Songs      []*entity.Song // All songs (for playlist)
+	Queued     bool           // Whether songs were queued (vs playing now)
+	IsPlaylist bool           // Whether the result was a playlist
+}
+
 // Play searches for a track and starts playback, or adds to queue if already playing.
-func (s *MusicService) Play(ctx context.Context, guildID, voiceChID, textChID, requesterID, query string) (*entity.Song, bool, error) {
+// Automatically detects playlists and queues all tracks.
+func (s *MusicService) Play(ctx context.Context, guildID, voiceChID, textChID, requesterID, query string) (*PlayResult, error) {
 	// Resolve the query into a Lavalink search string
 	searchQuery := resolveQuery(query)
 
 	result, err := s.lavalink.LoadTracks(ctx, searchQuery)
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to search tracks: %w", err)
+		return nil, fmt.Errorf("failed to search tracks: %w", err)
+	}
+
+	// Check if the result is a playlist
+	if playlist, ok := result.Data.(lavalink.Playlist); ok && len(playlist.Tracks) > 1 {
+		return s.playPlaylistResult(ctx, guildID, voiceChID, textChID, requesterID, playlist)
 	}
 
 	tracks := extractTracks(result)
 	if len(tracks) == 0 {
-		return nil, false, fmt.Errorf("no results found for: %s", query)
+		return nil, fmt.Errorf("no results found for: %s", query)
 	}
 
 	track := tracks[0]
@@ -130,13 +144,45 @@ func (s *MusicService) Play(ctx context.Context, guildID, voiceChID, textChID, r
 	if !gp.IsPlaying {
 		gp.Current = len(gp.Queue) - 1
 		if err := s.startPlayback(ctx, guildID, gp, track); err != nil {
-			return nil, false, err
+			return nil, err
 		}
-		return song, false, nil // false = not queued, playing now
+		return &PlayResult{Song: song, Queued: false}, nil
 	}
 
 	s.saveQueueToRedis(guildID, gp)
-	return song, true, nil // true = added to queue
+	return &PlayResult{Song: song, Queued: true}, nil
+}
+
+// playPlaylistResult handles queueing all tracks from a playlist result.
+func (s *MusicService) playPlaylistResult(ctx context.Context, guildID, voiceChID, textChID, requesterID string, playlist lavalink.Playlist) (*PlayResult, error) {
+	gp := s.getOrCreatePlayer(guildID)
+	gp.TextChID = textChID
+	gp.ChannelID = voiceChID
+
+	wasPlaying := gp.IsPlaying
+	startIdx := len(gp.Queue)
+
+	var songs []*entity.Song
+	for _, t := range playlist.Tracks {
+		song := trackToSong(t, requesterID)
+		gp.Queue = append(gp.Queue, song)
+		songs = append(songs, song)
+	}
+
+	if !wasPlaying && len(playlist.Tracks) > 0 {
+		gp.Current = startIdx
+		if err := s.startPlayback(ctx, guildID, gp, playlist.Tracks[0]); err != nil {
+			return nil, err
+		}
+	}
+
+	s.saveQueueToRedis(guildID, gp)
+	return &PlayResult{
+		Song:       songs[0],
+		Songs:      songs,
+		Queued:     wasPlaying,
+		IsPlaylist: true,
+	}, nil
 }
 
 // PlayMultiple adds multiple tracks (e.g., from a playlist) to the queue.
@@ -235,6 +281,28 @@ func (s *MusicService) Stop(ctx context.Context, guildID string) error {
 	}
 
 	s.stopPlayback(ctx, guildID, gp)
+	s.disconnectVoice(guildID)
+	s.removePlayer(guildID)
+	s.deleteQueueFromRedis(guildID)
+	return nil
+}
+
+// Leave disconnects the bot from voice without clearing queue state.
+func (s *MusicService) Leave(ctx context.Context, guildID string) error {
+	gp := s.getPlayer(guildID)
+	if gp == nil {
+		return fmt.Errorf("no active player")
+	}
+
+	// Stop Lavalink playback
+	player := s.lavalink.ExistingPlayer(guildID)
+	if player != nil {
+		_ = player.Update(ctx, lavalink.WithNullTrack())
+	}
+	s.lavalink.RemovePlayer(guildID)
+
+	gp.IsPlaying = false
+	gp.IsPaused = false
 	s.disconnectVoice(guildID)
 	s.removePlayer(guildID)
 	s.deleteQueueFromRedis(guildID)
@@ -384,10 +452,10 @@ func (s *MusicService) MoveInQueue(guildID string, from, to int) (*entity.Song, 
 	return song, nil
 }
 
-// SetVolume sets the volume for a guild (0-200).
+// SetVolume sets the volume for a guild (0-150).
 func (s *MusicService) SetVolume(ctx context.Context, guildID string, volume int) error {
-	if volume < 0 || volume > 200 {
-		return fmt.Errorf("volume must be between 0 and 200")
+	if volume < 0 || volume > 150 {
+		return fmt.Errorf("volume must be between 0 and 150")
 	}
 
 	gp := s.getPlayer(guildID)
@@ -1254,19 +1322,19 @@ func getFilterPreset(name string) (lavalink.Filters, error) {
 	switch strings.ToLower(name) {
 	case "bassboost":
 		eq := lavalink.Equalizer{}
-		eq[0] = 0.6
-		eq[1] = 0.67
-		eq[2] = 0.67
-		eq[3] = 0.4
-		eq[4] = -0.5
-		eq[5] = 0.15
-		eq[6] = -0.45
-		eq[7] = 0.23
-		eq[8] = 0.35
-		eq[9] = 0.45
-		eq[10] = 0.55
-		eq[11] = 0.6
-		eq[12] = 0.55
+		eq[0] = 0.25
+		eq[1] = 0.3
+		eq[2] = 0.3
+		eq[3] = 0.2
+		eq[4] = -0.1
+		eq[5] = 0.05
+		eq[6] = -0.1
+		eq[7] = 0.1
+		eq[8] = 0.15
+		eq[9] = 0.2
+		eq[10] = 0.25
+		eq[11] = 0.3
+		eq[12] = 0.25
 		eq[13] = 0
 		return lavalink.Filters{Equalizer: &eq}, nil
 

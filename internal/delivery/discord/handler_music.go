@@ -51,19 +51,30 @@ func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	song, queued, err := b.musicService.Play(ctx, i.GuildID, vs.ChannelID, i.ChannelID, i.Member.User.ID, query)
+	result, err := b.musicService.Play(ctx, i.GuildID, vs.ChannelID, i.ChannelID, i.Member.User.ID, query)
 	if err != nil {
 		b.followUpError(s, i, fmt.Sprintf("Failed to play: %s", err.Error()))
 		return
 	}
 
 	var embed *discordgo.MessageEmbed
-	if queued {
+	if result.IsPlaylist {
+		title := config.EmojiQueue + " Playlist Added"
+		if !result.Queued {
+			title = config.EmojiNowPlaying + " Playing Playlist"
+		}
+		embed = &discordgo.MessageEmbed{
+			Title:       title,
+			Description: fmt.Sprintf("Added **%d songs** to the queue\nNow playing: **[%s](%s)**", len(result.Songs), result.Song.Title, result.Song.URL),
+			Color:       0x00C9A7,
+			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: result.Song.Thumbnail},
+		}
+	} else if result.Queued {
 		embed = &discordgo.MessageEmbed{
 			Title:       config.EmojiQueue + " Added to Queue",
-			Description: fmt.Sprintf("**[%s](%s)**\nby %s • %s", song.Title, song.URL, song.Author, song.FormatDuration()),
+			Description: fmt.Sprintf("**[%s](%s)**\nby %s • %s", result.Song.Title, result.Song.URL, result.Song.Author, result.Song.FormatDuration()),
 			Color:       0x00C9A7,
-			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: song.Thumbnail},
+			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: result.Song.Thumbnail},
 			Footer: &discordgo.MessageEmbedFooter{
 				Text: fmt.Sprintf("Position: #%d", b.musicService.QueueLength(i.GuildID)),
 			},
@@ -71,13 +82,40 @@ func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	} else {
 		embed = &discordgo.MessageEmbed{
 			Title:       config.EmojiNowPlaying + " Now Playing",
-			Description: fmt.Sprintf("**[%s](%s)**\nby %s • %s", song.Title, song.URL, song.Author, song.FormatDuration()),
+			Description: fmt.Sprintf("**[%s](%s)**\nby %s • %s", result.Song.Title, result.Song.URL, result.Song.Author, result.Song.FormatDuration()),
 			Color:       0x00C9A7,
-			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: song.Thumbnail},
+			Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: result.Song.Thumbnail},
 		}
 	}
 
 	b.followUpEmbedWithButtons(s, i, embed, nowPlayingButtons())
+}
+
+// handleLeave disconnects the bot from the voice channel.
+func (b *Bot) handleLeave(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if b.musicService == nil {
+		b.respondError(s, i, "Music is not available")
+		return
+	}
+
+	vs := b.findUserVoiceState(i.GuildID, i.Member.User.ID)
+	if vs == nil {
+		b.respondError(s, i, "You need to be in a voice channel")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := b.musicService.Leave(ctx, i.GuildID); err != nil {
+		b.respondError(s, i, err.Error())
+		return
+	}
+
+	b.respondEmbed(s, i, &discordgo.MessageEmbed{
+		Description: "👋 Disconnected from voice channel",
+		Color:       0x00C9A7,
+	})
 }
 
 // handlePause pauses the current track.
