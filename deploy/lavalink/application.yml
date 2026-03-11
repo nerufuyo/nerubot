@@ -35,13 +35,18 @@ plugins:
     allowDirectVideoIds: true
     allowDirectPlaylistIds: true
     clients:
-      - MUSIC
-      - ANDROID_TESTSUITE
-      - WEB
       - TVHTML5_SIMPLY_EMBEDDED
+      - IOS
+      - ANDROID_VR
+      - WEB
     oauth:
       enabled: ${YOUTUBE_OAUTH_ENABLED:false}
       refreshToken: ${YOUTUBE_OAUTH_REFRESH_TOKEN:}
+    # To fix persistent "YouTube blocked this track" errors, enable OAuth:
+    # 1. Set YOUTUBE_OAUTH_ENABLED=true and restart Lavalink
+    # 2. Check Lavalink logs for the OAuth authorization URL
+    # 3. Complete the OAuth flow and copy the refresh token
+    # 4. Set YOUTUBE_OAUTH_REFRESH_TOKEN=<token> and restart
   lavasrc:
     providers:
       - "ytsearch:\"%ISRC%\""

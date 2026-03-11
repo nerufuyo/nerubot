@@ -1034,20 +1034,25 @@ func (s *MusicService) SetAutoJoinChannel(ctx context.Context, guildID, channelI
 // --- Internal playback helpers ---
 
 func (s *MusicService) startPlayback(ctx context.Context, guildID string, gp *entity.GuildPlayer, track lavalink.Track) error {
-	voiceCtx, voiceCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer voiceCancel()
+	// Check if the bot is already in the target voice channel
+	alreadyConnected := s.isBotInVoiceChannel(guildID, gp.ChannelID)
 
-	// Register voice-ready listener BEFORE joining so we don't miss the VoiceServerUpdate event
-	s.lavalink.PrepareVoiceReady(guildID)
+	if !alreadyConnected {
+		voiceCtx, voiceCancel := context.WithTimeout(ctx, 8*time.Second)
+		defer voiceCancel()
 
-	// Join voice channel via Discord gateway (not Lavalink)
-	if err := s.joinVoice(guildID, gp.ChannelID); err != nil {
-		return fmt.Errorf("failed to join voice channel: %w", err)
-	}
+		// Register voice-ready listener BEFORE joining so we don't miss the VoiceServerUpdate event
+		s.lavalink.PrepareVoiceReady(guildID)
 
-	// Wait for the voice server update to be forwarded to Lavalink
-	if err := s.lavalink.WaitVoiceReady(voiceCtx, guildID); err != nil {
-		return fmt.Errorf("voice connection not ready: %w", err)
+		// Join voice channel via Discord gateway (not Lavalink)
+		if err := s.joinVoice(guildID, gp.ChannelID); err != nil {
+			return fmt.Errorf("failed to join voice channel: %w", err)
+		}
+
+		// Wait for the voice server update to be forwarded to Lavalink
+		if err := s.lavalink.WaitVoiceReady(voiceCtx, guildID); err != nil {
+			return fmt.Errorf("voice connection not ready: %w", err)
+		}
 	}
 
 	// Start track on Lavalink player
@@ -1058,6 +1063,7 @@ func (s *MusicService) startPlayback(ctx context.Context, guildID string, gp *en
 
 	gp.IsPlaying = true
 	gp.IsPaused = false
+	gp.ConsecFails = 0
 	s.saveQueueToRedis(guildID, gp)
 	return nil
 }
@@ -1085,6 +1091,20 @@ func (s *MusicService) disconnectVoice(guildID string) {
 	// Lavalink handles the voice connection, but we also need to tell Discord
 	// to disconnect the gateway-side voice state.
 	_ = s.session.ChannelVoiceJoinManual(guildID, "", false, false)
+}
+
+// isBotInVoiceChannel checks if the bot is already connected to the specified voice channel.
+func (s *MusicService) isBotInVoiceChannel(guildID, channelID string) bool {
+	guild, err := s.session.State.Guild(guildID)
+	if err != nil {
+		return false
+	}
+	for _, vs := range guild.VoiceStates {
+		if vs.UserID == s.session.State.User.ID && vs.ChannelID == channelID {
+			return true
+		}
+	}
+	return false
 }
 
 // advanceQueue moves to the next song in the queue based on loop mode.
@@ -1152,7 +1172,7 @@ func (s *MusicService) onTrackEnd(player disgolink.Player, event lavalink.TrackE
 	// Track consecutive failures to prevent skip-storm spam
 	if event.Reason == lavalink.TrackEndReasonLoadFailed {
 		gp.ConsecFails++
-		if gp.ConsecFails >= 3 {
+		if gp.ConsecFails >= 5 {
 			s.logger.Warn("Too many consecutive track failures, stopping playback",
 				"guild", guildID, "failures", gp.ConsecFails)
 
@@ -1173,61 +1193,78 @@ func (s *MusicService) onTrackEnd(player disgolink.Player, event lavalink.TrackE
 		gp.ConsecFails = 0
 	}
 
-	nextSong, _ := s.advanceQueue(gp)
-	if nextSong == nil {
-		// Try autoplay before stopping
-		if gp.Autoplay {
-			s.handleAutoplay(guildID, gp, player)
+	// Use a loop to advance through the queue, skipping unloadable tracks
+	// instead of recursing into onTrackEnd.
+	const maxSkipAttempts = 10
+	for attempt := 0; attempt < maxSkipAttempts; attempt++ {
+		nextSong, _ := s.advanceQueue(gp)
+		if nextSong == nil {
+			// Try autoplay before stopping
+			if gp.Autoplay {
+				s.handleAutoplay(guildID, gp, player)
+				return
+			}
+
+			// Queue finished
+			gp.IsPlaying = false
+			gp.IsPaused = false
+			s.saveQueueToRedis(guildID, gp)
+
+			if s.sendEmbed != nil && gp.TextChID != "" {
+				s.sendEmbed(gp.TextChID, &discordgo.MessageEmbed{
+					Description: "Queue finished! Add more songs with `/play`",
+					Color:       0x00C9A7,
+				})
+			}
+
+			ctx247, cancel247 := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel247()
+			if !s.Is247(ctx247, guildID) {
+				s.disconnectVoice(guildID)
+				s.removePlayer(guildID)
+				s.deleteQueueFromRedis(guildID)
+			}
 			return
 		}
 
-		// Queue finished
-		gp.IsPlaying = false
-		gp.IsPaused = false
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		// Try loading by direct URL first
+		query := resolveQuery(nextSong.URL)
+		result, err := s.lavalink.LoadTracks(ctx, query)
+		tracks := extractTracks(result)
+
+		// Fallback: if direct URL fails or returns nothing, search by title + author
+		if (err != nil || len(tracks) == 0) && nextSong.Title != "" {
+			s.logger.Info("Direct URL failed, trying title search fallback",
+				"song", nextSong.Title, "url", nextSong.URL)
+			fallbackQuery := "ytsearch:" + nextSong.Title + " " + nextSong.Author
+			result, err = s.lavalink.LoadTracks(ctx, fallbackQuery)
+			if err == nil {
+				tracks = extractTracks(result)
+			}
+		}
+
+		if err != nil || len(tracks) == 0 {
+			cancel()
+			s.logger.Warn("Track not found after fallback, skipping", "song", nextSong.Title)
+			continue // try the next song in queue
+		}
+
+		if err := player.Update(ctx, lavalink.WithTrack(tracks[0])); err != nil {
+			cancel()
+			s.logger.Error("Failed to play next track", "error", err)
+			continue
+		}
+
+		cancel()
 		s.saveQueueToRedis(guildID, gp)
-
-		// Notify in text channel
-		if s.sendEmbed != nil && gp.TextChID != "" {
-			s.sendEmbed(gp.TextChID, &discordgo.MessageEmbed{
-				Description: "Queue finished! Add more songs with `/play`",
-				Color:       0x00C9A7,
-			})
-		}
-
-		// Disconnect if not in 24/7 mode
-		ctx247, cancel247 := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel247()
-		if !s.Is247(ctx247, guildID) {
-			s.disconnectVoice(guildID)
-			s.removePlayer(guildID)
-			s.deleteQueueFromRedis(guildID)
-		}
 		return
 	}
 
-	// Play next track by searching again (since we don't store encoded track data)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	query := resolveQuery(nextSong.URL)
-	result, err := s.lavalink.LoadTracks(ctx, query)
-	if err != nil {
-		s.logger.Error("Failed to load next track", "error", err, "song", nextSong.Title)
-		return
-	}
-
-	tracks := extractTracks(result)
-	if len(tracks) == 0 {
-		s.logger.Warn("Next track not found, skipping", "song", nextSong.Title)
-		// Try to skip to the next one
-		s.onTrackEnd(player, event)
-		return
-	}
-
-	if err := player.Update(ctx, lavalink.WithTrack(tracks[0])); err != nil {
-		s.logger.Error("Failed to play next track", "error", err)
-	}
-
+	// If we exhausted all skip attempts
+	s.logger.Warn("Exhausted skip attempts in onTrackEnd", "guild", guildID)
+	gp.IsPlaying = false
 	s.saveQueueToRedis(guildID, gp)
 }
 
