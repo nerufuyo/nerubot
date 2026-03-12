@@ -44,9 +44,13 @@ type ChatbotService struct {
 func NewChatbotService(deepseekKey string, redis *redispkg.Client, backendClient *backend.Client) *ChatbotService {
 	providers := make([]ai.AIProvider, 0)
 
-	// Add DeepSeek provider
+	// Add DeepSeek provider, wrapped with Redis cache if available
 	if deepseekKey != "" {
-		providers = append(providers, ai.NewDeepSeekProvider(deepseekKey))
+		var provider ai.AIProvider = ai.NewDeepSeekProvider(deepseekKey)
+		if redis != nil {
+			provider = ai.NewCachedProvider(provider, redis, 1*time.Hour)
+		}
+		providers = append(providers, provider)
 	}
 
 	service := &ChatbotService{

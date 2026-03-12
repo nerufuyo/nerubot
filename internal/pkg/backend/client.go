@@ -205,9 +205,9 @@ func (c *Client) GetSettings() *BotSettings {
 	}
 }
 
-// backgroundRefresh fast-polls the settings version every 30s.
+// backgroundRefresh fast-polls the settings version every 2 minutes.
 func (c *Client) backgroundRefresh() {
-	versionTicker := time.NewTicker(30 * time.Second)
+	versionTicker := time.NewTicker(2 * time.Minute)
 	defer versionTicker.Stop()
 
 	for {
