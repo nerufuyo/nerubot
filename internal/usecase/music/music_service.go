@@ -685,17 +685,32 @@ func (s *MusicService) PlayPlaylist(ctx context.Context, guildID, voiceChID, tex
 
 	if !wasPlaying {
 		gp.Current = startIdx
-		// Load first track
 		firstSong := gp.Queue[startIdx]
-		query := resolveQuery(firstSong.URL)
-		result, err := s.lavalink.LoadTracks(ctx, query)
-		if err != nil {
-			return 0, fmt.Errorf("failed to load first playlist track: %w", err)
+
+		var tracks []lavalink.Track
+
+		// Strategy 1: Load by direct URL
+		if firstSong.URL != "" {
+			query := resolveQuery(firstSong.URL)
+			result, err := s.lavalink.LoadTracks(ctx, query)
+			if err == nil {
+				tracks = extractTracks(result)
+			}
 		}
-		tracks := extractTracks(result)
+
+		// Strategy 2: Fallback search by title + author
+		if len(tracks) == 0 && firstSong.Title != "" {
+			fallbackQuery := "ytsearch:" + firstSong.Title + " " + firstSong.Author
+			result, err := s.lavalink.LoadTracks(ctx, fallbackQuery)
+			if err == nil {
+				tracks = extractTracks(result)
+			}
+		}
+
 		if len(tracks) == 0 {
 			return 0, fmt.Errorf("first playlist track not found")
 		}
+
 		if err := s.startPlayback(ctx, guildID, gp, tracks[0]); err != nil {
 			return 0, err
 		}

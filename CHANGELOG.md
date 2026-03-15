@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Music: Skip sends invalid payload** — `Skip()` was sending `{"track":{"encoded":"","userData":null}}` to Lavalink, which rejects `null` for `userData`. Now uses the same 3-strategy fallback as `onTrackEnd`: encoded URI → URL load → title search. This fixes "failed to skip: Bad Request" and playback stopping after a few songs.
+- **Music: Playlist load fails with "first playlist track not found"** — `PlayPlaylist()` only tried loading by URL with no fallback. Now falls back to title+author search if the URL load returns no tracks.
 
 ## [5.0.0] - 2026-03-10
 
