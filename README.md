@@ -2,7 +2,7 @@
 
 A feature-rich Discord bot built with Go. AI chat, moderation, utility tools, fun commands, confessions, roasts, news, whale alerts, analytics, music, and scheduled reminders.
 
-**v5.0.0** | Go 1.21+ | MIT License
+**v5.0.1** | Go 1.21+ | MIT License
 
 ---
 

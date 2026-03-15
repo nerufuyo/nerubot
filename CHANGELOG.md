@@ -5,6 +5,11 @@ All notable changes to NeruBot will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.1] - 2026-03-15
+
+### Fixed
+- **Music: Skip sends invalid payload** — `Skip()` was sending `{"track":{"encoded":"","userData":null}}` to Lavalink, which rejects `null` for `userData`. Now uses the same 3-strategy fallback as `onTrackEnd`: encoded URI → URL load → title search. This fixes "failed to skip: Bad Request" and playback stopping after a few songs.
+
 ## [5.0.0] - 2026-03-10
 
 ### Added

@@ -257,7 +257,7 @@ func (s *MusicService) Skip(ctx context.Context, guildID string) (*entity.Song, 
 		return nil, fmt.Errorf("nothing is playing")
 	}
 
-	nextSong, nextTrack := s.advanceQueue(gp)
+	nextSong, _ := s.advanceQueue(gp)
 	if nextSong == nil {
 		// No more songs, stop
 		s.stopPlayback(ctx, guildID, gp)
@@ -265,7 +265,41 @@ func (s *MusicService) Skip(ctx context.Context, guildID string) (*entity.Song, 
 	}
 
 	player := s.lavalink.Player(guildID)
-	if err := player.Update(ctx, lavalink.WithTrack(nextTrack)); err != nil {
+
+	// Strategy 1: Use the encoded track directly if available (fastest, avoids re-search)
+	if nextSong.URI != "" {
+		if err := player.Update(ctx, lavalink.WithEncodedTrack(nextSong.URI)); err == nil {
+			gp.IsPaused = false
+			s.saveQueueToRedis(guildID, gp)
+			return nextSong, nil
+		}
+		s.logger.Info("Skip: encoded track failed, falling back to URL", "song", nextSong.Title)
+	}
+
+	// Strategy 2: Load by direct URL
+	var tracks []lavalink.Track
+	if nextSong.URL != "" {
+		query := resolveQuery(nextSong.URL)
+		result, err := s.lavalink.LoadTracks(ctx, query)
+		if err == nil {
+			tracks = extractTracks(result)
+		}
+	}
+
+	// Strategy 3: Fallback search by title + author
+	if len(tracks) == 0 && nextSong.Title != "" {
+		fallbackQuery := "ytsearch:" + nextSong.Title + " " + nextSong.Author
+		result, err := s.lavalink.LoadTracks(ctx, fallbackQuery)
+		if err == nil {
+			tracks = extractTracks(result)
+		}
+	}
+
+	if len(tracks) == 0 {
+		return nil, fmt.Errorf("failed to skip: could not load next track")
+	}
+
+	if err := player.Update(ctx, lavalink.WithTrack(tracks[0])); err != nil {
 		return nil, fmt.Errorf("failed to skip: %w", err)
 	}
 	gp.IsPaused = false

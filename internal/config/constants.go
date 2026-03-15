@@ -64,7 +64,7 @@ const (
 // Application constants
 const (
 	AppName        = "NeruBot"
-	AppVersion     = "5.0.0"
+	AppVersion     = "5.0.1"
 	AppDescription = "Your friendly Discord companion!"
 	AppAuthor      = "nerufuyo"
 	AppWebsite     = "https://github.com/nerufuyo/nerubot"
