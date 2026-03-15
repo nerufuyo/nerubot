@@ -1508,6 +1508,13 @@ func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 							Description: "Playlist name",
 							Required:    true,
 						},
+						{
+							Type:        discordgo.ApplicationCommandOptionInteger,
+							Name:        "page",
+							Description: "Page number (default: 1)",
+							Required:    false,
+							MinValue:    func() *float64 { v := 1.0; return &v }(),
+						},
 					},
 				},
 				{

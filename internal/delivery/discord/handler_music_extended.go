@@ -482,7 +482,17 @@ func (b *Bot) handlePlaylistShow(s *discordgo.Session, i *discordgo.InteractionC
 		return
 	}
 
-	name := options[0].StringValue()
+	var name string
+	page := 1
+	for _, opt := range options {
+		switch opt.Name {
+		case "name":
+			name = opt.StringValue()
+		case "page":
+			page = int(opt.IntValue())
+		}
+	}
+
 	playlistID := i.Member.User.ID + "_" + strings.ReplaceAll(strings.ToLower(name), " ", "_")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -494,13 +504,27 @@ func (b *Bot) handlePlaylistShow(s *discordgo.Session, i *discordgo.InteractionC
 		return
 	}
 
+	pageSize := 10
+	totalPages := (len(playlist.Songs) + pageSize - 1) / pageSize
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+
+	startIdx := (page - 1) * pageSize
+	endIdx := startIdx + pageSize
+	if endIdx > len(playlist.Songs) {
+		endIdx = len(playlist.Songs)
+	}
+
 	var desc strings.Builder
-	maxShow := 15
-	for idx, song := range playlist.Songs {
-		if idx >= maxShow {
-			desc.WriteString(fmt.Sprintf("\n... and **%d** more songs", len(playlist.Songs)-maxShow))
-			break
-		}
+	for idx := startIdx; idx < endIdx; idx++ {
+		song := playlist.Songs[idx]
 		desc.WriteString(fmt.Sprintf("`%d.` [%s](%s) • %s\n", idx+1, song.Title, song.URL, song.FormatDuration()))
 	}
 
@@ -514,7 +538,7 @@ func (b *Bot) handlePlaylistShow(s *discordgo.Session, i *discordgo.InteractionC
 		Description: desc.String(),
 		Color:       0x00C9A7,
 		Footer: &discordgo.MessageEmbedFooter{
-			Text: fmt.Sprintf("%d songs • Total: %s", len(playlist.Songs), music.FormatDuration(totalDuration)),
+			Text: fmt.Sprintf("Page %d/%d • %d songs • Total: %s", page, totalPages, len(playlist.Songs), music.FormatDuration(totalDuration)),
 		},
 	}
 	b.respondEmbed(s, i, embed)
@@ -762,9 +786,14 @@ func (b *Bot) handle247(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	if newState {
+		// If enabling 24/7, join the user's voice channel if not already connected
+		vs := b.findUserVoiceState(i.GuildID, i.Member.User.ID)
+		if vs != nil && !b.musicService.IsInVoice(i.GuildID) {
+			_ = s.ChannelVoiceJoinManual(i.GuildID, vs.ChannelID, false, true)
+		}
 		b.respond(s, i, config.Emoji247+" **24/7 mode enabled** — I'll stay in voice even when alone")
 	} else {
-		b.respond(s, i, config.Emoji247+" **24/7 mode disabled** — I'll leave when the queue ends")
+		b.respond(s, i, config.Emoji247+" **24/7 mode disabled** — I'll leave when the queue ends or everyone leaves")
 	}
 }
 
@@ -965,7 +994,8 @@ func (b *Bot) handleAutoJoin(s *discordgo.Session, i *discordgo.InteractionCreat
 	b.respond(s, i, fmt.Sprintf("%s **Auto-join enabled** for <#%s> — I'll join when someone enters this channel", config.EmojiMusic, channelID))
 }
 
-// onVoiceStateUpdateAutoJoin handles auto-join logic when users enter a configured voice channel.
+// onVoiceStateUpdateAutoJoin handles auto-join logic when users enter a configured voice channel,
+// and auto-disconnect when the bot is left alone (unless 24/7 mode is enabled).
 func (b *Bot) onVoiceStateUpdateAutoJoin(s *discordgo.Session, v *discordgo.VoiceStateUpdate) {
 	if b.musicService == nil {
 		return
@@ -976,6 +1006,14 @@ func (b *Bot) onVoiceStateUpdateAutoJoin(s *discordgo.Session, v *discordgo.Voic
 		return
 	}
 
+	// --- Auto-disconnect when bot is alone in voice ---
+	// Triggered when a user leaves a channel (BeforeUpdate had a channel, now different or empty)
+	if v.BeforeUpdate != nil && v.BeforeUpdate.ChannelID != "" {
+		leftChannelID := v.BeforeUpdate.ChannelID
+		b.checkAloneInVoice(s, v.GuildID, leftChannelID)
+	}
+
+	// --- Auto-join logic ---
 	// Only care about joins (ChannelID is set, and it's different from before)
 	if v.ChannelID == "" {
 		return
@@ -1001,4 +1039,71 @@ func (b *Bot) onVoiceStateUpdateAutoJoin(s *discordgo.Session, v *discordgo.Voic
 	} else {
 		b.logger.Info("Auto-joined voice channel", "guild", v.GuildID, "channel", autoJoinCh)
 	}
+}
+
+// checkAloneInVoice checks if the bot is alone in the voice channel and disconnects if 24/7 is off.
+func (b *Bot) checkAloneInVoice(s *discordgo.Session, guildID, channelID string) {
+	// Find the bot's current voice channel in this guild
+	guild, err := s.State.Guild(guildID)
+	if err != nil {
+		return
+	}
+
+	botChannelID := ""
+	for _, vs := range guild.VoiceStates {
+		if vs.UserID == s.State.User.ID {
+			botChannelID = vs.ChannelID
+			break
+		}
+	}
+
+	// Only care if someone left the channel the bot is in
+	if botChannelID == "" || botChannelID != channelID {
+		return
+	}
+
+	// Count non-bot users still in the channel
+	humanCount := 0
+	for _, vs := range guild.VoiceStates {
+		if vs.ChannelID == botChannelID && vs.UserID != s.State.User.ID {
+			humanCount++
+		}
+	}
+
+	if humanCount > 0 {
+		return // not alone
+	}
+
+	// Bot is alone — check 24/7 mode
+	if b.musicService.ShouldStayInVoice(guildID) {
+		b.logger.Info("Bot is alone in voice but 24/7 mode is on, staying", "guild", guildID)
+		return
+	}
+
+	// Disconnect after a short delay to avoid race with quick rejoins
+	go func() {
+		time.Sleep(30 * time.Second)
+
+		// Re-check: someone might have joined during the delay
+		guild, err := s.State.Guild(guildID)
+		if err != nil {
+			return
+		}
+
+		humanCount := 0
+		for _, vs := range guild.VoiceStates {
+			if vs.ChannelID == botChannelID && vs.UserID != s.State.User.ID {
+				humanCount++
+			}
+		}
+		if humanCount > 0 {
+			return
+		}
+
+		b.logger.Info("Bot alone in voice for 30s, disconnecting", "guild", guildID)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = b.musicService.Stop(ctx, guildID)
+	}()
 }
