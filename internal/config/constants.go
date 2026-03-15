@@ -69,6 +69,7 @@ const (
 	AppAuthor      = "nerufuyo"
 	AppWebsite     = "https://github.com/nerufuyo/nerubot"
 	AppRepository  = "https://github.com/nerufuyo/nerubot"
+	AppDonation    = "https://trakteer.id/listyo_adi/showcase/support-neru-wrHkC"
 )
 
 // Language codes for multi-language support

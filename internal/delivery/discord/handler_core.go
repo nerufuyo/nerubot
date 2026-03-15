@@ -31,6 +31,52 @@ func (b *Bot) handlePing(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	b.followUpEmbed(s, i, embed)
 }
 
+// handleDonate handles the /donate command - shows donation links.
+func (b *Bot) handleDonate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	embed := &discordgo.MessageEmbed{
+		Title:       "💖 Support NeruBot",
+		Description: "If you enjoy using **NeruBot**, consider supporting its development!\nYour donation helps keep the bot running and fund new features.",
+		Color:       0xFF69B4,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: s.State.User.AvatarURL("256"),
+		},
+		Fields: []*discordgo.MessageEmbedField{
+			{Name: "Developer", Value: config.AppAuthor, Inline: true},
+			{Name: "Website", Value: fmt.Sprintf("[GitHub](%s)", config.AppRepository), Inline: true},
+		},
+		Footer: &discordgo.MessageEmbedFooter{
+			Text: "Thank you for your support! 💖",
+		},
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label: "☕ Donate via Trakteer",
+							Style: discordgo.LinkButton,
+							URL:   config.AppDonation,
+						},
+						discordgo.Button{
+							Label: "⭐ Star on GitHub",
+							Style: discordgo.LinkButton,
+							URL:   config.AppRepository,
+						},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		b.logger.Error("Failed to respond to donate command", "error", err)
+	}
+}
+
 // handleBotInfo handles the /botinfo command - shows bot information.
 func (b *Bot) handleBotInfo(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	uptime := time.Since(b.startedAt)

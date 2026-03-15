@@ -502,6 +502,8 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handlePing(s, i)
 	case "botinfo":
 		b.handleBotInfo(s, i)
+	case "donate":
+		b.handleDonate(s, i)
 	case "serverinfo":
 		b.handleServerInfo(s, i)
 	case "userinfo":
@@ -691,6 +693,10 @@ func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 		{
 			Name:        "botinfo",
 			Description: "Show bot information, uptime, and developer",
+		},
+		{
+			Name:        "donate",
+			Description: "Support NeruBot development with a donation",
 		},
 		{
 			Name:        "serverinfo",
