@@ -693,6 +693,86 @@ func (s *MusicService) AddCurrentToPlaylist(ctx context.Context, guildID, userID
 	return song, nil
 }
 
+// AddTrackToPlaylist resolves a song by link or search query and adds it to a playlist.
+func (s *MusicService) AddTrackToPlaylist(ctx context.Context, userID, playlistID, query string) (*entity.Song, error) {
+	playlist, err := s.repo.GetPlaylist(ctx, playlistID)
+	if err != nil {
+		return nil, fmt.Errorf("playlist not found")
+	}
+	if playlist.UserID != userID {
+		return nil, fmt.Errorf("you don't own this playlist")
+	}
+
+	searchQuery := resolveQuery(query)
+	result, err := s.lavalink.LoadTracks(ctx, searchQuery)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search: %w", err)
+	}
+
+	tracks := extractTracks(result)
+	if len(tracks) == 0 {
+		return nil, fmt.Errorf("no results found for: %s", query)
+	}
+
+	song := trackToSong(tracks[0], userID)
+	playlist.Songs = append(playlist.Songs, song)
+	if err := s.repo.SavePlaylist(ctx, playlist); err != nil {
+		return nil, fmt.Errorf("failed to save playlist: %w", err)
+	}
+	return song, nil
+}
+
+// AddQueueTrackToPlaylist adds a song from the current queue (by 1-based position) to a playlist.
+func (s *MusicService) AddQueueTrackToPlaylist(ctx context.Context, guildID, userID, playlistID string, position int) (*entity.Song, error) {
+	gp := s.getPlayer(guildID)
+	if gp == nil || len(gp.Queue) == 0 {
+		return nil, fmt.Errorf("queue is empty")
+	}
+
+	idx := position - 1
+	if idx < 0 || idx >= len(gp.Queue) {
+		return nil, fmt.Errorf("invalid position %d (queue has %d songs)", position, len(gp.Queue))
+	}
+
+	playlist, err := s.repo.GetPlaylist(ctx, playlistID)
+	if err != nil {
+		return nil, fmt.Errorf("playlist not found")
+	}
+	if playlist.UserID != userID {
+		return nil, fmt.Errorf("you don't own this playlist")
+	}
+
+	song := gp.Queue[idx]
+	playlist.Songs = append(playlist.Songs, song)
+	if err := s.repo.SavePlaylist(ctx, playlist); err != nil {
+		return nil, fmt.Errorf("failed to save playlist: %w", err)
+	}
+	return song, nil
+}
+
+// RemoveFromPlaylist removes a song from a playlist by 1-based position.
+func (s *MusicService) RemoveFromPlaylist(ctx context.Context, userID, playlistID string, position int) (*entity.Song, error) {
+	playlist, err := s.repo.GetPlaylist(ctx, playlistID)
+	if err != nil {
+		return nil, fmt.Errorf("playlist not found")
+	}
+	if playlist.UserID != userID {
+		return nil, fmt.Errorf("you don't own this playlist")
+	}
+
+	idx := position - 1
+	if idx < 0 || idx >= len(playlist.Songs) {
+		return nil, fmt.Errorf("invalid position %d (playlist has %d songs)", position, len(playlist.Songs))
+	}
+
+	removed := playlist.Songs[idx]
+	playlist.Songs = append(playlist.Songs[:idx], playlist.Songs[idx+1:]...)
+	if err := s.repo.SavePlaylist(ctx, playlist); err != nil {
+		return nil, fmt.Errorf("failed to save playlist: %w", err)
+	}
+	return removed, nil
+}
+
 // --- DJ role & guild settings ---
 
 // GetGuildMusicSettings retrieves music settings for a guild.

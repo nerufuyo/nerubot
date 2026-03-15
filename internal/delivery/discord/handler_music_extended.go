@@ -198,12 +198,18 @@ func (b *Bot) handlePlaylist(s *discordgo.Session, i *discordgo.InteractionCreat
 		b.handlePlaylistCreate(s, i, sub.Options)
 	case "add":
 		b.handlePlaylistAdd(s, i, sub.Options)
+	case "addtrack":
+		b.handlePlaylistAddTrack(s, i, sub.Options)
+	case "addqueue":
+		b.handlePlaylistAddQueue(s, i, sub.Options)
 	case "play":
 		b.handlePlaylistPlay(s, i, sub.Options)
 	case "list":
 		b.handlePlaylistList(s, i)
 	case "delete":
 		b.handlePlaylistDelete(s, i, sub.Options)
+	case "remove":
+		b.handlePlaylistRemove(s, i, sub.Options)
 	case "show":
 		b.handlePlaylistShow(s, i, sub.Options)
 	case "import":
@@ -267,6 +273,108 @@ func (b *Bot) handlePlaylistAdd(s *discordgo.Session, i *discordgo.InteractionCr
 	}
 
 	b.respond(s, i, fmt.Sprintf("%s Added **%s** to playlist **%s**", config.EmojiPlaylist, song.Title, name))
+}
+
+func (b *Bot) handlePlaylistAddTrack(s *discordgo.Session, i *discordgo.InteractionCreate, options []*discordgo.ApplicationCommandInteractionDataOption) {
+	var name, query string
+	for _, opt := range options {
+		switch opt.Name {
+		case "name":
+			name = opt.StringValue()
+		case "query":
+			query = opt.StringValue()
+		}
+	}
+
+	if name == "" || query == "" {
+		b.respondError(s, i, "Please provide both a playlist name and a song link or title")
+		return
+	}
+
+	playlistID := i.Member.User.ID + "_" + strings.ReplaceAll(strings.ToLower(name), " ", "_")
+
+	if err := b.deferResponse(s, i); err != nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	song, err := b.musicService.AddTrackToPlaylist(ctx, i.Member.User.ID, playlistID, query)
+	if err != nil {
+		b.followUpError(s, i, err.Error())
+		return
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       config.EmojiPlaylist + " Added to Playlist",
+		Description: fmt.Sprintf("**[%s](%s)**\n%s • %s\n\nAdded to **%s**", song.Title, song.URL, song.Author, song.FormatDuration(), name),
+		Color:       0x00C9A7,
+		Thumbnail:   &discordgo.MessageEmbedThumbnail{URL: song.Thumbnail},
+	}
+	b.followUpEmbed(s, i, embed)
+}
+
+func (b *Bot) handlePlaylistAddQueue(s *discordgo.Session, i *discordgo.InteractionCreate, options []*discordgo.ApplicationCommandInteractionDataOption) {
+	var name string
+	var position int64
+	for _, opt := range options {
+		switch opt.Name {
+		case "name":
+			name = opt.StringValue()
+		case "position":
+			position = opt.IntValue()
+		}
+	}
+
+	if name == "" || position <= 0 {
+		b.respondError(s, i, "Please provide a playlist name and queue position")
+		return
+	}
+
+	playlistID := i.Member.User.ID + "_" + strings.ReplaceAll(strings.ToLower(name), " ", "_")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	song, err := b.musicService.AddQueueTrackToPlaylist(ctx, i.GuildID, i.Member.User.ID, playlistID, int(position))
+	if err != nil {
+		b.respondError(s, i, err.Error())
+		return
+	}
+
+	b.respond(s, i, fmt.Sprintf("%s Added **%s** (queue #%d) to playlist **%s**", config.EmojiPlaylist, song.Title, position, name))
+}
+
+func (b *Bot) handlePlaylistRemove(s *discordgo.Session, i *discordgo.InteractionCreate, options []*discordgo.ApplicationCommandInteractionDataOption) {
+	var name string
+	var position int64
+	for _, opt := range options {
+		switch opt.Name {
+		case "name":
+			name = opt.StringValue()
+		case "position":
+			position = opt.IntValue()
+		}
+	}
+
+	if name == "" || position <= 0 {
+		b.respondError(s, i, "Please provide a playlist name and song position")
+		return
+	}
+
+	playlistID := i.Member.User.ID + "_" + strings.ReplaceAll(strings.ToLower(name), " ", "_")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	song, err := b.musicService.RemoveFromPlaylist(ctx, i.Member.User.ID, playlistID, int(position))
+	if err != nil {
+		b.respondError(s, i, err.Error())
+		return
+	}
+
+	b.respond(s, i, fmt.Sprintf("%s Removed **%s** from playlist **%s**", config.EmojiPlaylist, song.Title, name))
 }
 
 func (b *Bot) handlePlaylistPlay(s *discordgo.Session, i *discordgo.InteractionCreate, options []*discordgo.ApplicationCommandInteractionDataOption) {

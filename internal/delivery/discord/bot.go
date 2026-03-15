@@ -1429,6 +1429,45 @@ func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "addtrack",
+					Description: "Add a song to a playlist by link or title",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Playlist name",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "query",
+							Description: "Song link or search title",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "addqueue",
+					Description: "Add a song from the current queue to a playlist",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Playlist name",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionInteger,
+							Name:        "position",
+							Description: "Queue position number (use /queue to see positions)",
+							Required:    true,
+							MinValue:    func() *float64 { v := 1.0; return &v }(),
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Name:        "play",
 					Description: "Load and play a saved playlist",
 					Options: []*discordgo.ApplicationCommandOption{
@@ -1468,6 +1507,26 @@ func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 							Name:        "name",
 							Description: "Playlist name",
 							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "remove",
+					Description: "Remove a song from a playlist by position",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "Playlist name",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionInteger,
+							Name:        "position",
+							Description: "Song position to remove (use /playlist show to see positions)",
+							Required:    true,
+							MinValue:    func() *float64 { v := 1.0; return &v }(),
 						},
 					},
 				},
