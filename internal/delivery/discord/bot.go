@@ -414,11 +414,23 @@ func (b *Bot) syncGuildsToBackend() {
 		if g.Icon != "" {
 			iconURL = fmt.Sprintf("https://cdn.discordapp.com/icons/%s/%s.png", g.ID, g.Icon)
 		}
+		// Collect text channels for this guild
+		channels := make([]backend.GuildChannel, 0)
+		for _, ch := range g.Channels {
+			// Type 0 = GuildText, Type 5 = GuildAnnouncement
+			if ch.Type == 0 || ch.Type == 5 {
+				channels = append(channels, backend.GuildChannel{
+					ChannelID:   ch.ID,
+					ChannelName: ch.Name,
+				})
+			}
+		}
 		guilds = append(guilds, backend.GuildInfo{
 			GuildID:     g.ID,
 			GuildName:   g.Name,
 			MemberCount: g.MemberCount,
 			IconURL:     iconURL,
+			Channels:    channels,
 		})
 	}
 	b.backendClient.SyncGuilds(guilds)
