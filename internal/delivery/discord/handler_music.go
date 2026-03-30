@@ -91,25 +91,80 @@ func (b *Bot) handlePlay(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	b.followUpEmbedWithButtons(s, i, embed, nowPlayingButtons())
 }
 
-// handleLeave disconnects the bot from the voice channel.
-func (b *Bot) handleLeave(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if b.musicService == nil {
-		b.respondError(s, i, "Music is not available")
-		return
-	}
+// ownerUserID is the privileged user ID that can always disconnect the bot.
+const ownerUserID = "333202281535373313"
 
+// canDisconnectBot returns true if the member has permission to kick the bot out of voice.
+// Allowed: ownerUserID, server admins, and members with the Move Members permission.
+func canDisconnectBot(s *discordgo.Session, guildID, userID string) bool {
+	if userID == ownerUserID {
+		return true
+	}
+	member, err := s.GuildMember(guildID, userID)
+	if err != nil || member == nil {
+		return false
+	}
+	guild, err := s.State.Guild(guildID)
+	if err != nil {
+		return false
+	}
+	for _, roleID := range member.Roles {
+		for _, role := range guild.Roles {
+			if role.ID != roleID {
+				continue
+			}
+			perms := role.Permissions
+			if perms&discordgo.PermissionAdministrator != 0 ||
+				perms&discordgo.PermissionVoiceMoveMembers != 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// handleJoin makes the bot join the user's current voice channel in AFK mode.
+// The bot will stay indefinitely until a privileged user uses /leave.
+func (b *Bot) handleJoin(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	vs := b.findUserVoiceState(i.GuildID, i.Member.User.ID)
 	if vs == nil {
-		b.respondError(s, i, "You need to be in a voice channel")
+		b.respondError(s, i, "You need to be in a voice channel first")
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := b.musicService.Leave(ctx, i.GuildID); err != nil {
-		b.respondError(s, i, err.Error())
+	if err := s.ChannelVoiceJoinManual(i.GuildID, vs.ChannelID, false, true); err != nil {
+		b.respondError(s, i, "Failed to join voice channel")
 		return
+	}
+
+	// Mark this guild as AFK mode so auto-disconnect is suppressed.
+	b.afkVoiceGuilds.Store(i.GuildID, true)
+
+	b.respondEmbed(s, i, &discordgo.MessageEmbed{
+		Description: "🎙️ Joined voice channel — I'll stay here until a mod asks me to leave",
+		Color:       0x00C9A7,
+	})
+}
+
+// handleLeave disconnects the bot from the voice channel.
+// Only the owner user, admins, or members with Move Members permission can use this.
+func (b *Bot) handleLeave(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if !canDisconnectBot(s, i.GuildID, i.Member.User.ID) {
+		b.respondError(s, i, "❌ Only moderators or the bot owner can disconnect me")
+		return
+	}
+
+	// Clear AFK mode for this guild.
+	b.afkVoiceGuilds.Delete(i.GuildID)
+
+	// If music service is active, use it to leave cleanly (stops playback too).
+	if b.musicService != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = b.musicService.Leave(ctx, i.GuildID)
+	} else {
+		// Pure AFK — just disconnect from gateway.
+		_ = s.ChannelVoiceJoinManual(i.GuildID, "", false, false)
 	}
 
 	b.respondEmbed(s, i, &discordgo.MessageEmbed{

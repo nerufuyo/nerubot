@@ -1074,9 +1074,15 @@ func (b *Bot) checkAloneInVoice(s *discordgo.Session, guildID, channelID string)
 		return // not alone
 	}
 
-	// Bot is alone — check 24/7 mode
+	// Bot is alone — check 24/7 mode or AFK mode
 	if b.musicService.ShouldStayInVoice(guildID) {
 		b.logger.Info("Bot is alone in voice but 24/7 mode is on, staying", "guild", guildID)
+		return
+	}
+
+	// AFK mode: bot was invited via /join and must only be ejected by a privileged user.
+	if _, afk := b.afkVoiceGuilds.Load(guildID); afk {
+		b.logger.Info("Bot is alone in voice but AFK mode is on, staying", "guild", guildID)
 		return
 	}
 

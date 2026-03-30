@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -45,6 +46,9 @@ type Bot struct {
 	mongoDB           *mongodb.Client
 	redisClient       *redispkg.Client
 	backendClient     *backend.Client
+	// afkVoiceGuilds tracks guilds where the bot has joined via /join (AFK mode).
+	// In AFK mode the bot never auto-disconnects and only privileged users can kick it.
+	afkVoiceGuilds    sync.Map
 }
 
 // New creates a new Discord bot instance
@@ -583,6 +587,8 @@ func (b *Bot) onInteractionCreate(s *discordgo.Session, i *discordgo.Interaction
 		b.handleResume(s, i)
 	case "stop":
 		b.handleStop(s, i)
+	case "join":
+		b.handleJoin(s, i)
 	case "leave":
 		b.handleLeave(s, i)
 	case "skip":
@@ -1269,8 +1275,12 @@ func (b *Bot) buildCommands() []*discordgo.ApplicationCommand {
 			Description: "Stop playback and clear the queue",
 		},
 		{
+			Name:        "join",
+			Description: "Invite the bot to sit in your voice channel (AFK mode)",
+		},
+		{
 			Name:        "leave",
-			Description: "Disconnect the bot from voice channel",
+			Description: "Disconnect the bot from voice channel (mods/owner only)",
 		},
 		{
 			Name:        "skip",
