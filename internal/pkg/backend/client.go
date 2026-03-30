@@ -332,10 +332,17 @@ func (c *Client) post(ctx context.Context, path string, body interface{}) error 
 
 // GuildInfo represents a Discord guild for syncing with the backend.
 type GuildInfo struct {
-	GuildID     string `json:"guildId"`
-	GuildName   string `json:"guildName"`
-	MemberCount int    `json:"memberCount"`
-	IconURL     string `json:"iconUrl"`
+	GuildID     string         `json:"guildId"`
+	GuildName   string         `json:"guildName"`
+	MemberCount int            `json:"memberCount"`
+	IconURL     string         `json:"iconUrl"`
+	Channels    []GuildChannel `json:"channels,omitempty"`
+}
+
+// GuildChannel represents a text channel inside a Discord guild.
+type GuildChannel struct {
+	ChannelID   string `json:"channelId"`
+	ChannelName string `json:"channelName"`
 }
 
 // SyncGuilds pushes the bot's current guild list to the backend.
