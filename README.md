@@ -268,3 +268,7 @@ chmod +x setup.sh
 MIT — see [LICENSE](LICENSE).
 
 Built by [@nerufuyo](https://github.com/nerufuyo).
+
+## GitHub About suggestion
+
+See `GITHUB_ABOUT.md` for a ready-to-paste repository description and topics.
