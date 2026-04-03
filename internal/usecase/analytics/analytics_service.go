@@ -26,6 +26,7 @@ type AnalyticsService struct {
 	autoSave     bool
 	saveInterval time.Duration
 	stopChan     chan struct{}
+	dirty        bool
 }
 
 // NewAnalyticsService creates a new analytics service backed by MongoDB.
@@ -38,6 +39,7 @@ func NewAnalyticsService(db *mongodb.Client) *AnalyticsService {
 		autoSave:     true,
 		saveInterval: 5 * time.Minute,
 		stopChan:     make(chan struct{}),
+		dirty:        false,
 	}
 
 	// Load existing stats from MongoDB
@@ -103,6 +105,8 @@ func (s *AnalyticsService) RecordCommandUsage(guildID, guildName, userID, userna
 		serverStats.WhaleAlerts++
 		userStats.WhaleChecks++
 	}
+
+	s.dirty = true
 }
 
 // GetServerStats returns statistics for a specific server
@@ -188,7 +192,18 @@ func (s *AnalyticsService) GetTopUsers(limit int) []*entity.UserStats {
 // Save persists analytics data to MongoDB.
 func (s *AnalyticsService) Save() error {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
+	if !s.dirty {
+		s.mu.RUnlock()
+		return nil
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if !s.dirty {
+		return nil
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -220,6 +235,8 @@ func (s *AnalyticsService) Save() error {
 	if _, err := globalColl.ReplaceOne(ctx, filter, s.globalStats, opts); err != nil {
 		return fmt.Errorf("failed to save global stats: %w", err)
 	}
+
+	s.dirty = false
 
 	return nil
 }
@@ -268,6 +285,8 @@ func (s *AnalyticsService) Load() error {
 		s.globalStats = entity.NewGlobalStats()
 	}
 
+	s.dirty = false
+
 	return nil
 }
 
@@ -306,6 +325,7 @@ func (s *AnalyticsService) ResetServerStats(guildID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, _ = s.db.Collection("server_stats").DeleteOne(ctx, bson.M{"guild_id": guildID})
+	s.dirty = true
 
 	return nil
 }
@@ -320,6 +340,7 @@ func (s *AnalyticsService) ResetUserStats(userID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, _ = s.db.Collection("user_stats").DeleteOne(ctx, bson.M{"user_id": userID})
+	s.dirty = true
 
 	return nil
 }

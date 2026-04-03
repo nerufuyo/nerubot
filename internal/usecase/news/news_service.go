@@ -24,6 +24,13 @@ type NewsService struct {
 	running  bool
 	stopChan chan struct{}
 	mu       sync.RWMutex
+	cacheTTL  time.Duration
+	cacheByLang map[string]newsCacheEntry
+}
+
+type newsCacheEntry struct {
+	items     []*entity.NewsArticle
+	expiresAt time.Time
 }
 
 // NewNewsService creates a new news service
@@ -33,6 +40,8 @@ func NewNewsService() *NewsService {
 		parser:   gofeed.NewParser(),
 		running:  false,
 		stopChan: make(chan struct{}),
+		cacheTTL: 30 * time.Minute,
+		cacheByLang: make(map[string]newsCacheEntry),
 	}
 }
 
@@ -84,13 +93,34 @@ func defaultSources(lang string) []NewsSource {
 
 // FetchLatestByLang fetches the latest news from sources for the specified language
 func (s *NewsService) FetchLatestByLang(ctx context.Context, limit int, lang string) ([]*entity.NewsArticle, error) {
+	now := time.Now()
+	s.mu.RLock()
+	if cached, ok := s.cacheByLang[lang]; ok && now.Before(cached.expiresAt) {
+		items := cached.items
+		s.mu.RUnlock()
+		if len(items) > limit {
+			return items[:limit], nil
+		}
+		return items, nil
+	}
+	s.mu.RUnlock()
+
 	sources := defaultSources(lang)
-	return s.fetchFromSources(ctx, sources, limit)
+	items, err := s.fetchFromSources(ctx, sources, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	s.mu.Lock()
+	s.cacheByLang[lang] = newsCacheEntry{items: items, expiresAt: now.Add(s.cacheTTL)}
+	s.mu.Unlock()
+
+	return items, nil
 }
 
 // FetchLatest fetches the latest news from all default (EN) sources
 func (s *NewsService) FetchLatest(ctx context.Context, limit int) ([]*entity.NewsArticle, error) {
-	return s.fetchFromSources(ctx, s.sources, limit)
+	return s.FetchLatestByLang(ctx, limit, "EN")
 }
 
 // fetchFromSources fetches news from the given sources
@@ -216,4 +246,7 @@ func (s *NewsService) AddSource(name, url string) {
 		Name: name,
 		URL:  url,
 	})
+
+	// Invalidate cache because source list changed.
+	s.cacheByLang = make(map[string]newsCacheEntry)
 }

@@ -45,6 +45,11 @@ type FunService struct {
 	lastJoke         map[string]time.Time
 	lastMeme         map[string]time.Time
 	lastMentalHealth map[string]time.Time
+
+	// Cache active schedule configs to avoid full DB scan every minute
+	cachedConfigs    []*entity.GuildConfig
+	configsCachedAt  time.Time
+	configsCacheTTL  time.Duration
 }
 
 // NewFunService creates a new fun service.
@@ -60,7 +65,46 @@ func NewFunService() *FunService {
 		lastJoke:         make(map[string]time.Time),
 		lastMeme:         make(map[string]time.Time),
 		lastMentalHealth: make(map[string]time.Time),
+		cachedConfigs:    make([]*entity.GuildConfig, 0),
+		configsCacheTTL:  5 * time.Minute,
 	}
+}
+
+func (s *FunService) refreshScheduledConfigs(force bool) []*entity.GuildConfig {
+	now := time.Now()
+
+	s.mu.RLock()
+	if !force && len(s.cachedConfigs) > 0 && now.Sub(s.configsCachedAt) < s.configsCacheTTL {
+		configs := s.cachedConfigs
+		s.mu.RUnlock()
+		return configs
+	}
+	s.mu.RUnlock()
+
+	configs, err := s.repo.GetAll()
+	if err != nil {
+		s.logger.Warn("Failed to load guild configs for scheduler", "error", err)
+		s.mu.RLock()
+		fallback := s.cachedConfigs
+		s.mu.RUnlock()
+		return fallback
+	}
+
+	active := make([]*entity.GuildConfig, 0, len(configs))
+	for _, cfg := range configs {
+		if (cfg.DadJokeChannelID != "" && cfg.DadJokeInterval > 0) ||
+			(cfg.MemeChannelID != "" && cfg.MemeInterval > 0) ||
+			(cfg.MentalHealthChannelID != "" && cfg.MentalHealthInterval > 0) {
+			active = append(active, cfg)
+		}
+	}
+
+	s.mu.Lock()
+	s.cachedConfigs = active
+	s.configsCachedAt = now
+	s.mu.Unlock()
+
+	return active
 }
 
 // SetSendFunc sets the callback used to post embeds.
@@ -99,9 +143,8 @@ func (s *FunService) loop() {
 }
 
 func (s *FunService) checkScheduled() {
-	configs, err := s.repo.GetAll()
-	if err != nil {
-		s.logger.Warn("Failed to load guild configs for scheduler", "error", err)
+	configs := s.refreshScheduledConfigs(false)
+	if len(configs) == 0 {
 		return
 	}
 
@@ -486,5 +529,9 @@ func (s *FunService) GetGuildConfig(guildID, guildName string) (*entity.GuildCon
 
 // SaveGuildConfig persists a guild config.
 func (s *FunService) SaveGuildConfig(cfg *entity.GuildConfig) error {
-	return s.repo.Save(cfg)
+	if err := s.repo.Save(cfg); err != nil {
+		return err
+	}
+	_ = s.refreshScheduledConfigs(true)
+	return nil
 }

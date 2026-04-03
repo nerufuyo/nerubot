@@ -19,6 +19,8 @@ type WhaleService struct {
 	stopChan    chan struct{}
 	mu          sync.RWMutex
 	minAmount   float64
+	seenTx       map[string]time.Time
+	seenTTL      time.Duration
 }
 
 // NewWhaleService creates a new whale alert service
@@ -31,7 +33,38 @@ func NewWhaleService(apiKey string) *WhaleService {
 		running:   false,
 		stopChan:  make(chan struct{}),
 		minAmount: 1000000, // $1M minimum
+		seenTx:    make(map[string]time.Time),
+		seenTTL:   24 * time.Hour,
 	}
+}
+
+func (s *WhaleService) filterNewTransactions(transactions []*entity.WhaleTransaction) []*entity.WhaleTransaction {
+	now := time.Now()
+	threshold := now.Add(-s.seenTTL)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for hash, ts := range s.seenTx {
+		if ts.Before(threshold) {
+			delete(s.seenTx, hash)
+		}
+	}
+
+	fresh := make([]*entity.WhaleTransaction, 0, len(transactions))
+	for _, tx := range transactions {
+		if tx.Hash == "" {
+			fresh = append(fresh, tx)
+			continue
+		}
+		if _, exists := s.seenTx[tx.Hash]; exists {
+			continue
+		}
+		s.seenTx[tx.Hash] = now
+		fresh = append(fresh, tx)
+	}
+
+	return fresh
 }
 
 // FetchTransactions fetches recent whale transactions
@@ -108,8 +141,13 @@ func (s *WhaleService) Start(interval time.Duration, alertFunc func([]*entity.Wh
 	s.stopChan = make(chan struct{})
 	s.mu.Unlock()
 
+	effectiveInterval := interval
+	if effectiveInterval < 5*time.Minute {
+		effectiveInterval = 5 * time.Minute
+	}
+
 	go func() {
-		ticker := time.NewTicker(interval)
+		ticker := time.NewTicker(effectiveInterval)
 		defer ticker.Stop()
 
 		for {
@@ -120,7 +158,10 @@ func (s *WhaleService) Start(interval time.Duration, alertFunc func([]*entity.Wh
 				cancel()
 
 				if err == nil && len(transactions) > 0 {
-					alertFunc(transactions)
+					newTx := s.filterNewTransactions(transactions)
+					if len(newTx) > 0 {
+						alertFunc(newTx)
+					}
 				}
 
 			case <-s.stopChan:
