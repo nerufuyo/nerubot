@@ -4,6 +4,7 @@ pub mod auth;
 use axum::{
     routing::{get, post, put, delete},
     Router,
+    response::Html,
 };
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
@@ -12,6 +13,10 @@ use crate::handlers::BotData;
 
 pub fn create_router(bot_data: Arc<BotData>) -> Router {
     Router::new()
+        // ── Dashboard UI ────────────────────────────────
+        .route("/dashboard", get(dashboard_html))
+        .route("/dashboard/reminders", get(dashboard_html))
+
         // ── Dashboard Stats ─────────────────────────────
         .route("/api/admin/stats", get(admin::get_stats))
         .route("/api/admin/stats/guild/{guild_id}", get(admin::get_guild_stats))
@@ -33,8 +38,10 @@ pub fn create_router(bot_data: Arc<BotData>) -> Router {
         // ── Reminders ───────────────────────────────────
         .route("/api/admin/reminders", get(admin::get_reminders))
         .route("/api/admin/reminders", post(admin::create_reminder))
+        .route("/api/admin/reminders/types", get(admin::get_reminder_types))
         .route("/api/admin/reminders/{id}", put(admin::update_reminder))
         .route("/api/admin/reminders/{id}", delete(admin::delete_reminder))
+        .route("/api/admin/reminders/{id}/toggle", put(admin::toggle_reminder))
 
         // ── Polls ───────────────────────────────────────
         .route("/api/admin/polls", get(admin::get_polls))
@@ -64,4 +71,8 @@ pub fn create_router(bot_data: Arc<BotData>) -> Router {
 
         .layer(CorsLayer::permissive())
         .with_state(bot_data)
+}
+
+async fn dashboard_html() -> Html<&'static str> {
+    Html(include_str!("../../static/dashboard.html"))
 }

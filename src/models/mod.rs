@@ -79,6 +79,8 @@ pub struct Reminder {
     pub remind_at: DateTime<Utc>,
     pub recurring: Option<String>,
     pub active: bool,
+    pub reminder_type: String,
+    pub title: String,
     pub created_at: DateTime<Utc>,
 }
 

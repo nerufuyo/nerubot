@@ -326,6 +326,8 @@ pub struct ReminderEntry {
     pub remind_at: String,
     pub recurring: Option<String>,
     pub active: bool,
+    pub reminder_type: String,
+    pub title: String,
     pub created_at: String,
 }
 
@@ -337,31 +339,66 @@ pub struct CreateReminderRequest {
     pub content: String,
     pub remind_at: String,
     pub recurring: Option<String>,
+    pub reminder_type: Option<String>,
+    pub title: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ReminderQuery {
+    pub guild_id: Option<i64>,
+    pub reminder_type: Option<String>,
+    pub active: Option<bool>,
+    pub limit: Option<i64>,
+}
+
+#[derive(Serialize)]
+pub struct ReminderTypeInfo {
+    pub value: String,
+    pub label: String,
+    pub icon: String,
+    pub count: i64,
 }
 
 pub async fn get_reminders(
     State(data): State<Arc<BotData>>,
-    Query(query): Query<ChatQuery>,
+    Query(query): Query<ReminderQuery>,
 ) -> Result<Json<Vec<ReminderEntry>>, StatusCode> {
     let pool = &data.pool;
-    let limit = query.limit.unwrap_or(50);
+    let limit = query.limit.unwrap_or(100);
 
     let reminders = if let Some(gid) = query.guild_id {
-        sqlx::query_as::<_, (i64, i64, i64, i64, String, chrono::DateTime<chrono::Utc>, Option<String>, bool, chrono::DateTime<chrono::Utc>)>(
-            "SELECT id, guild_id, user_id, channel_id, content, remind_at, recurring, active, created_at FROM reminders
-             WHERE guild_id = $1 ORDER BY remind_at DESC LIMIT $2"
-        ).bind(gid).bind(limit).fetch_all(pool).await
+        if let Some(rt) = &query.reminder_type {
+            sqlx::query_as::<_, (i64, i64, i64, i64, String, chrono::DateTime<chrono::Utc>, Option<String>, bool, String, String, chrono::DateTime<chrono::Utc>)>(
+                "SELECT id, guild_id, user_id, channel_id, content, remind_at, recurring, active, reminder_type, title, created_at
+                 FROM reminders WHERE guild_id = $1 AND reminder_type = $2 ORDER BY remind_at DESC LIMIT $3"
+            ).bind(gid).bind(rt).bind(limit).fetch_all(pool).await
+        } else {
+            sqlx::query_as::<_, (i64, i64, i64, i64, String, chrono::DateTime<chrono::Utc>, Option<String>, bool, String, String, chrono::DateTime<chrono::Utc>)>(
+                "SELECT id, guild_id, user_id, channel_id, content, remind_at, recurring, active, reminder_type, title, created_at
+                 FROM reminders WHERE guild_id = $1 ORDER BY remind_at DESC LIMIT $2"
+            ).bind(gid).bind(limit).fetch_all(pool).await
+        }
+    } else if let Some(rt) = &query.reminder_type {
+        sqlx::query_as::<_, (i64, i64, i64, i64, String, chrono::DateTime<chrono::Utc>, Option<String>, bool, String, String, chrono::DateTime<chrono::Utc>)>(
+            "SELECT id, guild_id, user_id, channel_id, content, remind_at, recurring, active, reminder_type, title, created_at
+             FROM reminders WHERE reminder_type = $1 ORDER BY remind_at DESC LIMIT $2"
+        ).bind(rt).bind(limit).fetch_all(pool).await
     } else {
-        sqlx::query_as::<_, (i64, i64, i64, i64, String, chrono::DateTime<chrono::Utc>, Option<String>, bool, chrono::DateTime<chrono::Utc>)>(
-            "SELECT id, guild_id, user_id, channel_id, content, remind_at, recurring, active, created_at FROM reminders
-             ORDER BY remind_at DESC LIMIT $1"
+        sqlx::query_as::<_, (i64, i64, i64, i64, String, chrono::DateTime<chrono::Utc>, Option<String>, bool, String, String, chrono::DateTime<chrono::Utc>)>(
+            "SELECT id, guild_id, user_id, channel_id, content, remind_at, recurring, active, reminder_type, title, created_at
+             FROM reminders ORDER BY remind_at DESC LIMIT $1"
         ).bind(limit).fetch_all(pool).await
     };
 
     let reminders = reminders.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(reminders.into_iter().map(|(id, gid, uid, cid, content, remind_at, recurring, active, created_at)| {
-        ReminderEntry { id, guild_id: gid, user_id: uid, channel_id: cid, content, remind_at: remind_at.to_rfc3339(), recurring, active, created_at: created_at.to_rfc3339() }
+    Ok(Json(reminders.into_iter().map(|(id, gid, uid, cid, content, remind_at, recurring, active, rt, title, created_at)| {
+        ReminderEntry {
+            id, guild_id: gid, user_id: uid, channel_id: cid, content,
+            remind_at: remind_at.to_rfc3339(), recurring, active,
+            reminder_type: rt, title,
+            created_at: created_at.to_rfc3339(),
+        }
     }).collect()))
 }
 
@@ -375,9 +412,15 @@ pub async fn create_reminder(
         .map_err(|_| StatusCode::BAD_REQUEST)?
         .with_timezone(&chrono::Utc);
 
-    sqlx::query("INSERT INTO reminders (guild_id, user_id, channel_id, content, remind_at, recurring) VALUES ($1, $2, $3, $4, $5, $6)")
-        .bind(req.guild_id).bind(req.user_id).bind(req.channel_id).bind(req.content).bind(remind_at).bind(req.recurring)
-        .execute(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let reminder_type = req.reminder_type.unwrap_or_else(|| "custom".into());
+    let title = req.title.unwrap_or_default();
+
+    sqlx::query(
+        "INSERT INTO reminders (guild_id, user_id, channel_id, content, remind_at, recurring, reminder_type, title)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+    ).bind(req.guild_id).bind(req.user_id).bind(req.channel_id).bind(req.content)
+     .bind(remind_at).bind(req.recurring).bind(reminder_type).bind(title)
+     .execute(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::CREATED)
 }
@@ -393,9 +436,15 @@ pub async fn update_reminder(
         .map_err(|_| StatusCode::BAD_REQUEST)?
         .with_timezone(&chrono::Utc);
 
-    sqlx::query("UPDATE reminders SET content = $1, remind_at = $2, recurring = $3 WHERE id = $4")
-        .bind(req.content).bind(remind_at).bind(req.recurring).bind(id)
-        .execute(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let reminder_type = req.reminder_type.unwrap_or_else(|| "custom".into());
+    let title = req.title.unwrap_or_default();
+
+    sqlx::query(
+        "UPDATE reminders SET content = $1, remind_at = $2, recurring = $3, reminder_type = $4, title = $5,
+         guild_id = $6, user_id = $7, channel_id = $8 WHERE id = $9"
+    ).bind(req.content).bind(remind_at).bind(req.recurring).bind(reminder_type).bind(title)
+     .bind(req.guild_id).bind(req.user_id).bind(req.channel_id).bind(id)
+     .execute(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
 }
@@ -410,6 +459,50 @@ pub async fn delete_reminder(
         .bind(id).execute(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::OK)
+}
+
+pub async fn toggle_reminder(
+    State(data): State<Arc<BotData>>,
+    Path(id): Path<i64>,
+) -> Result<StatusCode, StatusCode> {
+    let pool = &data.pool;
+
+    sqlx::query("UPDATE reminders SET active = NOT active WHERE id = $1")
+        .bind(id).execute(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn get_reminder_types(
+    State(data): State<Arc<BotData>>,
+) -> Result<Json<Vec<ReminderTypeInfo>>, StatusCode> {
+    let pool = &data.pool;
+
+    let types = vec![
+        ("holiday", "Holiday", "🎉"),
+        ("work", "Work", "💼"),
+        ("standup", "Standup", "🧍"),
+        ("break", "Break", "☕"),
+        ("support", "Support", "🛟"),
+        ("announcement", "Announcement", "📢"),
+        ("custom", "Custom", "⚙️"),
+    ];
+
+    let mut result = Vec::new();
+    for (value, label, icon) in &types {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM reminders WHERE reminder_type = $1 AND active = true"
+        ).bind(value).fetch_one(pool).await.unwrap_or((0,));
+
+        result.push(ReminderTypeInfo {
+            value: value.to_string(),
+            label: label.to_string(),
+            icon: icon.to_string(),
+            count: count.0,
+        });
+    }
+
+    Ok(Json(result))
 }
 
 // ── Polls ───────────────────────────────────────────────
