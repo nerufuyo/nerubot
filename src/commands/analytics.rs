@@ -10,7 +10,7 @@ pub async fn stats(
     let guild_id = interaction.guild_id.map(|g| g.get() as i64).unwrap_or(0);
 
     let total_messages: (i64,) = sqlx::query_as(
-        "SELECT COALESCE(SUM(message_count), 0) FROM message_stats WHERE guild_id = $1"
+        "SELECT COALESCE(SUM(message_count)::BIGINT, 0) FROM message_stats WHERE guild_id = $1"
     ).bind(guild_id).fetch_one(pool).await?;
 
     let active_users: (i64,) = sqlx::query_as(
@@ -59,7 +59,7 @@ pub async fn profile(
     let user = target_user.to_user(&ctx.http).await?;
 
     let total_messages: (i64,) = sqlx::query_as(
-        "SELECT COALESCE(SUM(message_count), 0) FROM message_stats WHERE guild_id = $1 AND user_id = $2"
+        "SELECT COALESCE(SUM(message_count)::BIGINT, 0) FROM message_stats WHERE guild_id = $1 AND user_id = $2"
     ).bind(guild_id).bind(target_user.get() as i64).fetch_one(pool).await?;
 
     let total_commands: (i64,) = sqlx::query_as(
