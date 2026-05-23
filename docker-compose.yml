@@ -1,0 +1,21 @@
+# NeruBot Docker Compose
+# Uses same PostgreSQL and Redis as Neruwork
+
+services:
+  nerubot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://neruwork:PNJSilkUgW7c4WEkYY6wBP1f@host.docker.internal:5432/neruwork
+      REDIS_URL: redis://:FwiAyyUEE5CuReLg4NdMZymd@host.docker.internal:6379
+    ports:
+      - "8082:8082"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  nerubot:
+    driver: bridge

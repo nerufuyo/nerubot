@@ -1,35 +1,16 @@
-# Binaries
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-/nerubot
-cmd/nerubot/nerubot
+# Rust build artifacts
+/target/
 
-# Test
-*.test
-*.out
-coverage.txt
-coverage.html
-
-# Vendor
-vendor/
-
-# Go workspace
-go.work
-
-# Environment
+# Environment files
 .env
 .env.local
-.env.*.local
+.env.production
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
@@ -37,21 +18,3 @@ Thumbs.db
 
 # Logs
 *.log
-logs/
-
-# Temporary
-tmp/
-temp/
-*.tmp
-.cache/
-
-# Music downloads
-*.webm
-*.m4a
-*.mp3
-*.opus
-*.ogg
-
-# Build
-dist/
-build/
