@@ -1,21 +1,14 @@
 use axum::{
+    body::Body,
     http::{Request, StatusCode},
     middleware::Next,
     response::Response,
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AdminUser {
-    pub username: String,
-    pub role: String,
-}
-
-// Simple token-based auth for admin panel
-// In production, use JWT or session-based auth
-pub async fn admin_auth<B>(
-    req: Request<B>,
-    next: Next<B>,
+pub async fn admin_auth(
+    req: Request<Body>,
+    next: Next,
 ) -> Result<Response, StatusCode> {
     let auth_header = req.headers()
         .get("Authorization")

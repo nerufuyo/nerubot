@@ -42,7 +42,7 @@ pub async fn roast(
     let embed = CreateEmbed::new()
         .title("🔥 Roasted!")
         .description(&full_roast)
-        .colour(Colour::from_rgb(255, 69, 0))
+        .color(0xFF4500)
         .timestamp(chrono::Utc::now());
 
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(

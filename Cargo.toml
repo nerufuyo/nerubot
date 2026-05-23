@@ -7,8 +7,7 @@ license = "MIT"
 
 [dependencies]
 # Discord
-serenity = { version = "0.12", features = ["framework", "standard_framework", "gateway", "cache", "utils", "collector", "voice"] }
-songbird = { version = "0.4", features = ["builtin-queue"] }
+serenity = { version = "0.12", features = ["framework", "standard_framework", "gateway", "cache", "utils", "collector"] }
 
 # Web API (Admin Panel)
 axum = { version = "0.8", features = ["macros"] }
@@ -38,7 +37,7 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 
 # Random
-rand = "0.9"
+rand = "0.8"
 
 # Logging
 tracing = "0.1"

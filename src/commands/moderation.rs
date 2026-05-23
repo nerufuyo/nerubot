@@ -90,8 +90,8 @@ pub async fn timeout(
         .unwrap_or("No reason provided");
 
     let until = chrono::Utc::now() + chrono::Duration::minutes(duration_mins);
-    let member = guild_id.member(&ctx.http, target_user).await?;
-    member.disable_communication_until_datetime(&ctx.http, Timestamp::from_secs(until.timestamp())?).await?;
+    let mut member = guild_id.member(&ctx.http, target_user).await?;
+    member.disable_communication_until_datetime(&ctx.http, Timestamp::from_unix_timestamp(until.timestamp())?).await?;
 
     sqlx::query("INSERT INTO mod_logs (guild_id, user_id, moderator_id, action, reason) VALUES ($1, $2, $3, 'timeout', $4)")
         .bind(guild_id.get() as i64).bind(target_user.get() as i64).bind(moderator.id.get() as i64).bind(reason)

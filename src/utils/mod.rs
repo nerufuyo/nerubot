@@ -1,5 +1,4 @@
 use serenity::builder::CreateEmbed;
-use serenity::utils::Colour;
 
 pub mod ai;
 pub mod reminder;
@@ -8,7 +7,7 @@ pub fn success_embed(title: &str, description: &str) -> CreateEmbed {
     CreateEmbed::new()
         .title(title)
         .description(description)
-        .colour(Colour::from_rgb(87, 242, 135))
+        .color(0x57F287)
         .timestamp(chrono::Utc::now())
 }
 
@@ -16,7 +15,7 @@ pub fn error_embed(title: &str, description: &str) -> CreateEmbed {
     CreateEmbed::new()
         .title(title)
         .description(description)
-        .colour(Colour::from_rgb(237, 66, 69))
+        .color(0xED4245)
         .timestamp(chrono::Utc::now())
 }
 
@@ -24,13 +23,13 @@ pub fn info_embed(title: &str, description: &str) -> CreateEmbed {
     CreateEmbed::new()
         .title(title)
         .description(description)
-        .colour(Colour::from_rgb(88, 101, 242))
+        .color(0x5865F2)
         .timestamp(chrono::Utc::now())
 }
 
-pub fn random_color() -> Colour {
-    let r = rand::random::<u8>();
-    let g = rand::random::<u8>();
-    let b = rand::random::<u8>();
-    Colour::from_rgb(r, g, b)
+pub fn random_color() -> u32 {
+    let r = rand::random::<u8>() as u32;
+    let g = rand::random::<u8>() as u32;
+    let b = rand::random::<u8>() as u32;
+    (r << 16) | (g << 8) | b
 }

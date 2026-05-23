@@ -5,7 +5,6 @@ use axum::{
     routing::{get, post, put, delete},
     Router,
 };
-use sqlx::PgPool;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 

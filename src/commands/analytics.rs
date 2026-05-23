@@ -76,7 +76,7 @@ pub async fn profile(
         .field("Messages", format!("{}", total_messages.0), true)
         .field("Commands Used", format!("{}", total_commands.0), true)
         .field("Active Warnings", format!("{}", warnings.0), true)
-        .colour(Colour::from_rgb(88, 101, 242))
+        .color(0x5865F2)
         .timestamp(chrono::Utc::now());
 
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(

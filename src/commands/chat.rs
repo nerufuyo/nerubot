@@ -1,7 +1,7 @@
 use serenity::all::*;
 use sqlx::PgPool;
 use crate::utils::ai;
-use crate::utils::{info_embed, error_embed};
+use crate::utils::{success_embed, info_embed, error_embed};
 
 pub async fn chat(
     ctx: &Context,
@@ -17,7 +17,7 @@ pub async fn chat(
         .and_then(|o| o.value.as_str())
         .unwrap_or("");
 
-    interaction.defer_response(&ctx.http).await?;
+    interaction.defer(&ctx.http).await?;
 
     // Load history
     let history: Vec<(String, String)> = sqlx::query_as::<_, (String, String)>(

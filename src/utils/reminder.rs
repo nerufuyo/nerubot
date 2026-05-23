@@ -1,4 +1,4 @@
-use chrono::{Datelike, NaiveDate, Utc};
+use chrono::{Datelike, NaiveDate};
 
 #[derive(Debug, Clone)]
 pub struct Holiday {
@@ -27,15 +27,8 @@ pub fn get_indonesian_holidays(year: i32) -> Vec<Holiday> {
 }
 
 pub fn is_ramadan(date: NaiveDate) -> bool {
-    // Approximate Ramadan dates - in production, use Hijri calendar library
-    let year = date.year();
-    match year {
-        2026 => date >= NaiveDate::from_ymd_opt(2026, 2, 18).unwrap()
-             && date <= NaiveDate::from_ymd_opt(2026, 3, 19).unwrap(),
-        2027 => date >= NaiveDate::from_ymd_opt(2027, 2, 8).unwrap()
-             && date <= NaiveDate::from_ymd_opt(2027, 3, 9).unwrap(),
-        _ => false,
-    }
+    (date >= NaiveDate::from_ymd_opt(2026, 2, 18).unwrap() && date <= NaiveDate::from_ymd_opt(2026, 3, 19).unwrap())
+    || (date >= NaiveDate::from_ymd_opt(2027, 2, 8).unwrap() && date <= NaiveDate::from_ymd_opt(2027, 3, 9).unwrap())
 }
 
 pub fn get_sahoor_berbuka_times() -> (String, String) {

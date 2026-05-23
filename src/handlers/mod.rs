@@ -72,7 +72,7 @@ async fn show_help(ctx: &Context, interaction: &CommandInteraction) -> anyhow::R
         .field("**📊 Analytics**", "`/stats` `/profile`", false)
         .field("**⏰ Reminders**", "`/reminder` — Indonesian holidays & Ramadan", false)
         .field("**🔧 Utility**", "`/calc` `/poll`", false)
-        .colour(Colour::from_rgb(88, 101, 242))
+        .color(0x5865F2)
         .footer(CreateEmbedFooter::new("NeruBot v5.0.1 — Built with Rust"))
         .timestamp(chrono::Utc::now());
 

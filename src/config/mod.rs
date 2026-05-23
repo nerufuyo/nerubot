@@ -10,6 +10,7 @@ pub struct Config {
     pub enable_roast: bool,
     pub enable_reminder: bool,
     pub reminder_channel_id: u64,
+    pub skip_migrations: bool,
     pub log_level: String,
 }
 
@@ -32,6 +33,8 @@ impl Config {
                 .unwrap_or_else(|_| "true".into()).parse().unwrap_or(true),
             reminder_channel_id: env::var("REMINDER_CHANNEL_ID")
                 .unwrap_or_default().parse().unwrap_or(0),
+            skip_migrations: env::var("SKIP_MIGRATIONS")
+                .unwrap_or_default().parse().unwrap_or(false),
             log_level: env::var("LOG_LEVEL").unwrap_or_else(|_| "info".into()),
         })
     }

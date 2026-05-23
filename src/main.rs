@@ -8,7 +8,6 @@ mod api;
 mod lark;
 
 use serenity::all::*;
-use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -89,7 +88,7 @@ impl EventHandler for Handler {
 }
 
 struct BotDataKey;
-impl TypeMapKey for BotDataKey {
+impl serenity::prelude::TypeMapKey for BotDataKey {
     type Value = Arc<BotData>;
 }
 
@@ -104,7 +103,11 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Starting NeruBot v5.0.1...");
 
     let pool = db::create_pool(&config.database_url).await?;
-    db::run_migrations(&pool).await?;
+    if !config.skip_migrations {
+        db::run_migrations(&pool).await?;
+    } else {
+        tracing::info!("Skipping migrations (SKIP_MIGRATIONS=true)");
+    }
 
     let redis_client = redis::Client::open(config.redis_url.as_str())?;
     let mut redis_conn = redis_client.get_connection_manager().await?;
@@ -136,12 +139,14 @@ async fn main() -> anyhow::Result<()> {
     let api_data = bot_data.clone();
     let lark_state_clone = lark_state.clone();
     let api_handle = tokio::spawn(async move {
-        use axum::{routing::{get, post}, Router};
+        use axum::{routing::post, Router};
 
-        let app = Router::new()
-            .merge(api::create_router(api_data))
+        let lark_router: Router = Router::new()
             .route("/api/lark/webhook", post(lark::handler::handle_lark_webhook))
             .with_state(lark_state_clone);
+
+        let app: Router = api::create_router(api_data)
+            .merge(lark_router);
 
         let listener = tokio::net::TcpListener::bind("0.0.0.0:8082").await.unwrap();
         tracing::info!("Admin API + Lark webhook listening on 0.0.0.0:8082");

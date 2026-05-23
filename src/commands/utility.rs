@@ -1,5 +1,5 @@
 use serenity::all::*;
-use crate::utils::{success_embed, info_embed};
+use crate::utils::{success_embed, error_embed, info_embed};
 
 pub async fn calc(ctx: &Context, interaction: &CommandInteraction) -> anyhow::Result<()> {
     let expression = interaction.data.options.iter()
@@ -64,7 +64,7 @@ pub async fn poll(
         .title("📊 Poll")
         .description(format!("**{}**\n\n{}", question, options_text))
         .footer(CreateEmbedFooter::new(format!("Created by {}", interaction.user.name)))
-        .colour(Colour::from_rgb(88, 101, 242))
+        .color(0x5865F2)
         .timestamp(chrono::Utc::now());
 
     let response = interaction.create_response(&ctx.http, CreateInteractionResponse::Message(

@@ -29,7 +29,7 @@ pub async fn eight_ball(ctx: &Context, interaction: &CommandInteraction) -> anyh
 }
 
 pub async fn meme(ctx: &Context, interaction: &CommandInteraction) -> anyhow::Result<()> {
-    interaction.defer_response(&ctx.http).await?;
+    interaction.defer(&ctx.http).await?;
 
     let resp: serde_json::Value = reqwest::get("https://meme-api.com/gimme").await?.json().await?;
 
