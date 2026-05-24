@@ -33,7 +33,7 @@ pub async fn stats(
         top_cmds_text = "No commands used yet.".into();
     }
 
-    let embed = info_embed("📊 Server Statistics", &format!(
+    let embed = info_embed("Server Statistics", &format!(
         "**Total Messages:** {}\n**Active Users (7d):** {}\n**Total Commands:** {}\n\n**Top Commands:**\n{}",
         total_messages.0, active_users.0, total_commands.0, top_cmds_text
     ));
@@ -71,7 +71,7 @@ pub async fn profile(
     ).bind(guild_id).bind(target_user.get() as i64).fetch_one(pool).await?;
 
     let embed = CreateEmbed::new()
-        .title(format!("👤 {}'s Profile", user.name))
+        .title(format!("{}'s Profile", user.name))
         .thumbnail(user.face())
         .field("Messages", format!("{}", total_messages.0), true)
         .field("Commands Used", format!("{}", total_commands.0), true)

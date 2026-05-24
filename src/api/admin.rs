@@ -479,13 +479,13 @@ pub async fn get_reminder_types(
     let pool = &data.pool;
 
     let types = vec![
-        ("holiday", "Holiday", "🎉"),
-        ("work", "Work", "💼"),
-        ("standup", "Standup", "🧍"),
-        ("break", "Break", "☕"),
-        ("support", "Support", "🛟"),
-        ("announcement", "Announcement", "📢"),
-        ("custom", "Custom", "⚙️"),
+        ("holiday", "Holiday", ""),
+        ("work", "Work", ""),
+        ("standup", "Standup", ""),
+        ("break", "Break", ""),
+        ("support", "Support", ""),
+        ("announcement", "Announcement", ""),
+        ("custom", "Custom", ""),
     ];
 
     let mut result = Vec::new();

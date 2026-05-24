@@ -1,90 +1,52 @@
-# Makefile for NeruBot (Golang Edition)
+# Makefile for NeruBot (Rust Edition)
 
 # Variables
 BINARY_NAME=nerubot
-CMD_PATH=./cmd/nerubot
-BUILD_DIR=./build
-MAIN_PATH=$(CMD_PATH)/main.go
+CARGO=cargo
 
-# Go parameters
-GOCMD=go
-GOBUILD=$(GOCMD) build
-GOCLEAN=$(GOCMD) clean
-GOTEST=$(GOCMD) test
-GOGET=$(GOCMD) get
-GOMOD=$(GOCMD) mod
-GOFMT=$(GOCMD) fmt
-GOVET=$(GOCMD) vet
-
-# Build flags
-LDFLAGS=-ldflags "-s -w"
-
-.PHONY: all build clean test coverage lint fmt vet run help docker-build docker-run
+.PHONY: all build clean test fmt lint run help docker-build docker-run docker-stop check
 
 ## all: Default target - build the application
 all: build
 
-## build: Build the binary
+## build: Build release binary
 build:
 	@echo "Building $(BINARY_NAME)..."
-	@mkdir -p $(BUILD_DIR)
-	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
-	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
+	$(CARGO) build --release
+	@echo "Build complete: target/release/$(BINARY_NAME)"
 
 ## run: Build and run the application
-run: build
+run:
 	@echo "Running $(BINARY_NAME)..."
-	@$(BUILD_DIR)/$(BINARY_NAME)
+	$(CARGO) run
 
-## clean: Remove build artifacts and caches
+## clean: Remove build artifacts
 clean:
 	@echo "Cleaning..."
-	$(GOCLEAN)
-	@rm -rf $(BUILD_DIR)
-	@rm -f $(BINARY_NAME)
-	@rm -f coverage.txt coverage.html
+	$(CARGO) clean
 	@echo "Clean complete"
 
 ## test: Run tests
 test:
 	@echo "Running tests..."
-	$(GOTEST) -v -race ./...
-
-## coverage: Run tests with coverage
-coverage:
-	@echo "Running tests with coverage..."
-	$(GOTEST) -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-	$(GOCMD) tool cover -html=coverage.txt -o coverage.html
-	@echo "Coverage report generated: coverage.html"
-
-## lint: Run golangci-lint
-lint:
-	@echo "Running linter..."
-	@which golangci-lint > /dev/null || (echo "golangci-lint not installed. Run: brew install golangci-lint" && exit 1)
-	golangci-lint run ./...
+	$(CARGO) test
 
 ## fmt: Format code
 fmt:
 	@echo "Formatting code..."
-	$(GOFMT) ./...
+	$(CARGO) fmt
 	@echo "Format complete"
 
-## vet: Run go vet
-vet:
-	@echo "Running go vet..."
-	$(GOVET) ./...
+## lint: Run clippy linter
+lint:
+	@echo "Running clippy..."
+	$(CARGO) clippy -- -D warnings
 
-## tidy: Tidy go modules
-tidy:
-	@echo "Tidying modules..."
-	$(GOMOD) tidy
-	@echo "Tidy complete"
-
-## deps: Download dependencies
-deps:
-	@echo "Downloading dependencies..."
-	$(GOMOD) download
-	@echo "Dependencies downloaded"
+## check: Run typecheck (cargo check)
+check:
+	@echo "Checking..."
+	$(CARGO) check
+	@echo "Check complete"
 
 ## docker-build: Build Docker image
 docker-build:
@@ -104,14 +66,8 @@ docker-stop:
 	docker-compose down
 	@echo "Container stopped"
 
-## install: Install the binary to GOPATH/bin
-install:
-	@echo "Installing $(BINARY_NAME)..."
-	$(GOCMD) install $(MAIN_PATH)
-	@echo "Install complete"
-
-## check: Run all checks (fmt, vet, lint, test)
-check: fmt vet lint test
+## all-checks: Run all checks (fmt, check, lint, test)
+all-checks: fmt check lint test
 	@echo "All checks passed!"
 
 ## help: Show this help message

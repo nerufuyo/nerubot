@@ -6,6 +6,7 @@ mod models;
 mod utils;
 mod api;
 mod lark;
+mod workers;
 
 use serenity::all::*;
 use std::sync::Arc;
@@ -133,6 +134,7 @@ async fn main() -> anyhow::Result<()> {
     let lark_state = Arc::new(lark::handler::LarkState {
         bot: Arc::new(Mutex::new(lark_bot)),
         verification_token: lark_config.verification_token.clone(),
+        encrypt_key: lark_config.encrypt_key.clone(),
     });
 
     // Start API server
@@ -151,6 +153,13 @@ async fn main() -> anyhow::Result<()> {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:8082").await.unwrap();
         tracing::info!("Admin API + Lark webhook listening on 0.0.0.0:8082");
         axum::serve(listener, app).await.unwrap();
+    });
+
+    // Start reminder worker (auto-sends scheduled reminders)
+    let worker_pool = bot_data.pool.clone();
+    let worker_lark = lark_state.bot.clone();
+    tokio::spawn(async move {
+        workers::reminder_worker::reminder_loop(worker_pool, worker_lark).await;
     });
 
     // Start Discord bot

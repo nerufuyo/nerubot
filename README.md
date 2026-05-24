@@ -1,8 +1,8 @@
 # NeruBot
 
-A feature-rich Discord bot built with Go. AI chat, moderation, utility tools, fun commands, confessions, roasts, news, whale alerts, analytics, music, and scheduled reminders.
+A feature-rich Discord bot built with Rust. AI chat, moderation, utility tools, fun commands, confessions, roasts, news, whale alerts, analytics, music, and scheduled reminders.
 
-**v5.0.1** | Go 1.21+ | MIT License
+**v5.0.1** | Rust 2024 Edition | MIT License
 
 ---
 
@@ -30,7 +30,7 @@ A feature-rich Discord bot built with Go. AI chat, moderation, utility tools, fu
 
 ### Prerequisites
 
-- Go 1.21+
+- Rust (2024 edition)
 - A Discord bot token ([Discord Developer Portal](https://discord.com/developers/applications))
 
 ### Setup
@@ -46,11 +46,11 @@ cp .env.example .env
 
 ```bash
 # Direct
-go run ./cmd/nerubot
+cargo run
 
 # Or build first
-make build
-./build/nerubot
+cargo build --release
+./target/release/nerubot
 ```
 
 ### Docker
@@ -181,28 +181,23 @@ Use `/reminder` to view upcoming holidays and today's Ramadan schedule.
 
 ```
 nerubot/
-├── cmd/nerubot/main.go          # Entry point
-├── internal/
-│   ├── config/                   # Configuration, constants, messages
-│   ├── delivery/discord/         # Discord handlers (bot, slash commands)
-│   ├── entity/                   # Domain models
-│   ├── pkg/                      # Shared packages (AI, logger)
-│   ├── repository/               # Data persistence (JSON files)
-│   └── usecase/                  # Business logic per feature
-│       ├── analytics/
-│       ├── chatbot/
-│       ├── confession/
-│       ├── news/
-│       ├── reminder/
-│       ├── roast/
-│       └── whale/
-├── data/                         # Runtime JSON data (gitignored)
-├── deploy/                       # Systemd, nginx, cron configs
-├── .env.example                  # Environment template
-├── Dockerfile                    # Container build
-├── docker-compose.yml            # Docker orchestration
-├── Makefile                      # Build tasks
-└── railway.toml                  # Railway deployment
+├── src/main.rs                  # Entry point
+├── src/
+│   ├── commands/                # Slash commands (chat, roast, fun, moderation, etc.)
+│   ├── handlers/                # Interaction and event handlers
+│   ├── config/                  # Environment configuration
+│   ├── db/                      # Database connection and migrations
+│   ├── models/                  # Domain models
+│   ├── utils/                   # AI client, reminder utilities
+│   ├── api/                     # Admin API + Lark webhook
+│   ├── lark/                    # Lark bot integration
+│   └── workers/                 # Background workers (reminders)
+├── static/                      # Static assets
+├── migrations/                  # SQL migration files
+├── Cargo.toml                   # Rust dependencies
+├── Dockerfile                   # Container build
+├── docker-compose.yml           # Docker orchestration
+└── Makefile                     # Build tasks
 ```
 
 The project follows **Clean Architecture**: `delivery` -> `usecase` -> `entity` -> `repository`. Each feature is isolated in its own usecase package.
@@ -214,7 +209,7 @@ The project follows **Clean Architecture**: `delivery` -> `usecase` -> `entity` 
 ### Build
 
 ```bash
-make build          # Build binary to ./build/nerubot
+make build          # Build release binary
 make run            # Build and run
 make clean          # Remove build artifacts
 ```
@@ -222,20 +217,20 @@ make clean          # Remove build artifacts
 ### Code Quality
 
 ```bash
-make fmt            # Format code
-make vet            # Run go vet
-make test           # Run tests
-make lint           # Run linter (requires golangci-lint)
+make fmt            # Format code (cargo fmt)
+make check          # Check code (cargo check)
+make test           # Run tests (cargo test)
+make lint           # Run clippy linter
 ```
 
 ### Adding a Feature
 
-1. Define domain types in `internal/entity/`
-2. Create service in `internal/usecase/<feature>/`
-3. Add handler in `internal/delivery/discord/handler_<feature>.go`
-4. Wire it in `bot.go` (struct field, initialization, command routing, slash command registration)
-5. Add config in `internal/config/config.go` if needed
-6. Update help embed in `handlers.go`
+1. Create module in `src/commands/<feature>.rs`
+2. Add handler function with standard signature
+3. Register in `src/commands/mod.rs`
+4. Add route in `src/handlers/mod.rs` match block
+5. Register slash command in `src/main.rs` `ready()` handler
+6. Update help text in `show_help()`
 
 ---
 

@@ -10,7 +10,7 @@ pub async fn calc(ctx: &Context, interaction: &CommandInteraction) -> anyhow::Re
     // Simple calculator - evaluate basic math
     let result = evaluate_expression(expression);
 
-    let embed = info_embed("🧮 Calculator", &format!("`{}` = `{}`", expression, result));
+    let embed = info_embed("Calculator", &format!("`{}` = `{}`", expression, result));
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
         CreateInteractionResponseMessage::new().embed(embed)
     )).await?;
@@ -46,7 +46,7 @@ pub async fn poll(
         .collect();
 
     if options.len() < 2 {
-        let embed = error_embed("❌ Error", "Please provide at least 2 options.");
+        let embed = error_embed("Error", "Please provide at least 2 options.");
         interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
             CreateInteractionResponseMessage::new().embed(embed).ephemeral(true)
         )).await?;
@@ -61,7 +61,7 @@ pub async fn poll(
     }
 
     let embed = CreateEmbed::new()
-        .title("📊 Poll")
+        .title("Poll")
         .description(format!("**{}**\n\n{}", question, options_text))
         .footer(CreateEmbedFooter::new(format!("Created by {}", interaction.user.name)))
         .color(0x5865F2)

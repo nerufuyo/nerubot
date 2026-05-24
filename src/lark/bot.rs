@@ -1,6 +1,7 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
+use chrono::Datelike;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LarkMessage {
@@ -79,18 +80,28 @@ impl LarkBot {
     pub async fn handle_event(&self, event: &LarkEvent) -> Result<()> {
         match event.event_type.as_str() {
             "im.message.receive_v1" => {
-                let msg = &event.event;
+                // Lark event structure: event.message contains chat_id, message_type, content
+                let msg = &event.event["message"];
                 let chat_id = msg["chat_id"].as_str().unwrap_or("");
+                tracing::info!("Lark message from chat_id={}", chat_id);
+                let content = msg["content"].as_str().unwrap_or("");
                 let content = msg["content"].as_str().unwrap_or("");
                 let msg_type = msg["message_type"].as_str().unwrap_or("text");
 
                 if msg_type == "text" {
                     let text: serde_json::Value = serde_json::from_str(content)?;
-                    let text = text["text"].as_str().unwrap_or("");
+                    let mut text = text["text"].as_str().unwrap_or("").to_string();
+
+                    // Strip @mention prefix (Lark adds "@_user_xxx " when bot is mentioned)
+                    // e.g., "@_user_1 /help" -> "/help", "@_all hello" -> "hello"
+                    let first_word = text.split_whitespace().next().unwrap_or("");
+                    if first_word.starts_with("@_") {
+                        text = text[first_word.len()..].trim_start().to_string();
+                    }
 
                     // Handle commands
                     if text.starts_with("/") {
-                        self.handle_command(chat_id, text).await?;
+                        self.handle_command(chat_id, &text).await?;
                     } else {
                         // Default: echo back
                         self.send_text(chat_id, &format!("You said: {}", text)).await?;
@@ -112,7 +123,10 @@ impl LarkBot {
 
         match cmd {
             "/help" => {
-                self.send_text(chat_id, "🤖 NeruBot Commands:\n\n/help - Show this help\n/chat <message> - Chat with AI\n/roast - Get roasted\n/stats - Server stats\n/reminder - View reminders").await?;
+                self.send_text(chat_id, "NeruBot Commands:\n\n/help - Show this help\n/chatid - Show current chat ID\n/chat <message> - Chat with AI\n/roast - Get roasted\n/stats - Server stats\n/reminder - View reminders").await?;
+            }
+            "/chatid" => {
+                self.send_text(chat_id, &format!("Chat ID: `{}`", chat_id)).await?;
             }
             "/chat" => {
                 if args.is_empty() {
@@ -124,18 +138,38 @@ impl LarkBot {
             }
             "/roast" => {
                 let roasts = [
-                    "Kamu itu kayak WiFi tetangga — kadang nyambung, kadang nggak.",
-                    "Kalau kepribadianmu adalah warna, kamu pasti abu-abu.",
-                    "Aku mau roast kamu, tapi aku nggak mau bully yang lemah.",
+                    "Ehehe~ Paimon liat kamu kayak treasure chest yang belum di-unlock... penuh potensi tapi kuncinya ilang!",
+                    "Hmm, Paimon jadi penasaran deh — kamu ini adventurer beneran atau cuma NPC ya?",
+                    "Wah, skill kamu kayak menu emergency food... ada sih, tapi nggak ada yang spesial~",
                 ];
                 let roast = roasts[rand::random::<usize>() % roasts.len()];
-                self.send_text(chat_id, &format!("🔥 {}", roast)).await?;
+                self.send_text(chat_id, &format!("{}", roast)).await?;
             }
             "/stats" => {
-                self.send_text(chat_id, "📊 Stats feature coming soon!").await?;
+                self.send_text(chat_id, "Stats feature coming soon!").await?;
             }
             "/reminder" => {
-                self.send_text(chat_id, "⏰ Reminder feature coming soon!").await?;
+                let today = chrono::Utc::now().date_naive();
+                let holidays = crate::utils::reminder::get_indonesian_holidays(today.year());
+                let upcoming: Vec<_> = holidays.iter()
+                    .filter(|h| h.date >= today)
+                    .take(5)
+                    .collect();
+
+                let mut text = String::from("Upcoming Indonesian Holidays:\n\n");
+                for h in &upcoming {
+                    text.push_str(&format!("- {} -- {}\n", h.name, h.date.format("%d %B %Y")));
+                }
+
+                if crate::utils::reminder::is_ramadan(today) {
+                    let (sahoor, berbuka) = crate::utils::reminder::get_sahoor_berbuka_times();
+                    text.push_str(&format!(
+                        "\nRamadan Schedule:\nSahoor: {}\nBerbuka: {}",
+                        sahoor, berbuka
+                    ));
+                }
+
+                self.send_text(chat_id, &text).await?;
             }
             _ => {
                 self.send_text(chat_id, &format!("Unknown command: {}. Type /help for available commands.", cmd)).await?;

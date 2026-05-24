@@ -48,7 +48,7 @@ pub async fn chat(
          AND id NOT IN (SELECT id FROM chat_history WHERE user_id = $1 AND guild_id = $2 ORDER BY created_at DESC LIMIT 50)"
     ).bind(user_id).bind(guild_id).execute(pool).await?;
 
-    let embed = info_embed("💬 AI Chat", &response);
+    let embed = info_embed("AI Chat", &response);
     interaction.edit_response(&ctx.http, EditInteractionResponse::new().embed(embed)).await?;
     Ok(())
 }
@@ -64,7 +64,7 @@ pub async fn chat_reset(
     sqlx::query("DELETE FROM chat_history WHERE user_id = $1 AND guild_id = $2")
         .bind(user_id).bind(guild_id).execute(pool).await?;
 
-    let embed = success_embed("🔄 Chat Reset", "Your conversation history has been cleared.");
+    let embed = success_embed("Chat Reset", "Your conversation history has been cleared.");
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
         CreateInteractionResponseMessage::new().embed(embed)
     )).await?;
