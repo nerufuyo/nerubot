@@ -20,21 +20,21 @@ pub async fn reminder(
         .take(5)
         .collect();
 
-    let mut description = String::from("**Upcoming Indonesian Holidays:**\n\n");
+    let mut description = String::from("**📅 Upcoming Indonesian Holidays:**\n\n");
     for h in &upcoming {
-        description.push_str(&format!("- {} — {}\n", h.name, h.date.format("%d %B %Y")));
+        description.push_str(&format!("{} **{}** — {}\n", h.emoji, h.name, h.date.format("%d %B %Y")));
     }
 
     // Check Ramadan
     if crate::utils::reminder::is_ramadan(today) {
         let (sahoor, berbuka) = crate::utils::reminder::get_sahoor_berbuka_times();
         description.push_str(&format!(
-            "\n**Ramadan Schedule:**\nSahoor: {}\nBerbuka: {}",
+            "\n🌙 **Ramadan Schedule:**\n🕌 Sahoor: {}\n🌅 Berbuka: {}",
             sahoor, berbuka
         ));
     }
 
-    let embed = info_embed("Reminders", &description);
+    let embed = info_embed("⏰ Reminders", &description);
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
         CreateInteractionResponseMessage::new().embed(embed)
     )).await?;

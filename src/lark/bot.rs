@@ -23,15 +23,17 @@ pub struct LarkBot {
     app_secret: String,
     client: Client,
     access_token: Option<String>,
+    allowed_chat_ids: Vec<String>,
 }
 
 impl LarkBot {
-    pub fn new(app_id: String, app_secret: String) -> Self {
+    pub fn new(app_id: String, app_secret: String, allowed_chat_ids: Vec<String>) -> Self {
         Self {
             app_id,
             app_secret,
             client: Client::new(),
             access_token: None,
+            allowed_chat_ids,
         }
     }
 
@@ -80,28 +82,25 @@ impl LarkBot {
     pub async fn handle_event(&self, event: &LarkEvent) -> Result<()> {
         match event.event_type.as_str() {
             "im.message.receive_v1" => {
-                // Lark event structure: event.message contains chat_id, message_type, content
-                let msg = &event.event["message"];
+                let msg = &event.event;
                 let chat_id = msg["chat_id"].as_str().unwrap_or("");
-                tracing::info!("Lark message from chat_id={}", chat_id);
-                let content = msg["content"].as_str().unwrap_or("");
                 let content = msg["content"].as_str().unwrap_or("");
                 let msg_type = msg["message_type"].as_str().unwrap_or("text");
 
+                if !self.allowed_chat_ids.is_empty()
+                    && !self.allowed_chat_ids.iter().any(|id| id == chat_id)
+                {
+                    tracing::debug!("Ignoring message from unauthorized chat_id: {}", chat_id);
+                    return Ok(());
+                }
+
                 if msg_type == "text" {
                     let text: serde_json::Value = serde_json::from_str(content)?;
-                    let mut text = text["text"].as_str().unwrap_or("").to_string();
-
-                    // Strip @mention prefix (Lark adds "@_user_xxx " when bot is mentioned)
-                    // e.g., "@_user_1 /help" -> "/help", "@_all hello" -> "hello"
-                    let first_word = text.split_whitespace().next().unwrap_or("");
-                    if first_word.starts_with("@_") {
-                        text = text[first_word.len()..].trim_start().to_string();
-                    }
+                    let text = text["text"].as_str().unwrap_or("");
 
                     // Handle commands
                     if text.starts_with("/") {
-                        self.handle_command(chat_id, &text).await?;
+                        self.handle_command(chat_id, text).await?;
                     } else {
                         // Default: echo back
                         self.send_text(chat_id, &format!("You said: {}", text)).await?;
@@ -123,10 +122,7 @@ impl LarkBot {
 
         match cmd {
             "/help" => {
-                self.send_text(chat_id, "NeruBot Commands:\n\n/help - Show this help\n/chatid - Show current chat ID\n/chat <message> - Chat with AI\n/roast - Get roasted\n/stats - Server stats\n/reminder - View reminders").await?;
-            }
-            "/chatid" => {
-                self.send_text(chat_id, &format!("Chat ID: `{}`", chat_id)).await?;
+                self.send_text(chat_id, "🤖 NeruBot Commands:\n\n/help - Show this help\n/chat <message> - Chat with AI\n/roast - Get roasted\n/stats - Server stats\n/reminder - View reminders").await?;
             }
             "/chat" => {
                 if args.is_empty() {
@@ -138,15 +134,15 @@ impl LarkBot {
             }
             "/roast" => {
                 let roasts = [
-                    "Ehehe~ Paimon liat kamu kayak treasure chest yang belum di-unlock... penuh potensi tapi kuncinya ilang!",
-                    "Hmm, Paimon jadi penasaran deh — kamu ini adventurer beneran atau cuma NPC ya?",
-                    "Wah, skill kamu kayak menu emergency food... ada sih, tapi nggak ada yang spesial~",
+                    "Kamu itu kayak WiFi tetangga — kadang nyambung, kadang nggak.",
+                    "Kalau kepribadianmu adalah warna, kamu pasti abu-abu.",
+                    "Aku mau roast kamu, tapi aku nggak mau bully yang lemah.",
                 ];
                 let roast = roasts[rand::random::<usize>() % roasts.len()];
-                self.send_text(chat_id, &format!("{}", roast)).await?;
+                self.send_text(chat_id, &format!("🔥 {}", roast)).await?;
             }
             "/stats" => {
-                self.send_text(chat_id, "Stats feature coming soon!").await?;
+                self.send_text(chat_id, "📊 Stats feature coming soon!").await?;
             }
             "/reminder" => {
                 let today = chrono::Utc::now().date_naive();
@@ -156,15 +152,15 @@ impl LarkBot {
                     .take(5)
                     .collect();
 
-                let mut text = String::from("Upcoming Indonesian Holidays:\n\n");
+                let mut text = String::from("📅 Upcoming Indonesian Holidays:\n\n");
                 for h in &upcoming {
-                    text.push_str(&format!("- {} -- {}\n", h.name, h.date.format("%d %B %Y")));
+                    text.push_str(&format!("{} {} — {}\n", h.emoji, h.name, h.date.format("%d %B %Y")));
                 }
 
                 if crate::utils::reminder::is_ramadan(today) {
                     let (sahoor, berbuka) = crate::utils::reminder::get_sahoor_berbuka_times();
                     text.push_str(&format!(
-                        "\nRamadan Schedule:\nSahoor: {}\nBerbuka: {}",
+                        "\n🌙 Ramadan Schedule:\n🕌 Sahoor: {}\n🌅 Berbuka: {}",
                         sahoor, berbuka
                     ));
                 }

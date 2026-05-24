@@ -9,6 +9,7 @@ pub struct LarkConfig {
     pub app_secret: String,
     pub verification_token: String,
     pub encrypt_key: String,
+    pub allowed_chat_ids: Vec<String>,
 }
 
 impl LarkConfig {
@@ -18,6 +19,12 @@ impl LarkConfig {
             app_secret: std::env::var("LARK_APP_SECRET").unwrap_or_default(),
             verification_token: std::env::var("LARK_VERIFICATION_TOKEN").unwrap_or_default(),
             encrypt_key: std::env::var("LARK_ENCRYPT_KEY").unwrap_or_default(),
+            allowed_chat_ids: std::env::var("LARK_ALLOWED_CHAT_IDS")
+                .unwrap_or_default()
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
         }
     }
 }

@@ -26,7 +26,7 @@ pub async fn kick(
         .bind(guild_id.get() as i64).bind(target_user.get() as i64).bind(moderator.id.get() as i64).bind(reason)
         .execute(pool).await?;
 
-    let embed = success_embed("User Kicked", &format!("**{}** has been kicked.\nReason: {}", target_user, reason));
+    let embed = success_embed("👢 User Kicked", &format!("**{}** has been kicked.\nReason: {}", target_user, reason));
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
         CreateInteractionResponseMessage::new().embed(embed)
     )).await?;
@@ -58,7 +58,7 @@ pub async fn ban(
         .bind(guild_id.get() as i64).bind(target_user.get() as i64).bind(moderator.id.get() as i64).bind(reason)
         .execute(pool).await?;
 
-    let embed = success_embed("User Banned", &format!("**{}** has been banned.\nReason: {}", target_user, reason));
+    let embed = success_embed("🔨 User Banned", &format!("**{}** has been banned.\nReason: {}", target_user, reason));
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
         CreateInteractionResponseMessage::new().embed(embed)
     )).await?;
@@ -97,7 +97,7 @@ pub async fn timeout(
         .bind(guild_id.get() as i64).bind(target_user.get() as i64).bind(moderator.id.get() as i64).bind(reason)
         .execute(pool).await?;
 
-    let embed = success_embed("User Timed Out", &format!("**{}** timed out for {} minutes.\nReason: {}", target_user, duration_mins, reason));
+    let embed = success_embed("⏰ User Timed Out", &format!("**{}** timed out for {} minutes.\nReason: {}", target_user, duration_mins, reason));
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
         CreateInteractionResponseMessage::new().embed(embed)
     )).await?;
@@ -131,7 +131,7 @@ pub async fn warn(
         .bind(guild_id.get() as i64).bind(target_user.get() as i64)
         .fetch_one(pool).await?;
 
-    let embed = success_embed("User Warned", &format!("**{}** has been warned ({} warnings).\nReason: {}", target_user, count.0, reason));
+    let embed = success_embed("⚠️ User Warned", &format!("**{}** has been warned ({} warnings).\nReason: {}", target_user, count.0, reason));
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
         CreateInteractionResponseMessage::new().embed(embed)
     )).await?;
@@ -162,7 +162,7 @@ pub async fn purge(
         .bind(guild_id.get() as i64).bind(0i64).bind(moderator.id.get() as i64).bind(format!("{} messages", amount))
         .execute(pool).await?;
 
-    let embed = success_embed("Messages Purged", &format!("Deleted {} messages.", msg_ids.len()));
+    let embed = success_embed("🧹 Messages Purged", &format!("Deleted {} messages.", msg_ids.len()));
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(
         CreateInteractionResponseMessage::new().embed(embed).ephemeral(true)
     )).await?;

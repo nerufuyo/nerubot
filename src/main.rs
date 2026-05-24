@@ -6,7 +6,6 @@ mod models;
 mod utils;
 mod api;
 mod lark;
-mod workers;
 
 use serenity::all::*;
 use std::sync::Arc;
@@ -122,7 +121,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize Lark bot
     let lark_config = lark::LarkConfig::from_env();
-    let mut lark_bot = lark::bot::LarkBot::new(lark_config.app_id.clone(), lark_config.app_secret.clone());
+    let mut lark_bot = lark::bot::LarkBot::new(lark_config.app_id.clone(), lark_config.app_secret.clone(), lark_config.allowed_chat_ids.clone());
 
     if !lark_config.app_id.is_empty() && !lark_config.app_secret.is_empty() {
         match lark_bot.get_access_token().await {
@@ -134,7 +133,6 @@ async fn main() -> anyhow::Result<()> {
     let lark_state = Arc::new(lark::handler::LarkState {
         bot: Arc::new(Mutex::new(lark_bot)),
         verification_token: lark_config.verification_token.clone(),
-        encrypt_key: lark_config.encrypt_key.clone(),
     });
 
     // Start API server
@@ -153,13 +151,6 @@ async fn main() -> anyhow::Result<()> {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:8082").await.unwrap();
         tracing::info!("Admin API + Lark webhook listening on 0.0.0.0:8082");
         axum::serve(listener, app).await.unwrap();
-    });
-
-    // Start reminder worker (auto-sends scheduled reminders)
-    let worker_pool = bot_data.pool.clone();
-    let worker_lark = lark_state.bot.clone();
-    tokio::spawn(async move {
-        workers::reminder_worker::reminder_loop(worker_pool, worker_lark).await;
     });
 
     // Start Discord bot

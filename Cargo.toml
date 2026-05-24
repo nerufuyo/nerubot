@@ -55,9 +55,3 @@ lru = "0.12"
 
 # Dashmap
 dashmap = "6"
-
-# Crypto (Lark webhook encryption)
-base64 = "0.22"
-aes = "0.8"
-cbc = "0.1"
-sha2 = "0.10"
